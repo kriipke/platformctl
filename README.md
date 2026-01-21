@@ -1,10 +1,12 @@
-# ContextOps: Production Architecture and ADR Pack
+# ContextOps: Production Architecture and Development Guide
 
-**Document status:** Production draft  
+**Document status:** Development Ready  
 **Version:** 1.0  
 **Date:** 2026-01-21  
 **Audience:** Platform Engineering, SRE, DevOps, Security, App Owners  
 **Repo name (suggested):** `contextops`
+
+> **Development Note:** This README is structured to support phased development. Each major component is marked with implementation phases (🏗️ **PHASE X**) that correspond to development milestones. See `ROADMAP.md` for detailed implementation timeline.
 
 ---
 
@@ -55,6 +57,8 @@ The system is designed as **microservices** coordinated via **RabbitMQ** (comman
 
 ## 4. High-level architecture
 
+> 🏗️ **PHASE 1A: Core Architecture** - Implement basic component structure and communication patterns
+
 ### 4.1 Components
 
 1. **API Gateway** (Go)
@@ -72,6 +76,8 @@ The system is designed as **microservices** coordinated via **RabbitMQ** (comman
    - Status/admin panel, run history, safe actions.
 
 ### 4.2 Architecture diagram (Mermaid)
+
+> 📋 **Development Priority:** Start with API Gateway → Context Store → Single Integration Service → Basic Aggregator
 
 ```mermaid
 flowchart LR
@@ -102,6 +108,8 @@ flowchart LR
 
 ## 5. Key ADRs (Architecture Decision Records)
 
+> 🏗️ **PHASE 1A: Foundation ADRs** - Implement ADR-001 through ADR-005 first
+
 ### ADR-001: Event-driven integration workflows
 **Decision:** Use RabbitMQ commands/results for integration work.  
 **Why:** Integrations are failure-prone, rate-limited, and scale independently.  
@@ -130,6 +138,8 @@ flowchart LR
 ---
 
 ## 6. Context model
+
+> 🏗️ **PHASE 1A: Core Models** - Implement Context schema validation and basic CRUD operations first
 
 ### 6.1 Context schema
 
@@ -219,34 +229,51 @@ spec:
 ```
 
 ### 6.2 Validation rules (must)
+
+> \ud83d\udcdd **Development Note:** Implement JSON schema validation first, then add custom business rules
+
 - `metadata.name` must match `^[a-z0-9-]+$` (k8s-friendly).
 - If `policy.kubernetes.enforceNamespaceFromKubeconfig=true`, ignore `namespaceOverride`.
 - Secrets are references only; forbid inline secret material in the context spec.
+
+**Implementation Priority:**
+1. Basic schema validation (required fields, types)
+2. Name format validation  
+3. Secret reference validation
+4. Cross-field business rule validation
 
 ---
 
 ## 7. APIs
 
+> 🏗️ **PHASE 1B: API Layer** - Implement in order: Context CRUD → Read endpoints → Action endpoints
+
 ### 7.1 Gateway endpoints (REST/JSON)
 
-- Context management:
-  - `GET /contexts`
-  - `POST /contexts`
-  - `GET /contexts/{name}`
-  - `PUT /contexts/{name}`
-  - `DELETE /contexts/{name}`
+**Implementation Order:**
 
-- Actions (publish commands):
-  - `POST /contexts/{name}/actions/refresh`
-  - `POST /contexts/{name}/actions/validate`
-  - `POST /contexts/{name}/actions/sync`
-  - `POST /contexts/{name}/actions/inspect` (fetch linked files, kube state)
+**Phase 1A - Context CRUD (implement first):**
+- `GET /contexts` - List all contexts
+- `POST /contexts` - Create new context
+- `GET /contexts/{name}` - Get context by name
+- `PUT /contexts/{name}` - Update context
+- `DELETE /contexts/{name}` - Delete context
 
-- Reads (from read model):
-  - `GET /contexts/{name}/status`
-  - `GET /contexts/{name}/runs?limit=50`
-  - `GET /contexts/{name}/files?path=...` (read-only file browsing view)
-  - `GET /contexts/{name}/kube/workloads` (read-only snapshot)
+**Phase 1B - Read Endpoints (implement after aggregator):**
+- `GET /contexts/{name}/status` - Get current status from read model
+- `GET /contexts/{name}/runs?limit=50` - Get run history
+
+**Phase 1C - Action Endpoints (implement with integration services):**
+- `POST /contexts/{name}/actions/refresh` - Refresh all data
+- `POST /contexts/{name}/actions/validate` - Validate configuration
+- `POST /contexts/{name}/actions/inspect` - Fetch detailed state
+
+**Phase 1D - Advanced Read Endpoints:**
+- `GET /contexts/{name}/files?path=...` - Browse Git files
+- `GET /contexts/{name}/kube/workloads` - Kubernetes workload status
+
+**Phase 2A - Action Endpoints (implement after security hardening):**
+- `POST /contexts/{name}/actions/sync` - Trigger ArgoCD sync (requires enhanced auth)
 
 ### 7.2 AuthN/AuthZ
 - Prefer OIDC for users; service-to-service via mTLS + JWT service identities.
@@ -256,6 +283,8 @@ spec:
 ---
 
 ## 8. Events and RabbitMQ topology
+
+> 🏗️ **PHASE 1B: Messaging Infrastructure** - Set up basic RabbitMQ topology before integration services
 
 ### 8.1 Exchanges and queues
 - Exchange: `contextops.commands` (topic)
@@ -291,11 +320,20 @@ spec:
 
 ## 9. Integration services
 
+> 🏗️ **PHASE 1C: Integration Services** - Implement one service at a time in this order:
+> 1. Vault Service (foundation for other integrations)
+> 2. Kubernetes Service (local development friendly)
+> 3. Git Service (independent, good for testing)
+> 4. Argo CD Service (depends on Vault for tokens)
+> 5. New Relic Service (depends on Vault for API keys)
+
 Each service:
 - Pulls the Context spec from Gateway (or embeds enough in command payload).
 - Emits result events with **no secrets**, ever, unless explicitly allowed by policy.
 
 ### 9.1 Vault Service
+
+> 🏗️ **PHASE 1C-1: Vault Integration** - **Priority 1** - Foundation for other services
 
 **Capabilities**
 - Validate auth method and token acquisition.
@@ -310,6 +348,8 @@ Vault’s Kubernetes auth validates a service account JWT against the Kubernetes
 - `vault.latency_ms`, `vault.error_code`
 
 ### 9.2 Argo CD Service
+
+> 🏗️ **PHASE 1C-4: ArgoCD Integration** - **Priority 4** - Requires Vault service completion
 
 **Capabilities**
 - Query Application health/sync status
@@ -326,6 +366,8 @@ Argo CD supports Helm-specific configuration (including inline values via `sourc
 
 ### 9.3 New Relic Service
 
+> 🏗️ **PHASE 1C-5: New Relic Integration** - **Priority 5** - Requires Vault service completion
+
 **Capabilities**
 - Resolve entities by selector (tags/type/name)
 - Fetch metric snapshots and alert rollups
@@ -339,7 +381,9 @@ The NerdGraph entities tutorial describes searching and retrieving entity data b
 - `newrelic.metrics`: latency/error/throughput snapshots
 - `newrelic.incidents`: active incidents summary (optional)
 
-### 9.4 Kubernetes Service (NEW)
+### 9.4 Kubernetes Service
+
+> 🏗️ **PHASE 1C-2: Kubernetes Integration** - **Priority 2** - Good for local development and testing
 
 **Purpose**
 Provide namespace-scoped operational visibility using the **kubeconfig file** as the credential source, respecting the **current-context** and namespace unless explicitly overridden by policy.
@@ -375,7 +419,9 @@ The kubeconfig API spec documents the structure used by clients. [Ref-2]
 - `kube.events`: last N warning events
 - `kube.permissions`: any denied verbs/resources, surfaced as actionable errors
 
-### 9.5 Git Service (NEW)
+### 9.5 Git Service
+
+> 🏗️ **PHASE 1C-3: Git Integration** - **Priority 3** - Independent service, good for testing patterns
 
 **Purpose**
 Browse files referenced by Argo CD Application sources: manifests, Helm chart files, Helm values files, and overlays. GitHub is the default provider.
@@ -415,6 +461,8 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 
 ## 10. Aggregator and Read Model
 
+> 🏗️ **PHASE 1D: Aggregator Service** - Implement after at least 2 integration services are complete
+
 ### 10.1 Responsibilities
 - Consume all `evt.context.result.*` events
 - Build a consolidated state document per context
@@ -448,6 +496,9 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 
 ## 11. Security and compliance
 
+> 🏗️ **PHASE 2A: Security Foundation** - Basic security → Enhanced auth → Audit logging
+> 🏗️ **PHASE 2B: Advanced Security** - mTLS → Secret rotation → Compliance features
+
 ### 11.1 Sensitive data rules
 - Never log secrets, tokens, kubeconfigs, or file contents that include secrets.
 - Scrub known secret patterns and redact headers (`Authorization`, `X-Vault-Token`, etc.).
@@ -472,6 +523,9 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 
 ## 12. Observability
 
+> 🏗️ **PHASE 1E: Basic Observability** - Logging → Metrics → Health checks
+> 🏗️ **PHASE 3B: Advanced Observability** - Distributed tracing → Business metrics → Alerting
+
 ### Logging
 - JSON logs; include `correlation_id`, `message_id`, `context_name`, `service`, `action`
 
@@ -488,6 +542,9 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 ---
 
 ## 13. Deployment and operations
+
+> 🏗️ **PHASE 1F: Basic Deployment** - Docker containers → K8s manifests → Basic networking
+> 🏗️ **PHASE 3A: Production Deployment** - HPA → Network policies → Advanced failure handling
 
 ### Kubernetes deployment
 - Each service as its own Deployment
@@ -508,6 +565,9 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 
 ## 14. Testing strategy
 
+> 🏗️ **PHASE 1G: Foundation Testing** - Unit tests → Basic integration tests
+> 🏗️ **PHASE 2C: Advanced Testing** - Contract tests → E2E tests → Security tests
+
 - Unit tests: schema validation, policy enforcement, message routing keys
 - Contract tests: event schema compatibility (golden JSON fixtures)
 - Integration tests:
@@ -522,6 +582,9 @@ GitHub’s REST “Get repository content” endpoint returns the content of a f
 
 ## 15. CLI experience
 
+> 🏗️ **PHASE 1H: Basic CLI** - Context CRUD commands → Status commands
+> 🏗️ **PHASE 2D: Enhanced CLI** - Interactive features → Advanced operations
+
 Examples:
 - `contextops context create -f app1-dev.yaml`
 - `contextops context test app1-dev`
@@ -529,6 +592,40 @@ Examples:
 - `contextops sync app1-dev --wait`
 - `contextops files app1-dev --path charts/app1/values-dev.yaml`
 - `contextops kube app1-dev workloads`
+
+---
+
+## 16. Development Phase Summary
+
+> \ud83d\udcc5 **Quick Reference** - Implementation order for efficient development
+
+### Phase 1: Core System (MVP)
+- **1A:** Context model, API Gateway, basic database schema
+- **1B:** REST APIs, RabbitMQ setup, basic authentication
+- **1C:** Integration services (Vault \u2192 Kube \u2192 Git \u2192 Argo \u2192 NewRelic)
+- **1D:** Aggregator service and read model
+- **1E:** Basic logging, metrics, health checks
+- **1F:** Docker containers, basic K8s deployment
+- **1G:** Unit tests, basic integration tests
+- **1H:** Essential CLI commands
+
+**Milestone:** Working system with single integration path
+
+### Phase 2: Security & Production Readiness
+- **2A:** Enhanced authentication, input validation, audit logging
+- **2B:** mTLS, secret rotation, security scanning
+- **2C:** Contract tests, security tests, chaos testing
+- **2D:** Advanced CLI features, interactive commands
+
+**Milestone:** Production-ready security posture
+
+### Phase 3: Performance & Scale
+- **3A:** HPA, network policies, advanced failure handling
+- **3B:** Distributed tracing, business metrics, advanced alerting
+- **3C:** Caching layers, performance optimization
+- **3D:** Multi-tenancy, resource quotas
+
+**Milestone:** Enterprise-ready scalability
 
 ---
 
@@ -574,43 +671,84 @@ Examples:
 
 ---
 
-## Appendix D: Repo layout (suggested)
+## Appendix D: Repo layout (development-optimized)
 
 ```
+# Phase 1A: Core Foundation
 /cmd
-  /gateway
-  /aggregator
-  /vault-svc
-  /argocd-svc
-  /newrelic-svc
-  /kube-svc
-  /git-svc
-  /cli
+  /gateway              # PHASE 1A - Start here
 /internal
-  /auth
-  /contexts
-  /events
-  /policy
-  /storage
-  /observability
-  /clients
-    /vault
-    /argocd
-    /newrelic
-    /kube
-    /github
-/pkg
-  /api (shared DTOs)
-  /schemas
+  /contexts             # PHASE 1A - Core models
+  /storage              # PHASE 1A - Database layer
+  /auth                 # PHASE 1B - Basic auth
+/pkg  
+  /api                  # PHASE 1A - Shared DTOs
+  /schemas              # PHASE 1A - Validation
+
+# Phase 1B: Messaging & APIs  
+/internal
+  /events               # PHASE 1B - RabbitMQ setup
+/cmd
+  /aggregator           # PHASE 1D - After integration services
+
+# Phase 1C: Integration Services (implement in order)
+/cmd
+  /vault-svc            # PHASE 1C-1 - Priority 1
+  /kube-svc             # PHASE 1C-2 - Priority 2  
+  /git-svc              # PHASE 1C-3 - Priority 3
+  /argocd-svc           # PHASE 1C-4 - Priority 4
+  /newrelic-svc         # PHASE 1C-5 - Priority 5
+/internal
+  /clients              # PHASE 1C - Client libraries
+    /vault              # PHASE 1C-1
+    /kube               # PHASE 1C-2
+    /github             # PHASE 1C-3
+    /argocd             # PHASE 1C-4
+    /newrelic           # PHASE 1C-5
+
+# Phase 1E+: Supporting Components
+/internal
+  /observability        # PHASE 1E - Logging, metrics
+  /policy               # PHASE 2A - Advanced auth
+/cmd
+  /cli                  # PHASE 1H - CLI commands
 /deploy
-  /helm
+  /helm                 # PHASE 1F - K8s deployment
+  /docker               # PHASE 1F - Container setup
 /web
-  /ui
+  /ui                   # PHASE 1I - Web interface
+/docs
+  /phases               # Development phase docs
 ```
 
 ---
 
-## Appendix E: Practical “don’t shoot yourself” defaults
+## Appendix E: Development execution guidelines
+
+### Implementation Dependencies
+- **Phase 1A Prerequisites:** Go toolchain, PostgreSQL, basic Docker setup
+- **Phase 1B Prerequisites:** RabbitMQ instance, authentication framework
+- **Phase 1C Prerequisites:** Access to Vault dev server, K8s cluster (kind/minikube OK)
+- **Phase 1D Prerequisites:** At least 2 integration services completed
+- **Phase 1E Prerequisites:** Prometheus/logging infrastructure decisions
+
+### Testing Strategy per Phase
+- **Phase 1A-1D:** Unit tests + basic integration tests
+- **Phase 1E-1H:** Add observability and deployment testing
+- **Phase 2:** Security testing, contract testing
+- **Phase 3:** Performance testing, chaos engineering
+
+### Success Criteria per Phase
+- **Phase 1A:** Context CRUD operations work via API
+- **Phase 1B:** Commands can be published and consumed via RabbitMQ
+- **Phase 1C-X:** Each integration service can fetch and return valid data
+- **Phase 1D:** Aggregator builds consolidated view from multiple services
+- **Phase 1E:** Full observability stack operational
+- **Phase 1F:** System deploys and runs in Kubernetes
+- **Phase 1G:** Comprehensive test suite passes
+- **Phase 1H:** CLI can perform all basic operations
+
+## Appendix F: Practical "don't shoot yourself" defaults
 
 - Disable `sync` on prod contexts by default.
 - Read-only Git tokens unless you explicitly need writes.
