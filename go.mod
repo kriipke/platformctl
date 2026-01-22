@@ -3,7 +3,6 @@ module github.com/contextops/platformctl
 go 1.24.6
 
 require (
-
 	// GitOps integrations
 	// github.com/argoproj/argo-cd/v2 v2.8.4
 	github.com/caarlos0/env/v9 v9.0.0
