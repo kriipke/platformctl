@@ -7,24 +7,32 @@
 
 ## Overview
 
-This guide provides Claude with all essential information needed to build ContextOps, a Go-based CLI and Web UI system for managing application-environment contexts with integrated health monitoring across Vault, Kubernetes, ArgoCD, New Relic, and Git services.
+This guide provides Claude with all essential information needed to build ContextOps, a **GitOps-optimized application monitoring platform** designed specifically for DevOps engineers managing applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-secured secrets across multiple environments and customers.
 
 ---
 
 ## 🎯 What We're Building
 
-**ContextOps** is a microservices-based system that:
-- Manages "contexts" (application + environment pairings)
-- Monitors health across multiple integrated services 
-- Provides real-time status aggregation via event-driven architecture
-- Offers both CLI and Web UI interfaces
-- Implements CQRS-lite with read model optimization
-- Supports multi-tenancy with complete data isolation
+**ContextOps** is a GitOps-native application monitoring platform that:
+- **Monitors GitOps Workflows**: ApplicationSet → Generated Applications → Helm deployments → Vault secrets
+- **Multi-Environment Correlation**: Tracks applications across dev/qa/uat/prod with unified dashboards
+- **Real-Time Secret Validation**: Correlates Vault secrets with pod environment variables 
+- **Customer Isolation**: Supports customer branches with separate configurations and resource tracking
+- **Application-Centric Interface**: Per-app dashboards with environment tabs and cross-environment comparison
+- **Helm Values Intelligence**: Correlates values-dev.yaml, values-qa.yaml, values-uat.yaml, values-prod.yaml with deployed state
 
-### Core Architecture Pattern
+### GitOps Architecture Pattern
 ```
-CLI/Web UI → API Gateway → RabbitMQ → Integration Services → Aggregator Service → Read Model
+Bootstrap App → ApplicationSets → Generated Apps → Helm Charts → VaultStaticSecrets → Pod Env Vars
+                        ↓
+CLI/Web UI → API Gateway → RabbitMQ → GitOps Integration Services → GitOps Aggregator → Multi-Environment Read Model
 ```
+
+### Key GitOps Capabilities
+- **ApplicationSet Deep Integration**: Bootstrap Application monitoring, ApplicationSet health tracking, generated application correlation
+- **Vault-Kubernetes Secret Bridge**: VaultStaticSecret monitoring, real-time secret sync validation, pod environment variable correlation
+- **Multi-Cluster Operations**: Cross-cluster application visibility, namespace isolation, unified status aggregation
+- **Customer Branch Management**: Git branch isolation, configuration drift detection, customer-specific policy enforcement
 
 ---
 
