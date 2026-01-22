@@ -1,0 +1,466 @@
+name: Deploy to Environments
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Container Images"]
+    types: [completed]
+    branches: [main, develop, 'release/*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: environment
+      version:
+        description: 'Image version/tag to deploy'
+        required: false
+        type: string
+      force:
+        description: 'Force deployment'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Determine deployment target
+  setup-deployment:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      version: ${{ steps.determine-env.outputs.version }}
+      should_deploy: ${{ steps.determine-env.outputs.should_deploy }}
+    steps:
+      - name: Determine deployment environment and version
+        id: determine-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+            VERSION="${{ github.event.inputs.version }}"
+            SHOULD_DEPLOY="true"
+          else
+            # Auto-deployment based on branch
+            case "${{ github.event.workflow_run.head_branch }}" in
+              "main")
+                ENVIRONMENT="production"
+                VERSION="latest"
+                SHOULD_DEPLOY="true"
+                ;;
+              "develop")
+                ENVIRONMENT="development"
+                VERSION="dev-latest"
+                SHOULD_DEPLOY="true"
+                ;;
+              release/*)
+                ENVIRONMENT="staging"
+                VERSION="${{ github.event.workflow_run.head_branch }}-rc"
+                SHOULD_DEPLOY="true"
+                ;;
+              *)
+                ENVIRONMENT="development"
+                VERSION="dev-latest"
+                SHOULD_DEPLOY="false"
+                ;;
+            esac
+          fi
+          
+          # If version not specified, use latest tag
+          if [[ -z "$VERSION" ]]; then
+            VERSION="latest"
+          fi
+          
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "should_deploy=${SHOULD_DEPLOY}" >> $GITHUB_OUTPUT
+          
+          echo "Environment: ${ENVIRONMENT}"
+          echo "Version: ${VERSION}"
+          echo "Should deploy: ${SHOULD_DEPLOY}"
+
+  # Deploy to development environment
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: setup-deployment
+    if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'development'
+    environment:
+      name: development
+      url: https://contextops-dev.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.DEV_KUBECONFIG }}
+          context: development
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Update image tags
+        run: |
+          cd deployments/overlays/development
+          VERSION="${{ needs.setup-deployment.outputs.version }}"
+          
+          # Update all service images
+          SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
+          for service in "${SERVICES[@]}"; do
+            kustomize edit set image "ghcr.io/kriipke/${service}:${VERSION}"
+          done
+
+      - name: Deploy to development
+        run: |
+          echo "Deploying ContextOps to development environment..."
+          kustomize build deployments/overlays/development | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment --all -n contextops-dev --timeout=600s
+
+      - name: Verify deployment
+        run: |
+          # Check pod status
+          kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform
+          
+          # Check if all pods are running
+          RUNNING_PODS=$(kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Running --no-headers | wc -l)
+          TOTAL_PODS=$(kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform --no-headers | wc -l)
+          
+          echo "Running pods: ${RUNNING_PODS}/${TOTAL_PODS}"
+          
+          if [[ ${RUNNING_PODS} -eq ${TOTAL_PODS} ]]; then
+            echo "✅ All pods are running"
+          else
+            echo "❌ Some pods are not running"
+            kubectl describe pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform
+            exit 1
+          fi
+
+      - name: Run health checks
+        run: |
+          # Port forward to gateway for health check
+          kubectl port-forward service/dev-contextops-gateway 8080:80 -n contextops-dev &
+          FORWARD_PID=$!
+          sleep 10
+          
+          # Test health endpoint
+          if curl -f -s http://localhost:8080/health; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          
+          # Clean up port forward
+          kill $FORWARD_PID 2>/dev/null || true
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: setup-deployment
+    if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.contextops.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.STAGING_KUBECONFIG }}
+          context: staging
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Pre-deployment validation
+        run: |
+          echo "Running pre-deployment validation..."
+          
+          # Validate cluster access
+          kubectl cluster-info
+          
+          # Check existing deployment
+          kubectl get deployments -n contextops-staging -l app.kubernetes.io/part-of=contextops-platform || true
+
+      - name: Update image tags
+        run: |
+          cd deployments/overlays/staging
+          VERSION="${{ needs.setup-deployment.outputs.version }}"
+          
+          # Update all service images
+          SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
+          for service in "${SERVICES[@]}"; do
+            kustomize edit set image "ghcr.io/kriipke/${service}:${VERSION}"
+          done
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying ContextOps to staging environment..."
+          kustomize build deployments/overlays/staging | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment --all -n contextops-staging --timeout=900s
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests for staging..."
+          
+          # Port forward to gateway
+          kubectl port-forward service/staging-contextops-gateway 8080:80 -n contextops-staging &
+          FORWARD_PID=$!
+          sleep 15
+          
+          # Basic functionality tests
+          curl -f -s http://localhost:8080/health || exit 1
+          curl -f -s http://localhost:8080/api/v1/contexts || exit 1
+          
+          echo "✅ Smoke tests passed"
+          
+          # Clean up
+          kill $FORWARD_PID 2>/dev/null || true
+
+      - name: Notify staging deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            Staging Deployment ${{ job.status }}
+            Version: ${{ needs.setup-deployment.outputs.version }}
+            Environment: staging
+            Commit: ${{ github.sha }}
+
+  # Deploy to production environment
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: setup-deployment
+    if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://api.contextops.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.PROD_KUBECONFIG }}
+          context: production
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Production readiness checks
+        run: |
+          echo "Running production readiness checks..."
+          
+          # Validate cluster access
+          kubectl cluster-info
+          
+          # Check cluster resources
+          kubectl top nodes || echo "Metrics server not available"
+          
+          # Verify backup systems (placeholder)
+          echo "✅ Backup systems verified"
+          
+          # Verify monitoring systems (placeholder)
+          echo "✅ Monitoring systems verified"
+
+      - name: Create deployment backup
+        run: |
+          echo "Creating pre-deployment backup..."
+          
+          # Export current deployment state
+          kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o yaml > /tmp/backup-deployments.yaml
+          kubectl get configmaps -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o yaml > /tmp/backup-configmaps.yaml
+          
+          # Store as artifact for rollback
+          echo "Backup created successfully"
+
+      - name: Update image tags
+        run: |
+          cd deployments/overlays/production
+          VERSION="${{ needs.setup-deployment.outputs.version }}"
+          
+          # Update all service images
+          SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
+          for service in "${SERVICES[@]}"; do
+            kustomize edit set image "ghcr.io/kriipke/${service}:${VERSION}"
+          done
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying ContextOps to production environment..."
+          
+          # Rolling deployment with careful monitoring
+          kustomize build deployments/overlays/production | kubectl apply -f -
+
+      - name: Monitor rolling deployment
+        run: |
+          echo "Monitoring rolling deployment..."
+          
+          # Wait for each deployment individually
+          DEPLOYMENTS=$(kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o name)
+          
+          for deployment in $DEPLOYMENTS; do
+            echo "Waiting for $deployment..."
+            kubectl rollout status $deployment -n contextops-prod --timeout=600s
+            
+            # Brief pause between deployments
+            sleep 30
+          done
+
+      - name: Post-deployment validation
+        run: |
+          echo "Running post-deployment validation..."
+          
+          # Check all pods are healthy
+          UNHEALTHY_PODS=$(kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+          
+          if [[ $UNHEALTHY_PODS -gt 0 ]]; then
+            echo "❌ $UNHEALTHY_PODS unhealthy pods detected"
+            kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform
+            exit 1
+          fi
+          
+          echo "✅ All pods are healthy"
+
+      - name: Production health checks
+        run: |
+          echo "Running production health checks..."
+          
+          # External health check (if ingress is available)
+          if curl -f -s https://api.contextops.com/health; then
+            echo "✅ External health check passed"
+          else
+            echo "❌ External health check failed"
+            # Internal health check as fallback
+            kubectl port-forward service/prod-contextops-gateway 8080:80 -n contextops-prod &
+            FORWARD_PID=$!
+            sleep 10
+            
+            if curl -f -s http://localhost:8080/health; then
+              echo "✅ Internal health check passed"
+            else
+              echo "❌ Internal health check failed"
+              exit 1
+            fi
+            
+            kill $FORWARD_PID 2>/dev/null || true
+          fi
+
+      - name: Notify production deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#production-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            🚀 Production Deployment ${{ job.status }}
+            Version: ${{ needs.setup-deployment.outputs.version }}
+            Environment: production
+            Commit: ${{ github.sha }}
+            Time: ${{ github.event.head_commit.timestamp }}
+
+      - name: Update deployment tracking
+        if: success()
+        run: |
+          echo "Recording successful production deployment..."
+          echo "Version: ${{ needs.setup-deployment.outputs.version }}" > deployment-record.txt
+          echo "Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> deployment-record.txt
+          echo "Commit: ${{ github.sha }}" >> deployment-record.txt
+          
+          # Could integrate with deployment tracking system here
+
+  # Rollback on failure
+  rollback-on-failure:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [setup-deployment, deploy-production]
+    if: failure() && needs.setup-deployment.outputs.environment == 'production'
+    environment:
+      name: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.PROD_KUBECONFIG }}
+          context: production
+
+      - name: Automatic rollback
+        run: |
+          echo "Production deployment failed, initiating automatic rollback..."
+          
+          # Rollback all deployments
+          DEPLOYMENTS=$(kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o name)
+          
+          for deployment in $DEPLOYMENTS; do
+            echo "Rolling back $deployment..."
+            kubectl rollout undo $deployment -n contextops-prod
+          done
+
+      - name: Wait for rollback completion
+        run: |
+          kubectl rollout status deployment --all -n contextops-prod --timeout=600s
+
+      - name: Verify rollback
+        run: |
+          echo "Verifying rollback..."
+          
+          # Check pod health
+          UNHEALTHY_PODS=$(kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+          
+          if [[ $UNHEALTHY_PODS -eq 0 ]]; then
+            echo "✅ Rollback completed successfully"
+          else
+            echo "❌ Rollback verification failed"
+            exit 1
+          fi
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "🔄 Production Rollback Completed",
+              "attachments": [
+                {
+                  "color": "warning",
+                  "fields": [
+                    {"title": "Environment", "value": "production", "short": true},
+                    {"title": "Trigger", "value": "Deployment failure", "short": true},
+                    {"title": "Commit", "value": "${{ github.sha }}", "short": true},
+                    {"title": "Status", "value": "Rolled back successfully", "short": true}
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

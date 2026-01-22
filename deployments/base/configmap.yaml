@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contextops-config
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-config
+    app.kubernetes.io/part-of: contextops-platform
+data:
+  # Database configuration
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "contextops"
+  DATABASE_SSL_MODE: "disable"
+  
+  # RabbitMQ configuration
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: "/"
+  
+  # Observability configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_PORT: "8081"
+  TRACING_ENABLED: "false"
+  
+  # GitOps service configuration
+  ENABLE_VAULT_INTEGRATION: "true"
+  ENABLE_ARGOCD_INTEGRATION: "true"
+  ENABLE_GIT_INTEGRATION: "true"
+  ENABLE_KUBERNETES_INTEGRATION: "true"
+  
+  # Performance tuning
+  MAX_CONCURRENT_REQUESTS: "100"
+  REQUEST_TIMEOUT: "30s"
+  DB_MAX_OPEN_CONNS: "25"
+  DB_MAX_IDLE_CONNS: "5"
