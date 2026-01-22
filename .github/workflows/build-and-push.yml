@@ -105,15 +105,7 @@ jobs:
         id: services
         run: |
           # Get services from build script or define them here
-          SERVICES='[
-            "gateway",
-            "gitops-aggregator", 
-            "app-sync-svc",
-            "environment-validation-svc",
-            "context-correlation-svc",
-            "multi-environment-kube-svc",
-            "customer-git-branch-svc"
-          ]'
+          SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
           
           echo "matrix=${SERVICES}" >> $GITHUB_OUTPUT
           echo "Services to build: ${SERVICES}"
