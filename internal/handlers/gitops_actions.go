@@ -55,7 +55,7 @@ func (h *GitOpsActionHandler) HandleSyncApps(w http.ResponseWriter, r *http.Requ
 	// Verify Context exists with customer isolation
 	context, err := h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
 	if err != nil {
-		if err == storage.ErrContextNotFound {
+		if err == storage.ErrNotFound {
 			http.Error(w, "Context not found", http.StatusNotFound)
 			return
 		}
@@ -64,7 +64,7 @@ func (h *GitOpsActionHandler) HandleSyncApps(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get App manifest referenced by Context
-	app, err := h.appStore.Get(r.Context(), context.AppReference, customer.CustomerID)
+	app, err := h.appStore.Get(r.Context(), context.Spec.AppRef, customer.CustomerID)
 	if err != nil {
 		http.Error(w, "Failed to get App manifest", http.StatusInternalServerError)
 		return
@@ -113,7 +113,7 @@ func (h *GitOpsActionHandler) HandleValidateEnvironments(w http.ResponseWriter, 
 	// Verify Context exists with customer isolation
 	context, err := h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
 	if err != nil {
-		if err == storage.ErrContextNotFound {
+		if err == storage.ErrNotFound {
 			http.Error(w, "Context not found", http.StatusNotFound)
 			return
 		}
@@ -122,7 +122,7 @@ func (h *GitOpsActionHandler) HandleValidateEnvironments(w http.ResponseWriter, 
 	}
 
 	// Get Environment manifest referenced by Context
-	environment, err := h.environmentStore.Get(r.Context(), context.EnvironmentReference, customer.CustomerID)
+	environment, err := h.environmentStore.Get(r.Context(), context.Spec.Deployments[0].EnvironmentRef, customer.CustomerID)
 	if err != nil {
 		http.Error(w, "Failed to get Environment manifest", http.StatusInternalServerError)
 		return
@@ -176,7 +176,7 @@ func (h *GitOpsActionHandler) HandleCorrelateContexts(w http.ResponseWriter, r *
 	// Verify Context exists with customer isolation
 	context, err := h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
 	if err != nil {
-		if err == storage.ErrContextNotFound {
+		if err == storage.ErrNotFound {
 			http.Error(w, "Context not found", http.StatusNotFound)
 			return
 		}
@@ -185,13 +185,13 @@ func (h *GitOpsActionHandler) HandleCorrelateContexts(w http.ResponseWriter, r *
 	}
 
 	// Publish Context pairing correlation command
-	cmd, err := h.publisher.PublishContextCorrelation(customer.CustomerID, contextName, customer.Username, context.AppReference, context.EnvironmentReference)
+	cmd, err := h.publisher.PublishContextCorrelation(customer.CustomerID, contextName, customer.Username, context.Spec.AppRef, context.Spec.Deployments[0].EnvironmentRef)
 	if err != nil {
 		http.Error(w, "Failed to publish Context correlation command", http.StatusInternalServerError)
 		return
 	}
 
-	contextPairingDescription := fmt.Sprintf("%s+%s", context.AppReference, context.EnvironmentReference)
+	contextPairingDescription := fmt.Sprintf("%s+%s", context.Spec.AppRef, context.Spec.Deployments[0].EnvironmentRef)
 
 	response := GitOpsActionResponse{
 		Success:         true,
@@ -223,9 +223,9 @@ func (h *GitOpsActionHandler) HandleInspectManifests(w http.ResponseWriter, r *h
 	}
 
 	// Verify Context exists with customer isolation
-	_, err = h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
+	_, err := h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
 	if err != nil {
-		if err == storage.ErrContextNotFound {
+		if err == storage.ErrNotFound {
 			http.Error(w, "Context not found", http.StatusNotFound)
 			return
 		}
