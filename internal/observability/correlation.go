@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/streadway/amqp"
+	"github.com/rabbitmq/amqp091-go"
 
-	"platformctl/pkg/api"
+	"github.com/contextops/platformctl/pkg/api"
 )
 
 // CorrelationTracker provides end-to-end correlation tracking for GitOps operations

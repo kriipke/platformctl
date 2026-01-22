@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"platformctl/internal/aggregator"
-	"platformctl/internal/config"
-	"platformctl/internal/database"
-	"platformctl/internal/events"
-	"platformctl/internal/observability"
+	"github.com/contextops/platformctl/internal/aggregator"
+	"github.com/contextops/platformctl/internal/config"
+	"github.com/contextops/platformctl/internal/database"
+	"github.com/contextops/platformctl/internal/events"
+	"github.com/contextops/platformctl/internal/observability"
 )
 
 func main() {

@@ -9,8 +9,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 
-	"platformctl/internal/readmodel"
-	"platformctl/pkg/api"
+	"github.com/contextops/platformctl/internal/readmodel"
+	"github.com/contextops/platformctl/pkg/api"
 )
 
 // EnvironmentCorrelator provides advanced correlation logic for multi-environment GitOps data
