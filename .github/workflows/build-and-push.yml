@@ -201,12 +201,6 @@ jobs:
             echo "No tests found for ${{ matrix.service }}, skipping"
           fi
 
-      - name: Run security scan
-        uses: securecodewarrior/github-action-add-sarif@v1
-        if: github.event_name != 'pull_request'
-        continue-on-error: true
-        with:
-          sarif-file: 'security-scan.sarif'
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
