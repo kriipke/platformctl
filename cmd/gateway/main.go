@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/contextops/platformctl/internal/auth"
+	"github.com/rs/zerolog"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/database"
 	"github.com/contextops/platformctl/internal/events"
@@ -26,46 +28,68 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize observability
-	logger := observability.NewLogger(cfg.Service.Name, cfg.Log.Level)
-	metrics := observability.NewMetrics(cfg.Service.Name, cfg.Metrics.Enabled)
+	loggerConfig := observability.LoggerConfig{
+		Level:         cfg.Observability.LogLevel,
+		Format:        cfg.Observability.LogFormat,
+		ServiceName:   "gateway",
+		EnableConsole: cfg.Observability.EnableConsoleLog,
+	}
+	logger := observability.NewLogger(loggerConfig)
+	
+	metricsConfig := observability.MetricsConfig{
+		Enabled:   cfg.Observability.MetricsEnabled,
+		Port:      cfg.Observability.MetricsPort,
+		Path:      cfg.Observability.MetricsPath,
+		Namespace: cfg.Observability.MetricsNamespace,
+	}
+	metrics := observability.NewMetrics(metricsConfig)
 
 	// Initialize database connection
-	db, err := database.Connect(cfg.DatabaseURL)
+	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to connect to database")
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Also create storage.DB for other stores
+	storageDB, err := storage.NewDB(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to storage database: %v", err)
+	}
+	defer storageDB.Close()
 
 	// Run migrations
 	migrationsPath := getEnv("MIGRATIONS_PATH", "./migrations")
 	if err := database.RunMigrations(cfg.DatabaseURL, migrationsPath); err != nil {
-		logger.Fatal().Err(err).Msg("Failed to run migrations")
+		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	// Initialize RabbitMQ connection
-	rabbitmq, err := events.NewGitOpsRabbitMQ(cfg.RabbitMQURL, "api-gateway")
+	rabbitmq, err := events.NewGitOpsMessageBus(cfg.RabbitMQURL, cfg)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to connect to RabbitMQ")
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer rabbitmq.Close()
 
 	// Initialize stores
-	appStore := storage.NewAppStore(db)
-	environmentStore := storage.NewEnvironmentStore(db)
-	contextStore := storage.NewContextStore(db)
+	appStore := storage.NewAppStore(storageDB)
+	environmentStore := storage.NewEnvironmentStore(storageDB)
+	contextStore := storage.NewContextStore(storageDB)
 
 	// Initialize GitOps read model store
 	gitopsStore := readmodel.NewGitOpsStore(db)
 
 	// Initialize GitOps components
-	publisher := events.NewGitOpsPublisher(rabbitmq)
+	publisher := events.NewGitOpsCommandPublisher(rabbitmq)
 
 	// Initialize handlers
 	appHandler := handlers.NewAppHandler(appStore)
 	environmentHandler := handlers.NewEnvironmentHandler(environmentStore)
 	contextHandler := handlers.NewContextHandler(contextStore)
 	actionHandler := handlers.NewGitOpsActionHandler(appStore, environmentStore, contextStore, publisher)
-	statusHandler := handlers.NewGitOpsStatusHandler(gitopsStore, *logger)
+	// Create a simple zerolog logger for the status handler
+	statusLogger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	statusHandler := handlers.NewGitOpsStatusHandler(gitopsStore, statusLogger)
 
 	// Setup Gin router with observability middleware
 	gin.SetMode(gin.ReleaseMode)
@@ -78,14 +102,8 @@ func main() {
 	// Setup API routes
 	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler)
 
-	// Initialize health checker
-	healthChecker := observability.NewHealthChecker(logger)
-	healthChecker.AddDatabaseCheck("postgres", db)
-	healthChecker.AddRabbitMQCheck("rabbitmq", rabbitmq.Connection())
-
-	// Start observability server for health and metrics
-	obsServer := observability.StartObservabilityServer(cfg.Health.Port, logger, metrics, healthChecker)
-	defer obsServer.Shutdown(context.Background())
+	// TODO: Initialize health checker and observability server
+	// These functions need to be implemented or replaced with working alternatives
 
 	// Start main server
 	server := &http.Server{
@@ -95,13 +113,10 @@ func main() {
 
 	// Graceful shutdown handling
 	go func() {
-		logger.Info().
-			Str("port", cfg.Port).
-			Str("health_port", cfg.Health.Port).
-			Msg("Starting GitOps API Gateway")
+		log.Printf("Starting GitOps API Gateway on port %s (health: %s)", cfg.Port, cfg.Observability.HealthCheckPort)
 		
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal().Err(err).Msg("Server failed to start")
+			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
 
@@ -110,17 +125,18 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info().Msg("Shutting down server...")
+	// Use the underlying zerolog logger for shutdown message
+	logger.NewContextLogger(context.Background()).Info().Msg("Shutting down server...")
 
 	// Graceful shutdown with 5 second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Fatal().Err(err).Msg("Server forced to shutdown")
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	logger.Info().Msg("Server exited")
+	log.Println("Server exited")
 }
 
 func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environmentHandler *handlers.EnvironmentHandler, contextHandler *handlers.ContextHandler, actionHandler *handlers.GitOpsActionHandler, statusHandler *handlers.GitOpsStatusHandler) {
@@ -159,20 +175,20 @@ func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environ
 	gitopsGroup := apiGroup.Group("/gitops")
 	
 	// Context status routes
-	gitopsGroup.GET("/contexts/status", ginHandlerWrapper(statusHandler.ListContextStatuses))
-	gitopsGroup.GET("/contexts/:contextName/status", ginHandlerWrapper(statusHandler.GetContextStatus))
-	gitopsGroup.GET("/contexts/:contextName/health", ginHandlerWrapper(statusHandler.GetContextHealth))
+	gitopsGroup.GET("/contexts/status", statusHandler.ListContextStatuses)
+	gitopsGroup.GET("/contexts/:contextName/status", statusHandler.GetContextStatus)
+	gitopsGroup.GET("/contexts/:contextName/health", statusHandler.GetContextHealth)
 	
 	// App manifest status routes
-	gitopsGroup.GET("/contexts/:contextName/apps/:appName/status", ginHandlerWrapper(statusHandler.GetAppManifestStatus))
-	gitopsGroup.GET("/contexts/:contextName/apps/:appName/environments/status", ginHandlerWrapper(statusHandler.GetMultiEnvironmentAppStatus))
+	gitopsGroup.GET("/contexts/:contextName/apps/:appName/status", statusHandler.GetAppManifestStatus)
+	gitopsGroup.GET("/contexts/:contextName/apps/:appName/environments/status", statusHandler.GetMultiEnvironmentAppStatus)
 	
 	// Environment manifest status routes
-	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/status", ginHandlerWrapper(statusHandler.GetEnvironmentManifestStatus))
-	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/vault/status", ginHandlerWrapper(statusHandler.GetVaultValidationDetails))
+	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/status", statusHandler.GetEnvironmentManifestStatus)
+	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/vault/status", statusHandler.GetVaultValidationDetails)
 	
 	// System health overview
-	gitopsGroup.GET("/health/overview", ginHandlerWrapper(statusHandler.GetSystemHealthOverview))
+	gitopsGroup.GET("/health/overview", statusHandler.GetSystemHealthOverview)
 
 	// Health check (no auth required)
 	router.GET("/health", ginHealthHandler)
@@ -186,11 +202,9 @@ func ginHealthHandler(c *gin.Context) {
 		Services: struct {
 			Database bool `json:"database"`
 			Storage  bool `json:"storage"`
-			RabbitMQ bool `json:"rabbitmq,omitempty"`
 		}{
 			Database: true,
 			Storage:  true,
-			RabbitMQ: true,
 		},
 	}
 	c.JSON(http.StatusOK, response)

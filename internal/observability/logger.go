@@ -2,14 +2,12 @@ package observability
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // CorrelationIDKey is the context key for correlation IDs
@@ -72,7 +70,7 @@ func NewLogger(config LoggerConfig) *Logger {
 }
 
 // NewContextLogger creates a logger with context-specific fields
-func (l *Logger) NewContextLogger(ctx context.Context) zerolog.Logger {
+func (l *Logger) NewContextLogger(ctx context.Context) *zerolog.Logger {
 	logger := l.logger
 
 	// Add correlation ID if present
@@ -90,7 +88,7 @@ func (l *Logger) NewContextLogger(ctx context.Context) zerolog.Logger {
 		logger = logger.With().Str("component", service).Logger()
 	}
 
-	return logger
+	return &logger
 }
 
 // GitOpsEvent logs GitOps-specific events with structured data

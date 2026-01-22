@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
-	"net/http"
+		"net/http"
 	"time"
 
 	"github.com/gorilla/mux"

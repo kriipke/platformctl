@@ -3,13 +3,12 @@ package observability
 import (
 	"context"
 	"net/http"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
-	"github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // CorrelationMiddleware adds correlation ID to all HTTP requests
@@ -374,7 +373,6 @@ func (sm *SecurityMiddleware) GinMiddleware() gin.HandlerFunc {
 		c.Header("Server", "")
 		
 		// Log security-relevant events
-		correlationID := GetCorrelationID(c.Request.Context())
 		customerID := getCustomerIDFromContext(c)
 		
 		// Check for suspicious headers or patterns

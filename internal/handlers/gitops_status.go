@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
+	"github.com/contextops/platformctl/internal/models"
 	"github.com/contextops/platformctl/internal/readmodel"
 )
 
@@ -28,11 +29,11 @@ func NewGitOpsStatusHandler(store *readmodel.GitOpsStore, logger zerolog.Logger)
 func (h *GitOpsStatusHandler) GetContextStatus(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 
 	if contextName == "" {
@@ -41,11 +42,11 @@ func (h *GitOpsStatusHandler) GetContextStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Msg("Getting context status")
 
-	status, err := h.store.GetContextStatus(c.Request.Context(), customerData.ID, contextName)
+	status, err := h.store.GetContextStatus(c.Request.Context(), customerData.ID.String(), contextName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Context status not found"})
@@ -63,11 +64,11 @@ func (h *GitOpsStatusHandler) GetContextStatus(c *gin.Context) {
 func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 
 	// Optional health status filter
 	healthStatusParam := c.Query("health_status")
@@ -77,7 +78,7 @@ func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Strs("health_statuses", healthStatuses).
 		Msg("Listing context statuses")
 
@@ -85,9 +86,9 @@ func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 	var err error
 
 	if len(healthStatuses) > 0 {
-		statuses, err = h.store.GetContextsByHealthStatus(c.Request.Context(), customerData.ID, healthStatuses)
+		statuses, err = h.store.GetContextsByHealthStatus(c.Request.Context(), customerData.ID.String(), healthStatuses)
 	} else {
-		statuses, err = h.store.ListContextStatuses(c.Request.Context(), customerData.ID)
+		statuses, err = h.store.ListContextStatuses(c.Request.Context(), customerData.ID.String())
 	}
 
 	if err != nil {
@@ -106,11 +107,11 @@ func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetAppManifestStatus(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 	appName := c.Param("appName")
 
@@ -120,12 +121,12 @@ func (h *GitOpsStatusHandler) GetAppManifestStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Str("app_name", appName).
 		Msg("Getting app manifest status")
 
-	status, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID, contextName, appName)
+	status, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, appName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "App manifest status not found"})
@@ -146,11 +147,11 @@ func (h *GitOpsStatusHandler) GetAppManifestStatus(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetEnvironmentManifestStatus(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 	environmentName := c.Param("environmentName")
 
@@ -160,12 +161,12 @@ func (h *GitOpsStatusHandler) GetEnvironmentManifestStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Str("environment_name", environmentName).
 		Msg("Getting environment manifest status")
 
-	status, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID, contextName, environmentName)
+	status, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, environmentName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Environment manifest status not found"})
@@ -186,11 +187,11 @@ func (h *GitOpsStatusHandler) GetEnvironmentManifestStatus(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetMultiEnvironmentAppStatus(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 	appName := c.Param("appName")
 
@@ -200,12 +201,12 @@ func (h *GitOpsStatusHandler) GetMultiEnvironmentAppStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Str("app_name", appName).
 		Msg("Getting multi-environment app status")
 
-	statuses, err := h.store.GetMultiEnvironmentAppStatus(c.Request.Context(), customerData.ID, contextName, appName)
+	statuses, err := h.store.GetMultiEnvironmentAppStatus(c.Request.Context(), customerData.ID.String(), contextName, appName)
 	if err != nil {
 		h.logger.Error().Err(err).
 			Str("context_name", contextName).
@@ -225,11 +226,11 @@ func (h *GitOpsStatusHandler) GetMultiEnvironmentAppStatus(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetVaultValidationDetails(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 	environmentName := c.Param("environmentName")
 
@@ -239,12 +240,12 @@ func (h *GitOpsStatusHandler) GetVaultValidationDetails(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Str("environment_name", environmentName).
 		Msg("Getting vault validation details")
 
-	validations, err := h.store.GetVaultValidationDetails(c.Request.Context(), customerData.ID, contextName, environmentName)
+	validations, err := h.store.GetVaultValidationDetails(c.Request.Context(), customerData.ID.String(), contextName, environmentName)
 	if err != nil {
 		h.logger.Error().Err(err).
 			Str("context_name", contextName).
@@ -264,11 +265,11 @@ func (h *GitOpsStatusHandler) GetVaultValidationDetails(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 	contextName := c.Param("contextName")
 
 	if contextName == "" {
@@ -277,12 +278,12 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Str("context_name", contextName).
 		Msg("Getting context health summary")
 
 	// Get overall context status
-	contextStatus, err := h.store.GetContextStatus(c.Request.Context(), customerData.ID, contextName)
+	contextStatus, err := h.store.GetContextStatus(c.Request.Context(), customerData.ID.String(), contextName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Context not found"})
@@ -294,14 +295,14 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	}
 
 	// Get app manifest status
-	appStatus, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID, contextName, contextStatus.AppReference)
+	appStatus, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, contextStatus.AppReference)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		h.logger.Error().Err(err).Msg("Failed to get app manifest status")
 		// Don't return error, just log it
 	}
 
 	// Get environment manifest status
-	envStatus, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID, contextName, contextStatus.EnvironmentReference)
+	envStatus, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, contextStatus.EnvironmentReference)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		h.logger.Error().Err(err).Msg("Failed to get environment manifest status")
 		// Don't return error, just log it
@@ -340,18 +341,18 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 func (h *GitOpsStatusHandler) GetSystemHealthOverview(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Customer not found in request context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "models.Customer not found in request context"})
 		return
 	}
 
-	customerData := customer.(*Customer)
+	customerData := customer.(*models.Customer)
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID).
+		Str("customer_id", customerData.ID.String()).
 		Msg("Getting system health overview")
 
 	// Get all context statuses
-	statuses, err := h.store.ListContextStatuses(c.Request.Context(), customerData.ID)
+	statuses, err := h.store.ListContextStatuses(c.Request.Context(), customerData.ID.String())
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to list context statuses")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})

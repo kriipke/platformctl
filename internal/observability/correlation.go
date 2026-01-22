@@ -3,9 +3,10 @@ package observability
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
-	"github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/contextops/platformctl/pkg/api"
 )
@@ -67,7 +68,7 @@ func (ct *CorrelationTracker) TrackHTTPRequest(ctx context.Context, method, endp
 	}
 	
 	// Log the start of the correlation chain
-	ct.logger.GitOps(ctx, "correlation_start").
+	ct.logger.GitOpsEvent(ctx, "correlation_start").
 		WithAction(correlationCtx.Action).
 		WithStatus("started").
 		Send("HTTP request correlation started")
@@ -162,7 +163,7 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 	if contextNameStr, ok := contextName.(string); ok {
 		manifestType := ctx.Value("manifest_type")
 		if manifestTypeStr, ok := manifestType.(string); ok {
-			ct.metrics.IncrementCommandsActiveProcessing(customerID, operation, manifestTypeStr)
+			ct.metrics.IncrementCommandsActiveProcessing(customerID, contextNameStr, manifestTypeStr)
 		}
 	}
 	
@@ -280,7 +281,7 @@ func (ct *CorrelationTracker) TrackCorrelationComplete(ctx context.Context, corr
 	ct.logCorrelationEvent(ctx, event)
 	
 	// Log correlation summary
-	ct.logger.GitOps(ctx, "correlation_complete").
+	ct.logger.GitOpsEvent(ctx, "correlation_complete").
 		WithContext(correlationCtx.ContextName).
 		WithAction(correlationCtx.Action).
 		WithStatus(status).
@@ -331,9 +332,9 @@ func (set *ServiceExecutionTracker) Complete(status string, err error) {
 	if contextNameStr, ok := contextName.(string); ok {
 		manifestType := set.ctx.Value("manifest_type")
 		if manifestTypeStr, ok := manifestType.(string); ok {
-			set.correlationTracker.metrics.IncrementCommandsProcessed(set.CustomerID, set.Operation, manifestTypeStr, status)
-			set.correlationTracker.metrics.RecordCommandProcessingDuration(set.CustomerID, set.Operation, manifestTypeStr, duration)
-			set.correlationTracker.metrics.DecrementCommandsActiveProcessing(set.CustomerID, set.Operation, manifestTypeStr)
+			set.correlationTracker.metrics.IncrementCommandsProcessed(set.CustomerID, contextNameStr, manifestTypeStr, status)
+			set.correlationTracker.metrics.RecordCommandProcessingDuration(set.CustomerID, contextNameStr, manifestTypeStr, duration)
+			set.correlationTracker.metrics.DecrementCommandsActiveProcessing(set.CustomerID, contextNameStr, manifestTypeStr)
 		}
 	}
 }
@@ -437,7 +438,7 @@ func WithCorrelationFromMessage(ctx context.Context, message amqp.Delivery) cont
 
 // logCorrelationEvent logs a correlation event with structured data
 func (ct *CorrelationTracker) logCorrelationEvent(ctx context.Context, event CorrelationEvent) {
-	logEvent := ct.logger.GitOps(ctx, "correlation_event").
+	logEvent := ct.logger.GitOpsEvent(ctx, "correlation_event").
 		WithStatus(event.Status).
 		WithDuration(event.Duration)
 	

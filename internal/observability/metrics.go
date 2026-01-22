@@ -705,3 +705,53 @@ func StartMetricsServer(metrics *Metrics, config MetricsConfig) error {
 	
 	return server.ListenAndServe()
 }
+
+// Generic metrics methods for backward compatibility
+func (m *Metrics) IncrementCounter(counterName string, labels prometheus.Labels) {
+	// Try to find a matching counter by name and increment it
+	switch counterName {
+	case "messages_consumed_total":
+		if customer, ok := labels["customer_id"]; ok {
+			if queue, ok := labels["queue"]; ok {
+				if messageType, ok := labels["message_type"]; ok {
+					if status, ok := labels["status"]; ok {
+						m.IncrementMessagesConsumed(customer, queue, messageType, status)
+					}
+				}
+			}
+		}
+	case "messages_published_total":
+		if customer, ok := labels["customer_id"]; ok {
+			if exchange, ok := labels["exchange"]; ok {
+				if routingKey, ok := labels["routing_key"]; ok {
+					if messageType, ok := labels["message_type"]; ok {
+						m.IncrementMessagesPublished(customer, exchange, routingKey, messageType)
+					}
+				}
+			}
+		}
+	case "message_processing_errors_total":
+		if customer, ok := labels["customer_id"]; ok {
+			if queue, ok := labels["queue"]; ok {
+				if messageType, ok := labels["message_type"]; ok {
+					if errorType, ok := labels["error_type"]; ok {
+						m.IncrementMessageProcessingErrors(customer, queue, messageType, errorType)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (m *Metrics) RecordHistogram(histogramName string, value float64, labels prometheus.Labels) {
+	switch histogramName {
+	case "message_processing_duration_seconds":
+		if customer, ok := labels["customer_id"]; ok {
+			if service, ok := labels["service"]; ok {
+				if action, ok := labels["action"]; ok {
+					m.RecordMessageProcessingDuration(customer, service, action, time.Duration(value*float64(time.Second)))
+				}
+			}
+		}
+	}
+}

@@ -8,6 +8,9 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// GitOpsRabbitMQ is an alias for GitOpsMessageBus for backward compatibility
+type GitOpsRabbitMQ = GitOpsMessageBus
+
 type GitOpsMessageBus struct {
 	conn    *amqp.Connection
 	channel *amqp.Channel
@@ -235,8 +238,11 @@ func (gmb *GitOpsMessageBus) Close() error {
 	return nil
 }
 
-func (gmb *GitOpsMessageBus) GetChannel() *amqp.Channel {
-	return gmb.channel
+func (gmb *GitOpsMessageBus) GetChannel() (*amqp.Channel, error) {
+	if gmb.channel == nil || gmb.channel.IsClosed() {
+		return nil, fmt.Errorf("channel is closed or nil")
+	}
+	return gmb.channel, nil
 }
 
 func (gmb *GitOpsMessageBus) IsConnected() bool {
