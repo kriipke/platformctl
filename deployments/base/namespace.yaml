@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contextops
+  labels:
+    name: contextops
+    app.kubernetes.io/name: contextops
+    app.kubernetes.io/part-of: contextops-platform

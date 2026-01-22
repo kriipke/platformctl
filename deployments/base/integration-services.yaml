@@ -1,0 +1,789 @@
+# App Sync Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-sync-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: app-sync-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-sync-svc
+  template:
+    metadata:
+      labels:
+        app: app-sync-svc
+        app.kubernetes.io/name: app-sync-svc
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: integration-service
+    spec:
+      containers:
+      - name: app-sync-svc
+        image: ghcr.io/kriipke/platformctl-app-sync-svc:latest
+        ports:
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVICE_NAME
+          value: "app-sync-svc"
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        - name: ENABLE_ARGOCD_INTEGRATION
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: ENABLE_ARGOCD_INTEGRATION
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-sync-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: app-sync-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  selector:
+    app: app-sync-svc
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP
+---
+# Environment Validation Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: environment-validation-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: environment-validation-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: environment-validation-svc
+  template:
+    metadata:
+      labels:
+        app: environment-validation-svc
+        app.kubernetes.io/name: environment-validation-svc
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: integration-service
+    spec:
+      containers:
+      - name: environment-validation-svc
+        image: ghcr.io/kriipke/platformctl-environment-validation-svc:latest
+        ports:
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVICE_NAME
+          value: "environment-validation-svc"
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        - name: ENABLE_VAULT_INTEGRATION
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: ENABLE_VAULT_INTEGRATION
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: environment-validation-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: environment-validation-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  selector:
+    app: environment-validation-svc
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP
+---
+# Context Correlation Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: context-correlation-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: context-correlation-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: context-correlation-svc
+  template:
+    metadata:
+      labels:
+        app: context-correlation-svc
+        app.kubernetes.io/name: context-correlation-svc
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: integration-service
+    spec:
+      containers:
+      - name: context-correlation-svc
+        image: ghcr.io/kriipke/platformctl-context-correlation-svc:latest
+        ports:
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVICE_NAME
+          value: "context-correlation-svc"
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: context-correlation-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: context-correlation-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  selector:
+    app: context-correlation-svc
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP
+---
+# Multi-Environment Kubernetes Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-environment-kube-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: multi-environment-kube-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-environment-kube-svc
+  template:
+    metadata:
+      labels:
+        app: multi-environment-kube-svc
+        app.kubernetes.io/name: multi-environment-kube-svc
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: integration-service
+    spec:
+      containers:
+      - name: multi-environment-kube-svc
+        image: ghcr.io/kriipke/platformctl-multi-environment-kube-svc:latest
+        ports:
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVICE_NAME
+          value: "multi-environment-kube-svc"
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        - name: ENABLE_KUBERNETES_INTEGRATION
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: ENABLE_KUBERNETES_INTEGRATION
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-environment-kube-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: multi-environment-kube-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  selector:
+    app: multi-environment-kube-svc
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP
+---
+# Customer Git Branch Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-git-branch-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: customer-git-branch-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: customer-git-branch-svc
+  template:
+    metadata:
+      labels:
+        app: customer-git-branch-svc
+        app.kubernetes.io/name: customer-git-branch-svc
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: integration-service
+    spec:
+      containers:
+      - name: customer-git-branch-svc
+        image: ghcr.io/kriipke/platformctl-customer-git-branch-svc:latest
+        ports:
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: SERVICE_NAME
+          value: "customer-git-branch-svc"
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        - name: ENABLE_GIT_INTEGRATION
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: ENABLE_GIT_INTEGRATION
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-git-branch-svc
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: customer-git-branch-svc
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: integration-service
+spec:
+  selector:
+    app: customer-git-branch-svc
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP

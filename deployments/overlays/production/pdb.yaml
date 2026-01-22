@@ -1,0 +1,143 @@
+# Pod Disruption Budget for Gateway
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: gateway-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: gateway
+---
+# Pod Disruption Budget for GitOps Aggregator (single instance)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gitops-aggregator-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: gitops-aggregator-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  maxUnavailable: 0  # Never disrupt the single aggregator instance
+  selector:
+    matchLabels:
+      app: gitops-aggregator
+---
+# Pod Disruption Budget for App Sync Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app-sync-svc-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: app-sync-svc-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: app-sync-svc
+---
+# Pod Disruption Budget for Environment Validation Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: environment-validation-svc-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: environment-validation-svc-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: environment-validation-svc
+---
+# Pod Disruption Budget for Context Correlation Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: context-correlation-svc-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: context-correlation-svc-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: context-correlation-svc
+---
+# Pod Disruption Budget for Multi-Environment Kubernetes Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: multi-environment-kube-svc-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: multi-environment-kube-svc-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: multi-environment-kube-svc
+---
+# Pod Disruption Budget for Customer Git Branch Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: customer-git-branch-svc-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: customer-git-branch-svc-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: customer-git-branch-svc
+---
+# Pod Disruption Budget for PostgreSQL
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: postgres-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  maxUnavailable: 0  # Never disrupt the database
+  selector:
+    matchLabels:
+      app: postgres
+---
+# Pod Disruption Budget for RabbitMQ
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rabbitmq-pdb
+  namespace: contextops-prod
+  labels:
+    app.kubernetes.io/name: rabbitmq-pdb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/environment: production
+spec:
+  maxUnavailable: 0  # Never disrupt the message queue
+  selector:
+    matchLabels:
+      app: rabbitmq

@@ -1,0 +1,71 @@
+# Git
+.git/
+.gitignore
+
+# Build artifacts
+bin/
+*.o
+*.a
+*.so
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Node.js (if any frontend components)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Go specific
+*.test
+*.prof
+coverage.out
+
+# Documentation
+docs/
+*.md
+README.md
+
+# Development environment
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Development tools
+Makefile
+docker-compose*.yml
+scripts/dev/
+
+# Test files
+*_test.go
+test/
+testdata/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Deployment files (already copied if needed)
+deployments/
+k8s/
+charts/
+
+# Local development
+*.local
