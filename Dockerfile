@@ -2,7 +2,7 @@
 # Optimized for production deployment with minimal attack surface
 
 # Stage 1: Build environment
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -17,6 +17,14 @@ WORKDIR /build
 
 # Copy go mod files and download dependencies
 COPY go.mod go.sum ./
+
+# Set Go proxy for faster downloads and enable module caching
+ENV GOPROXY=https://proxy.golang.org,direct \
+    GOSUMDB=sum.golang.org \
+    GOCACHE=/tmp/gocache \
+    GOMODCACHE=/tmp/gomodcache
+
+# Download and verify dependencies with timeout
 RUN go mod download && go mod verify
 
 # Copy source code
