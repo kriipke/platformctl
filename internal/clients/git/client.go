@@ -12,6 +12,7 @@ type GitClient interface {
 	GetFileContent(gitRepo, filePath string) ([]byte, error)
 	GetLastModifiedTime(gitRepo, filePath string) (time.Time, error)
 	ValidateCustomerBranch(customerID, branch, repositoryURL string) (*api.CustomerBranchValidation, error)
+	ValidateGitSources(customerID, appName string) ([]api.GitSourceStatus, error)
 }
 
 type GitClientImpl struct{}
