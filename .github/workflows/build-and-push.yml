@@ -100,18 +100,18 @@ jobs:
               CHANGED=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
             fi
             
-            # Convert to JSON array
+            # Convert to JSON array using printf for better reliability
             if [[ ${#CHANGED[@]} -gt 0 ]]; then
-              # Build JSON array with proper quoting
-              JSON_SERVICES=""
+              # Use printf to build JSON array with proper escaping
+              CHANGED_SERVICES='['
               for i in "${!CHANGED[@]}"; do
                 if [[ $i -eq 0 ]]; then
-                  JSON_SERVICES="\"${CHANGED[i]}\""
+                  CHANGED_SERVICES+="\"${CHANGED[i]}\""
                 else
-                  JSON_SERVICES="${JSON_SERVICES},\"${CHANGED[i]}\""
+                  CHANGED_SERVICES+=",\"${CHANGED[i]}\""
                 fi
               done
-              CHANGED_SERVICES="[${JSON_SERVICES}]"
+              CHANGED_SERVICES+=']'
             else
               CHANGED_SERVICES='[]'
             fi
