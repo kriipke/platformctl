@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -20,6 +21,7 @@ import (
 	"github.com/contextops/platformctl/internal/database"
 	"github.com/contextops/platformctl/internal/events"
 	"github.com/contextops/platformctl/internal/handlers"
+	"github.com/contextops/platformctl/internal/models"
 	"github.com/contextops/platformctl/internal/observability"
 	"github.com/contextops/platformctl/internal/readmodel"
 	"github.com/contextops/platformctl/internal/storage"
@@ -286,7 +288,18 @@ func ginBasicAuthMiddleware() gin.HandlerFunc {
 
 		// Set customer in Gin context (configurable via environment variable)
 		customerID := getEnv("DEFAULT_CUSTOMER_ID", "acme-corp")
+		
+		// Create a Customer object for GitOps handlers
+		customer := &models.Customer{
+			ID:       uuid.New(), // Generate a UUID for the customer
+			Name:     customerID,
+			Username: username,
+			Email:    username + "@example.com",
+			Active:   true,
+		}
+		
 		c.Set("customer_id", customerID)
+		c.Set("customer", customer)
 		c.Set("username", username)
 
 		// Continue to next handler
