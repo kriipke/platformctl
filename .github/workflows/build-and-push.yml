@@ -45,12 +45,72 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       environment: ${{ steps.meta.outputs.environment }}
       should_push: ${{ steps.meta.outputs.should_push }}
-      cache_key: ${{ steps.meta.outputs.cache_key }}
+      changed_services: ${{ steps.changes.outputs.changed_services }}
+      skip_unchanged: ${{ steps.changes.outputs.skip_unchanged }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Detect changed services
+        id: changes
+        run: |
+          # Skip change detection for tags, main, or workflow_dispatch
+          SKIP_UNCHANGED="false"
+          CHANGED_SERVICES='[]'
+          
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
+            echo "Force rebuild requested - building all services"
+            CHANGED_SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Tag or main branch - building all services"
+            CHANGED_SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
+          else
+            # Detect changes for PR and develop branch builds
+            SKIP_UNCHANGED="true"
+            
+            # Get list of changed files
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            else
+              BASE_SHA="HEAD~1"
+            fi
+            
+            # Get changed files
+            CHANGED_FILES=$(git diff --name-only ${BASE_SHA}..HEAD)
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            
+            # Detect which services were changed
+            SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
+            CHANGED=()
+            
+            for service in "${SERVICES[@]}"; do
+              # Check if service-specific files changed
+              if echo "$CHANGED_FILES" | grep -E "(^cmd/$service/|^internal/|^pkg/|go\.mod|go\.sum|Dockerfile)" > /dev/null; then
+                CHANGED+=("\"$service\"")
+                echo "Service $service has changes"
+              fi
+            done
+            
+            # If core files changed, rebuild all services
+            if echo "$CHANGED_FILES" | grep -E "(^internal/|^pkg/|go\.mod|go\.sum|Dockerfile)" > /dev/null; then
+              echo "Core files changed - building all services"
+              CHANGED=("\"gateway\"" "\"gitops-aggregator\"" "\"app-sync-svc\"" "\"environment-validation-svc\"" "\"context-correlation-svc\"" "\"multi-environment-kube-svc\"" "\"customer-git-branch-svc\"")
+            fi
+            
+            # Convert to JSON array
+            if [[ ${#CHANGED[@]} -gt 0 ]]; then
+              CHANGED_SERVICES="[$(IFS=,; echo "${CHANGED[*]}")]"
+            else
+              CHANGED_SERVICES='[]'
+            fi
+          fi
+          
+          echo "skip_unchanged=${SKIP_UNCHANGED}" >> $GITHUB_OUTPUT
+          echo "changed_services=${CHANGED_SERVICES}" >> $GITHUB_OUTPUT
+          echo "Services to build: ${CHANGED_SERVICES}"
 
       - name: Setup build metadata
         id: meta
@@ -76,7 +136,7 @@ jobs:
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             TAG="latest"
           elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            TAG="dev-latest"
+            TAG="develop"
           elif [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
             TAG="${{ github.ref_name }}-rc"
           else
@@ -89,15 +149,9 @@ jobs:
             SHOULD_PUSH="true"
           fi
 
-          # Cache key for build dependencies
-          # Add timestamp to force fresh cache due to corruption issues
-          TIMESTAMP=$(date +%Y%m%d)
-          CACHE_KEY="${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-docker-${{ hashFiles('**/Dockerfile') }}-${TIMESTAMP}"
-
           echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "should_push=${SHOULD_PUSH}" >> $GITHUB_OUTPUT
-          echo "cache_key=${CACHE_KEY}" >> $GITHUB_OUTPUT
 
           echo "Build Environment: ${ENVIRONMENT}"
           echo "Image Tag: ${TAG}"
@@ -106,8 +160,12 @@ jobs:
       - name: Generate services matrix
         id: services
         run: |
-          # Get services from build script or define them here
-          SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
+          # Use changed services if detection is enabled, otherwise all services
+          if [[ "${{ steps.changes.outputs.skip_unchanged }}" == "true" ]]; then
+            SERVICES="${{ steps.changes.outputs.changed_services }}"
+          else
+            SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
+          fi
           
           echo "matrix=${SERVICES}" >> $GITHUB_OUTPUT
           echo "Services to build: ${SERVICES}"
@@ -117,6 +175,8 @@ jobs:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: setup
+    # Skip if no services to build
+    if: needs.setup.outputs.services != '[]'
     strategy:
       fail-fast: false
       matrix:
@@ -124,43 +184,15 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.23'
-          cache: true
-
-      - name: Clean Go cache on cache conflicts
-        run: |
-          # Remove potentially corrupted cache files if they exist
-          rm -rf ~/.cache/go-build/* || true
-          go clean -modcache || true
-        continue-on-error: true
-
-      - name: Cache Go dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ needs.setup.outputs.cache_key }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-docker-
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-
-            ${{ runner.os }}-go-
-          save-always: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          platforms: linux/amd64,linux/arm64
+          # Use single platform for faster builds on develop branch
+          platforms: ${{ github.ref == 'refs/heads/develop' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           driver-opts: |
             network=host
 
@@ -178,48 +210,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/platformctl-${{ matrix.service }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ needs.setup.outputs.tag }}
           labels: |
             org.opencontainers.image.title=ContextOps ${{ matrix.service }}
             org.opencontainers.image.description=GitOps-optimized application monitoring platform - ${{ matrix.service }}
             org.opencontainers.image.vendor=ContextOps
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/blob/main/README.md
-
-      - name: Verify service exists
-        run: |
-          if [[ ! -d "cmd/${{ matrix.service }}" ]]; then
-            echo "Service directory not found: cmd/${{ matrix.service }}"
-            exit 1
-          fi
-          echo "Building service: ${{ matrix.service }}"
-
-      - name: Download Go dependencies
-        run: |
-          go mod download
-          go mod verify
-
-      - name: Run Go tests
-        run: |
-          if ls cmd/${{ matrix.service }}/*_test.go 2>/dev/null; then
-            go test -v ./cmd/${{ matrix.service }}/
-          else
-            echo "No tests found for ${{ matrix.service }}, skipping"
-          fi
-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.ref == 'refs/heads/develop' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ needs.setup.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -228,14 +230,29 @@ jobs:
             VERSION=${{ needs.setup.outputs.tag }}
             COMMIT_SHA=${{ github.sha }}
             BUILD_DATE=${{ github.run_id }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
-          provenance: true
-          sbom: true
+          # Enhanced caching strategy
+          cache-from: |
+            type=gha,scope=${{ matrix.service }}
+            type=gha,scope=buildkit-base
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.service }}
+            type=gha,mode=max,scope=buildkit-base
 
+  # Lightweight security scan (only for pushes to main/tags)
+  security-scan:
+    name: Security Scan ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: needs.setup.outputs.should_push == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.setup.outputs.services) }}
+    permissions:
+      security-events: write
+    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        if: needs.setup.outputs.should_push == 'true'
         continue-on-error: true
         with:
           image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/platformctl-${{ matrix.service }}:${{ needs.setup.outputs.tag }}
@@ -244,118 +261,11 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
-        if: needs.setup.outputs.should_push == 'true'
         continue-on-error: true
         with:
           sarif_file: 'trivy-results.sarif'
 
-  # Job to update deployment manifests
-  update-manifests:
-    name: Update Deployment Manifests
-    runs-on: ubuntu-latest
-    needs: [setup, build]
-    if: needs.setup.outputs.should_push == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v'))
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Set up Kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
-
-      - name: Update image tags in Kustomize overlays
-        run: |
-          ENVIRONMENT="${{ needs.setup.outputs.environment }}"
-          TAG="${{ needs.setup.outputs.tag }}"
-          
-          echo "Updating images for environment: ${ENVIRONMENT}"
-          echo "New tag: ${TAG}"
-          
-          # Update the appropriate overlay
-          OVERLAY_DIR="deployments/overlays/${ENVIRONMENT}"
-          if [[ ! -d "${OVERLAY_DIR}" ]]; then
-            echo "Overlay directory not found: ${OVERLAY_DIR}"
-            exit 1
-          fi
-          
-          # Update each service image tag
-          cd "${OVERLAY_DIR}"
-          
-          SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
-          
-          for service in "${SERVICES[@]}"; do
-            echo "Updating ${service} to tag ${TAG}"
-            kustomize edit set image "ghcr.io/${{ github.repository_owner }}/platformctl-${service}:${TAG}"
-          done
-
-      - name: Create Pull Request for manifest updates
-        if: github.ref != 'refs/heads/main'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            chore: update ${{ needs.setup.outputs.environment }} images to ${{ needs.setup.outputs.tag }}
-            
-            - Updated all service images to tag ${{ needs.setup.outputs.tag }}
-            - Environment: ${{ needs.setup.outputs.environment }}
-            - Commit: ${{ github.sha }}
-            
-            🤖 Generated by GitHub Actions
-          title: 'chore: update ${{ needs.setup.outputs.environment }} images to ${{ needs.setup.outputs.tag }}'
-          body: |
-            ## Image Updates
-            
-            This PR updates the Kubernetes deployment manifests with new container images.
-            
-            - **Environment**: `${{ needs.setup.outputs.environment }}`
-            - **New Tag**: `${{ needs.setup.outputs.tag }}`
-            - **Source Commit**: ${{ github.sha }}
-            - **Workflow**: ${{ github.workflow }}
-            
-            ### Changes
-            - Updated all ContextOps service images to use tag `${{ needs.setup.outputs.tag }}`
-            - Modified Kustomize overlay: `deployments/overlays/${{ needs.setup.outputs.environment }}`
-            
-            ### Images Updated
-            ${{ join(fromJson(needs.setup.outputs.services), ', ') }}
-            
-            ### Verification
-            - [ ] All images built successfully
-            - [ ] Security scans completed
-            - [ ] Manifest syntax is valid
-            
-            🤖 This PR was created automatically by GitHub Actions.
-          branch: update-images-${{ needs.setup.outputs.environment }}-${{ github.run_id }}
-          delete-branch: true
-
-      - name: Commit manifest updates directly (main branch)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          if git diff --quiet; then
-            echo "No changes to commit"
-          else
-            git add deployments/overlays/
-            git commit -m "chore: update ${{ needs.setup.outputs.environment }} images to ${{ needs.setup.outputs.tag }}
-
-            - Updated all service images to tag ${{ needs.setup.outputs.tag }}
-            - Environment: ${{ needs.setup.outputs.environment }}
-            - Commit: ${{ github.sha }}
-            
-            🤖 Generated by GitHub Actions"
-            git push
-          fi
-
-  # Job to create GitHub release for tags
+  # Job to create GitHub release for tags (simplified)
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
@@ -369,92 +279,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Get the previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          CURRENT_TAG=${{ github.ref_name }}
-          
-          echo "Generating changelog from ${PREVIOUS_TAG} to ${CURRENT_TAG}"
-          
-          # Generate changelog
-          if [[ -n "${PREVIOUS_TAG}" ]]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${PREVIOUS_TAG}..HEAD | head -20)
-          else
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --max-count=20)
-          fi
-          
-          # Save changelog
-          cat << EOF > changelog.md
-          ## What's Changed
-          
-          ${CHANGELOG}
-          
-          ## Container Images
-          
-          All images are available at: \`ghcr.io/${{ github.repository_owner }}/platformctl-SERVICE_NAME:${CURRENT_TAG}\`
-          
-          ### Services
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-gateway:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-gitops-aggregator:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-app-sync-svc:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-environment-validation-svc:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-context-correlation-svc:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-multi-environment-kube-svc:${CURRENT_TAG}\`
-          - \`ghcr.io/${{ github.repository_owner }}/platformctl-customer-git-branch-svc:${CURRENT_TAG}\`
-          
-          ## Installation
-          
-          \`\`\`bash
-          # Deploy to development
-          ./scripts/deploy.sh -e development
-          
-          # Deploy to production (specific version)
-          ENVIRONMENT=production VERSION=${CURRENT_TAG} ./scripts/deploy.sh
-          \`\`\`
-          
-          ## Full Changelog
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}
-          EOF
-          
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          cat changelog.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: ContextOps ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          body: |
+            ## ContextOps Release ${{ github.ref_name }}
+            
+            ### Container Images
+            All images are available at: `ghcr.io/${{ github.repository_owner }}/platformctl-SERVICE_NAME:${{ github.ref_name }}`
+            
+            ### Services
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-gateway:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-gitops-aggregator:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-app-sync-svc:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-environment-validation-svc:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-context-correlation-svc:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-multi-environment-kube-svc:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository_owner }}/platformctl-customer-git-branch-svc:${{ github.ref_name }}`
+            
+            ### Installation
+            ```bash
+            kubectl apply -k deployments/base
+            ```
           draft: false
           prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') }}
           generate_release_notes: true
-
-  # Job to clean up old images
-  cleanup:
-    name: Cleanup Old Images
-    runs-on: ubuntu-latest
-    needs: [setup, build]
-    if: needs.setup.outputs.should_push == 'true' && github.ref == 'refs/heads/main'
-    permissions:
-      packages: write
-    steps:
-      - name: Cleanup old container images
-        uses: actions/delete-package-versions@v4
-        continue-on-error: true
-        with:
-          package-name: platformctl-gateway
-          package-type: container
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: true
-
-      - name: Cleanup old development images
-        uses: actions/delete-package-versions@v4
-        continue-on-error: true
-        with:
-          package-name: platformctl-gateway
-          package-type: container
-          min-versions-to-keep: 5
-          token: ${{ secrets.GITHUB_TOKEN }}
