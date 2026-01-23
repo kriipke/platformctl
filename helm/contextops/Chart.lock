@@ -1,0 +1,9 @@
+dependencies:
+- name: argo-cd
+  repository: https://argoproj.github.io/argo-helm
+  version: 9.3.5
+- name: vault
+  repository: https://helm.releases.hashicorp.com
+  version: 0.30.1
+digest: sha256:91d5a5dc636b5fe8f0ce264dfd25b6efebc2098d068a11abf4b13d87f9edd54b
+generated: "2026-01-23T16:42:11.240665-05:00"

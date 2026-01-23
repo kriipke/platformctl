@@ -1,0 +1,119 @@
+{{- if and .Values.contextopsIntegration.argocd.enabled .Values.argocd.enabled }}
+---
+# ServiceAccount for ArgoCD Integration
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.contextopsIntegration.argocd.serviceAccount }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-integration
+automountServiceAccountToken: true
+---
+# ClusterRole for ArgoCD Integration
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.contextopsIntegration.argocd.rbac.clusterRole }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-integration
+rules:
+{{- range .Values.contextopsIntegration.argocd.rbac.rules }}
+- apiGroups: {{ .apiGroups | toJson }}
+  resources: {{ .resources | toJson }}
+  verbs: {{ .verbs | toJson }}
+{{- end }}
+---
+# ClusterRoleBinding for ArgoCD Integration
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.contextopsIntegration.argocd.rbac.clusterRole }}-binding
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-integration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.contextopsIntegration.argocd.rbac.clusterRole }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.contextopsIntegration.argocd.serviceAccount }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+{{- end }}
+
+{{- if and .Values.contextopsIntegration.vault.enabled .Values.vault.enabled }}
+---
+# ServiceAccount for Vault Integration
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.contextopsIntegration.vault.serviceAccount }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault-integration
+  annotations:
+    vault.hashicorp.com/auth-path: {{ .Values.contextopsIntegration.vault.auth.path }}
+    vault.hashicorp.com/role: {{ .Values.contextopsIntegration.vault.auth.role }}
+    vault.hashicorp.com/agent-inject: "true"
+automountServiceAccountToken: true
+{{- end }}
+
+{{- if or .Values.contextopsIntegration.argocd.enabled .Values.contextopsIntegration.vault.enabled }}
+---
+# Role for Integration Services within ContextOps namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: {{ .Values.namespace | default "contextops" }}
+  name: {{ include "contextops.fullname" . }}-integration-role
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: integration-role
+rules:
+# Access to ConfigMaps and Secrets for integration configuration
+- apiGroups: [""]
+  resources:
+    - configmaps
+    - secrets
+  verbs: ["get", "list", "watch"]
+# Access to services for integration endpoints
+- apiGroups: [""]
+  resources:
+    - services
+    - endpoints
+  verbs: ["get", "list", "watch"]
+# Access to pods for health checking integration services
+- apiGroups: [""]
+  resources:
+    - pods
+  verbs: ["get", "list", "watch"]
+---
+# RoleBinding for Integration Services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: {{ .Values.namespace | default "contextops" }}
+  name: {{ include "contextops.fullname" . }}-integration-binding
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: integration-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "contextops.fullname" . }}-integration-role
+subjects:
+{{- if .Values.contextopsIntegration.argocd.enabled }}
+- kind: ServiceAccount
+  name: {{ .Values.contextopsIntegration.argocd.serviceAccount }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+{{- end }}
+{{- if .Values.contextopsIntegration.vault.enabled }}
+- kind: ServiceAccount
+  name: {{ .Values.contextopsIntegration.vault.serviceAccount }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+{{- end }}
+{{- end }}

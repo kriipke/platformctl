@@ -653,3 +653,289 @@ metricsLoadBalancer:
 # Service Discovery configuration
 serviceDiscovery:
   enabled: true
+
+# =============================================================================
+# SubChart Configurations
+# =============================================================================
+
+# ArgoCD Configuration (Subchart)
+argocd:
+  enabled: true
+  
+  # ArgoCD Server Configuration
+  server:
+    # Enable ArgoCD UI access
+    service:
+      type: ClusterIP
+      port: 443
+      portName: https
+    
+    # Configure RBAC for ContextOps integration
+    rbacConfig:
+      policy.default: role:readonly
+      policy.csv: |
+        p, role:contextops-admin, applications, *, */*, allow
+        p, role:contextops-admin, clusters, get, *, allow
+        p, role:contextops-admin, repositories, get, *, allow
+        p, role:contextops-readonly, applications, get, */*, allow
+        p, role:contextops-readonly, clusters, get, *, allow
+        p, role:contextops-readonly, repositories, get, *, allow
+        g, contextops:admin, role:contextops-admin
+        g, contextops:readonly, role:contextops-readonly
+    
+    # Configure to work with ContextOps monitoring
+    config:
+      application.instanceLabelKey: contextops.io/instance
+      url: http://argocd-server.contextops.svc.cluster.local
+      oidc.config: |
+        name: ContextOps OIDC
+        issuer: https://argocd-server.contextops.svc.cluster.local/api/dex
+        clientId: contextops
+        clientSecret: $oidc.contextops.clientSecret
+        requestedScopes: ["openid", "profile", "email", "groups"]
+        requestedIDTokenClaims: {"groups": {"essential": true}}
+    
+    # Additional configuration for GitOps monitoring
+    additionalApplications:
+      - name: contextops-apps
+        namespace: contextops
+        project: default
+        source:
+          repoURL: https://github.com/kriipke/platformctl.git
+          targetRevision: HEAD
+          path: deployments/apps
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: contextops
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
+          syncOptions:
+            - CreateNamespace=true
+  
+  # ArgoCD Repository Server Configuration  
+  repoServer:
+    # Enable Helm support
+    env:
+      - name: HELM_CACHE_HOME
+        value: /helm-working-dir
+      - name: HELM_CONFIG_HOME
+        value: /helm-working-dir
+      - name: HELM_DATA_HOME
+        value: /helm-working-dir
+    
+    # Volume mounts for Helm
+    volumes:
+      - name: helm-working-dir
+        emptyDir: {}
+    
+    volumeMounts:
+      - name: helm-working-dir
+        mountPath: /helm-working-dir
+  
+  # Application Controller Configuration
+  controller:
+    # Configure for high availability
+    replicas: 1
+    
+    # Metrics configuration for ContextOps monitoring
+    metrics:
+      enabled: true
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "8082"
+    
+    # Configure resource limits
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  
+  # Redis Configuration (for ArgoCD)
+  redis:
+    enabled: true
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  # Disable components we don't need
+  notifications:
+    enabled: false
+  
+  applicationSet:
+    enabled: true
+    replicas: 1
+    
+  # Configure for ContextOps integration
+  configs:
+    secret:
+      # OIDC configuration for ContextOps
+      oidcClientSecret: contextops-secret
+    
+    # Repository credentials for GitOps integration
+    repositories:
+      contextops-repo:
+        url: https://github.com/kriipke/platformctl.git
+        type: git
+        name: contextops-repo
+        
+# Vault Configuration (Subchart)
+vault:
+  enabled: true
+  
+  # Vault Server Configuration
+  server:
+    # Enable development mode for testing (disable in production)
+    dev:
+      enabled: false
+    
+    # High Availability configuration
+    ha:
+      enabled: false
+      replicas: 1
+    
+    # Data storage configuration
+    dataStorage:
+      enabled: true
+      size: "10Gi"
+      storageClass: "do-block-storage"
+    
+    # Vault configuration
+    standalone:
+      enabled: true
+      config: |
+        ui = true
+        
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+        
+        storage "file" {
+          path = "/vault/data"
+        }
+        
+        # Example configuration for ContextOps integration
+        api_addr = "http://POD_IP:8200"
+        cluster_addr = "http://POD_IP:8201"
+        
+        # Enable specific secrets engines for ContextOps
+        # These will be configured via post-install hooks
+    
+    # Configure service for ContextOps access
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 8200
+      targetPort: 8200
+      annotations:
+        contextops.io/vault-server: "true"
+    
+    # Resource configuration
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsGroup: 1000
+      runAsUser: 100
+      fsGroup: 1000
+  
+  # Vault UI Configuration
+  ui:
+    enabled: true
+    serviceType: "ClusterIP"
+    
+  # Injector Configuration (for secrets injection)
+  injector:
+    enabled: true
+    
+    # Configure for ContextOps workloads
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    
+    # Webhook configuration for ContextOps namespace
+    namespaceSelector:
+      matchLabels:
+        name: contextops
+    
+    # Configure logging
+    logLevel: "info"
+    
+    # Enable metrics for monitoring
+    metrics:
+      enabled: true
+  
+  # Configure Vault for ContextOps integration
+  serverTelemetry:
+    prometheusOperator: false
+    prometheus:
+      enabled: true
+      
+# ContextOps Integration Configuration
+contextopsIntegration:
+  # ArgoCD Integration
+  argocd:
+    enabled: true
+    # Service account for ArgoCD access
+    serviceAccount: "contextops-argocd-integration"
+    # RBAC configuration
+    rbac:
+      # ClusterRole for ArgoCD monitoring
+      clusterRole: "contextops-argocd-reader"
+      rules:
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications", "applicationsets", "appprojects"]
+          verbs: ["get", "list", "watch"]
+    # API endpoints for integration
+    endpoints:
+      applications: "/api/v1/applications"
+      clusters: "/api/v1/clusters"
+      repositories: "/api/v1/repositories"
+  
+  # Vault Integration  
+  vault:
+    enabled: true
+    # Service account for Vault access
+    serviceAccount: "contextops-vault-integration"
+    # Authentication method
+    auth:
+      method: "kubernetes"
+      path: "kubernetes"
+      role: "contextops-role"
+    # Policies for ContextOps access
+    policies:
+      - name: "contextops-secrets-read"
+        path: "secret/*"
+        capabilities: ["read", "list"]
+      - name: "contextops-kv-read"  
+        path: "kv/data/contextops/*"
+        capabilities: ["read", "list"]
+    # Secret paths for ContextOps monitoring
+    secretPaths:
+      - "secret/contextops/dev/*"
+      - "secret/contextops/qa/*" 
+      - "secret/contextops/prod/*"
+      - "kv/contextops/database"
+      - "kv/contextops/external-services"
