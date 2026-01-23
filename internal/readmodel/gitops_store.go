@@ -37,7 +37,8 @@ type ContextStatus struct {
 	ResourceCount        int                    `json:"resource_count" db:"resource_count"`
 	LastSyncTime         *time.Time             `json:"last_sync_time" db:"last_sync_time"`
 	LastDeploymentTime   *time.Time             `json:"last_deployment_time" db:"last_deployment_time"`
-	CorrelationData      map[string]interface{} `json:"correlation_data" db:"correlation_data"`
+	CorrelationData      map[string]interface{} `json:"correlation_data"`
+	correlationDataJSON  []byte                 `db:"correlation_data"`
 	ValidationErrors     []string               `json:"validation_errors" db:"validation_errors"`
 	GitCommit            string                 `json:"git_commit" db:"git_commit"`
 	HelmRevision         string                 `json:"helm_revision" db:"helm_revision"`
@@ -129,7 +130,6 @@ type VaultValidationDetail struct {
 // GetContextStatus retrieves the current status of a context
 func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextName string) (*ContextStatus, error) {
 	var status ContextStatus
-	var correlationDataJSON []byte
 
 	query := `
 		SELECT customer_id, context_name, app_reference, environment_reference,
@@ -149,8 +149,8 @@ func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextN
 	}
 
 	// Parse correlation data JSON
-	if len(correlationDataJSON) > 0 {
-		if err := json.Unmarshal(correlationDataJSON, &status.CorrelationData); err != nil {
+	if len(status.correlationDataJSON) > 0 {
+		if err := json.Unmarshal(status.correlationDataJSON, &status.CorrelationData); err != nil {
 			return nil, fmt.Errorf("failed to parse correlation data: %w", err)
 		}
 	}
