@@ -1,0 +1,139 @@
+{{- if .Values.loadBalancer.enabled }}
+# LoadBalancer service for external access (cloud environments)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-external-lb
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: load-balancer
+  annotations:
+    {{- if eq .Values.loadBalancer.provider "aws" }}
+    # AWS Load Balancer Controller annotations
+    service.beta.kubernetes.io/aws-load-balancer-type: {{ .Values.loadBalancer.aws.type | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: {{ .Values.loadBalancer.aws.scheme | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: {{ .Values.loadBalancer.aws.crossZoneLoadBalancing | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-target-type: {{ .Values.loadBalancer.aws.targetType | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "HTTP"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/health"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval-seconds: {{ .Values.loadBalancer.healthCheck.intervalSeconds | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout-seconds: {{ .Values.loadBalancer.healthCheck.timeoutSeconds | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-healthy-threshold-count: {{ .Values.loadBalancer.healthCheck.healthyThresholdCount | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-unhealthy-threshold-count: {{ .Values.loadBalancer.healthCheck.unhealthyThresholdCount | quote }}
+    {{- end }}
+    {{- if eq .Values.loadBalancer.provider "azure" }}
+    # Azure Load Balancer annotations
+    service.beta.kubernetes.io/azure-load-balancer-internal: {{ .Values.loadBalancer.azure.internal | quote }}
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/health"
+    {{- end }}
+    {{- if eq .Values.loadBalancer.provider "gcp" }}
+    # GCP Load Balancer annotations
+    cloud.google.com/load-balancer-type: {{ .Values.loadBalancer.gcp.type | quote }}
+    {{- end }}
+    {{- if .Values.loadBalancer.annotations }}
+    {{- toYaml .Values.loadBalancer.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  selector:
+    app: {{ include "contextops.fullname" . }}-gateway
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: {{ .Values.gateway.service.port }}
+  {{- if .Values.loadBalancer.https.enabled }}
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: {{ .Values.gateway.service.port }}
+  {{- end }}
+  sessionAffinity: None
+  externalTrafficPolicy: {{ .Values.loadBalancer.externalTrafficPolicy }}
+  {{- if .Values.loadBalancer.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.loadBalancer.loadBalancerIP }}
+  {{- end }}
+  {{- if .Values.loadBalancer.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range .Values.loadBalancer.loadBalancerSourceRanges }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if .Values.metricsLoadBalancer.enabled }}
+---
+# Internal load balancer for metrics (monitoring access only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-metrics-lb
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-load-balancer
+  annotations:
+    {{- if eq .Values.metricsLoadBalancer.provider "aws" }}
+    # AWS Internal Load Balancer
+    service.beta.kubernetes.io/aws-load-balancer-type: {{ .Values.metricsLoadBalancer.aws.type | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: {{ .Values.metricsLoadBalancer.aws.crossZoneLoadBalancing | quote }}
+    {{- end }}
+    {{- if eq .Values.metricsLoadBalancer.provider "azure" }}
+    # Azure Internal Load Balancer
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    {{- end }}
+    {{- if eq .Values.metricsLoadBalancer.provider "gcp" }}
+    # GCP Internal Load Balancer
+    cloud.google.com/load-balancer-type: "Internal"
+    {{- end }}
+    {{- if .Values.metricsLoadBalancer.annotations }}
+    {{- toYaml .Values.metricsLoadBalancer.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/part-of: contextops-platform
+  ports:
+  - name: gateway-metrics
+    protocol: TCP
+    port: {{ .Values.config.metrics.port }}
+    targetPort: {{ .Values.config.metrics.port }}
+  {{- if .Values.gitopsAggregator.enabled }}
+  - name: aggregator-metrics
+    protocol: TCP
+    port: {{ add .Values.config.metrics.port 1 }}
+    targetPort: {{ .Values.config.metrics.port }}
+  {{- end }}
+  sessionAffinity: None
+  externalTrafficPolicy: {{ .Values.metricsLoadBalancer.externalTrafficPolicy }}
+{{- end }}
+{{- if .Values.serviceDiscovery.enabled }}
+---
+# Headless service for service discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-discovery
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service-discovery
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: contextops-platform
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: health
+    protocol: TCP
+    port: {{ .Values.config.healthCheck.port }}
+    targetPort: {{ .Values.config.healthCheck.port }}
+  - name: metrics
+    protocol: TCP
+    port: {{ .Values.config.metrics.port }}
+    targetPort: {{ .Values.config.metrics.port }}
+{{- end }}

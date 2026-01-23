@@ -1,0 +1,43 @@
+1. Get the application URL by running these commands:
+{{- if .Values.loadBalancer.enabled }}
+{{- if contains "NodePort" .Values.gateway.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Values.namespace | default "contextops" }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "contextops.fullname" . }}-gateway)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Values.namespace | default "contextops" }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.gateway.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Values.namespace | default "contextops" }} svc -w {{ include "contextops.fullname" . }}-external-lb'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.namespace | default "contextops" }} {{ include "contextops.fullname" . }}-external-lb --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:80
+{{- else if contains "ClusterIP" .Values.gateway.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Values.namespace | default "contextops" }} -l "app.kubernetes.io/name={{ include "contextops.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Values.namespace | default "contextops" }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Values.namespace | default "contextops" }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Values.namespace | default "contextops" }} -l "app.kubernetes.io/name={{ include "contextops.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Values.namespace | default "contextops" }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Values.namespace | default "contextops" }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Check the health of your ContextOps deployment:
+  kubectl get pods -n {{ .Values.namespace | default "contextops" }}
+
+3. View logs for troubleshooting:
+  kubectl logs -n {{ .Values.namespace | default "contextops" }} -l app.kubernetes.io/name={{ include "contextops.name" . }}
+
+4. Access RabbitMQ Management UI (if enabled):
+{{- if .Values.rabbitmq.enabled }}
+  kubectl port-forward -n {{ .Values.namespace | default "contextops" }} svc/{{ include "contextops.fullname" . }}-rabbitmq 15672:15672
+  # Then visit http://localhost:15672 (login: {{ .Values.rabbitmq.auth.username }}/{{ .Values.rabbitmq.auth.password }})
+{{- end }}
+
+5. Access PostgreSQL (if enabled):
+{{- if .Values.postgres.enabled }}
+  kubectl port-forward -n {{ .Values.namespace | default "contextops" }} svc/{{ include "contextops.fullname" . }}-postgres 5432:5432
+  # Connect using: psql -h localhost -U {{ .Values.postgres.auth.username }} -d {{ .Values.postgres.auth.database }}
+{{- end }}
+
+For more information about ContextOps, visit: https://github.com/kriipke/platformctl

@@ -1,0 +1,655 @@
+# Default values for contextops
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  # Override the default image registry
+  imageRegistry: ""
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+
+# Namespace configuration
+namespace: contextops
+namespaceLabels: {}
+namespaceAnnotations: {}
+
+# Override chart and app names
+nameOverride: ""
+fullnameOverride: ""
+
+# Service Account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # Whether to auto mount the service account token
+  automountServiceAccountToken: true
+
+# RBAC configuration
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+  # RBAC rules configuration
+  rules:
+    argocd: true
+    helm: true
+    externalSecrets: true
+    vault: true
+
+# Configuration for all services
+config:
+  # Logging configuration
+  logging:
+    level: "info"
+    format: "json"
+  
+  # Metrics configuration
+  metrics:
+    enabled: true
+    port: 9090
+  
+  # Health check configuration
+  healthCheck:
+    port: 8081
+  
+  # Tracing configuration
+  tracing:
+    enabled: false
+  
+  # GitOps integrations configuration
+  integrations:
+    vault: true
+    argocd: true
+    git: true
+    kubernetes: true
+  
+  # Performance tuning
+  performance:
+    maxConcurrentRequests: 100
+    requestTimeout: "30s"
+    dbMaxOpenConns: 25
+    dbMaxIdleConns: 5
+  
+  # Authentication configuration
+  auth:
+    defaultCustomerId: "acme-corp"
+  
+  # Extra environment variables for all services
+  extraEnv: {}
+
+# Secret values (should be overridden in production)
+secrets:
+  database:
+    username: "contextops"
+    password: "contextops"
+  
+  rabbitmq:
+    username: "contextops"
+    password: "contextops"
+  
+  jwt:
+    secret: "contextops-jwt-secret-change-me"
+  
+  # Additional secrets
+  extraSecrets: {}
+
+# Gateway service configuration
+gateway:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: ghcr.io/kriipke/platformctl-gateway
+    pullPolicy: Always
+    # Override the image tag (default: Chart.appVersion)
+    tag: ""
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    nodePort: ""
+    annotations: {}
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+  
+  # Resource limits and requests
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Security contexts
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+  
+  # Health check probes
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Node selection
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Extra environment variables
+  extraEnv: {}
+
+# GitOps Aggregator configuration
+gitopsAggregator:
+  enabled: true
+  replicaCount: 1  # Single replica for read model consistency
+  
+  image:
+    repository: ghcr.io/kriipke/platformctl-gitops-aggregator
+    pullPolicy: Always
+    tag: ""
+  
+  service:
+    annotations: {}
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+  
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: {}
+
+# Integration Services configuration
+integrationServices:
+  # App Sync Service
+  app-sync-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-app-sync-svc
+      pullPolicy: Always
+      tag: ""
+    service:
+      annotations: {}
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    extraEnv: {}
+  
+  # Environment Validation Service
+  environment-validation-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-environment-validation-svc
+      pullPolicy: Always
+      tag: ""
+    service:
+      annotations: {}
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    extraEnv: {}
+  
+  # Context Correlation Service
+  context-correlation-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-context-correlation-svc
+      pullPolicy: Always
+      tag: ""
+    service:
+      annotations: {}
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    extraEnv: {}
+  
+  # Multi-Environment Kubernetes Service
+  multi-environment-kube-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
+      pullPolicy: Always
+      tag: ""
+    service:
+      annotations: {}
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    extraEnv: {}
+  
+  # Customer Git Branch Service
+  customer-git-branch-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-customer-git-branch-svc
+      pullPolicy: Always
+      tag: ""
+    service:
+      annotations: {}
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    extraEnv: {}
+
+# Kubernetes Integration Service configuration
+kubernetesIntegration:
+  enabled: true
+
+# PostgreSQL configuration
+postgres:
+  enabled: true
+  
+  image:
+    repository: postgres
+    tag: "14-alpine"
+    pullPolicy: Always
+  
+  # Authentication
+  auth:
+    username: "contextops"
+    password: "contextops"
+    database: "contextops"
+  
+  service:
+    name: postgres
+    port: 5432
+    annotations: {}
+  
+  # SSL configuration
+  sslMode: "disable"
+  
+  # Persistence
+  persistence:
+    size: "10Gi"
+    storageClass: "do-block-storage"
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  podSecurityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    capabilities:
+      drop:
+        - ALL
+  
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: {}
+  
+  # External PostgreSQL configuration (if not using bundled)
+  external:
+    enabled: false
+    connectionString: ""
+
+# RabbitMQ configuration
+rabbitmq:
+  enabled: true
+  
+  image:
+    repository: rabbitmq
+    tag: "3.12-management-alpine"
+    pullPolicy: Always
+  
+  # Authentication
+  auth:
+    username: "contextops"
+    password: "contextops"
+    vhost: "/"
+  
+  service:
+    name: rabbitmq
+    port: 5672
+    managementPort: 15672
+    annotations: {}
+  
+  # Persistence
+  persistence:
+    size: "5Gi"
+    storageClass: "do-block-storage"
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  podSecurityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    capabilities:
+      drop:
+        - ALL
+  
+  livenessProbe:
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 20
+    failureThreshold: 6
+  
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 20
+    failureThreshold: 3
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: {}
+  
+  # External RabbitMQ configuration (if not using bundled)
+  external:
+    enabled: false
+    connectionString: ""
+
+# Load Balancer configuration
+loadBalancer:
+  enabled: true
+  externalTrafficPolicy: "Local"
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  
+  # Cloud provider specific configuration
+  provider: "digitalocean"  # aws, azure, gcp, digitalocean
+  
+  # HTTPS configuration
+  https:
+    enabled: false
+  
+  # AWS specific configuration
+  aws:
+    type: "nlb"
+    scheme: "internet-facing"
+    crossZoneLoadBalancing: "true"
+    targetType: "instance"
+  
+  # Azure specific configuration
+  azure:
+    internal: "false"
+  
+  # GCP specific configuration
+  gcp:
+    type: "External"
+  
+  # Health check configuration
+  healthCheck:
+    intervalSeconds: "30"
+    timeoutSeconds: "5"
+    healthyThresholdCount: "2"
+    unhealthyThresholdCount: "3"
+  
+  # Additional annotations
+  annotations: {}
+
+# Metrics Load Balancer configuration
+metricsLoadBalancer:
+  enabled: false
+  externalTrafficPolicy: "Local"
+  
+  # Cloud provider specific configuration
+  provider: "digitalocean"  # aws, azure, gcp, digitalocean
+  
+  # AWS specific configuration
+  aws:
+    type: "nlb"
+    crossZoneLoadBalancing: "true"
+  
+  # Additional annotations
+  annotations: {}
+
+# Service Discovery configuration
+serviceDiscovery:
+  enabled: true
