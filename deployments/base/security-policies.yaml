@@ -111,7 +111,7 @@ spec:
     
     # Load balancer and node port services (restrict external access)
     services.loadbalancers: "2"
-    services.nodeports: "0"
+    services.nodeports: "2"
 ---
 # Limit Ranges for pod and container resource limits
 apiVersion: v1

@@ -13,8 +13,6 @@ resources:
   - secrets.yaml
   - rbac.yaml
   - security-policies.yaml
-  - postgres.yaml
-  - rabbitmq.yaml
   - gateway.yaml
   - gitops-aggregator.yaml
   - integration-services.yaml
@@ -30,19 +28,19 @@ namePrefix: contextops-
 # Images that can be customized in overlays
 images:
   - name: ghcr.io/kriipke/platformctl-gateway
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-gitops-aggregator
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-app-sync-svc
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-environment-validation-svc
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-context-correlation-svc
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
-    newTag: latest
+    newTag: develop
   - name: ghcr.io/kriipke/platformctl-customer-git-branch-svc
-    newTag: latest
+    newTag: develop
 
 # Configuration transformers
 replicas:

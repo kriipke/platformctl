@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: app-sync-svc
-        image: ghcr.io/kriipke/platformctl-app-sync-svc:latest
+        image: ghcr.io/kriipke/platformctl-app-sync-svc:develop
         ports:
         - containerPort: 8081
           name: health
@@ -33,7 +33,7 @@ spec:
         - name: SERVICE_NAME
           value: "app-sync-svc"
         - name: DATABASE_URL
-          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -65,7 +65,7 @@ spec:
               name: contextops-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
@@ -182,7 +182,7 @@ spec:
     spec:
       containers:
       - name: environment-validation-svc
-        image: ghcr.io/kriipke/platformctl-environment-validation-svc:latest
+        image: ghcr.io/kriipke/platformctl-environment-validation-svc:develop
         ports:
         - containerPort: 8081
           name: health
@@ -192,7 +192,7 @@ spec:
         - name: SERVICE_NAME
           value: "environment-validation-svc"
         - name: DATABASE_URL
-          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -224,7 +224,7 @@ spec:
               name: contextops-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
@@ -341,7 +341,7 @@ spec:
     spec:
       containers:
       - name: context-correlation-svc
-        image: ghcr.io/kriipke/platformctl-context-correlation-svc:latest
+        image: ghcr.io/kriipke/platformctl-context-correlation-svc:develop
         ports:
         - containerPort: 8081
           name: health
@@ -351,7 +351,7 @@ spec:
         - name: SERVICE_NAME
           value: "context-correlation-svc"
         - name: DATABASE_URL
-          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -383,7 +383,7 @@ spec:
               name: contextops-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
@@ -495,7 +495,7 @@ spec:
     spec:
       containers:
       - name: multi-environment-kube-svc
-        image: ghcr.io/kriipke/platformctl-multi-environment-kube-svc:latest
+        image: ghcr.io/kriipke/platformctl-multi-environment-kube-svc:develop
         ports:
         - containerPort: 8081
           name: health
@@ -505,7 +505,7 @@ spec:
         - name: SERVICE_NAME
           value: "multi-environment-kube-svc"
         - name: DATABASE_URL
-          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -537,7 +537,7 @@ spec:
               name: contextops-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
@@ -654,7 +654,7 @@ spec:
     spec:
       containers:
       - name: customer-git-branch-svc
-        image: ghcr.io/kriipke/platformctl-customer-git-branch-svc:latest
+        image: ghcr.io/kriipke/platformctl-customer-git-branch-svc:develop
         ports:
         - containerPort: 8081
           name: health
@@ -664,7 +664,7 @@ spec:
         - name: SERVICE_NAME
           value: "customer-git-branch-svc"
         - name: DATABASE_URL
-          value: "postgres://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=$(DATABASE_SSL_MODE)"
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -696,7 +696,7 @@ spec:
               name: contextops-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)$(RABBITMQ_VHOST)"
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
