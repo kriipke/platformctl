@@ -1,0 +1,30 @@
+# ConfigMap generator for environment-specific configurations
+apiVersion: builtin
+kind: ConfigMapGenerator
+metadata:
+  name: contextops-env-config
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Environment configuration maps
+configMapName: contextops-env-config
+behavior: replace
+
+# Environment-specific configuration files
+files:
+- config/development.yaml
+- config/staging.yaml
+- config/production.yaml
+
+# Common configuration literals
+literals:
+- APPLICATION_NAME=ContextOps
+- APPLICATION_VERSION=v1.0.0
+- SUPPORTED_ENVIRONMENTS=development,staging,production
+- DEFAULT_TIMEZONE=UTC
+- DEFAULT_LOCALE=en_US
+
+# Configuration generation options
+options:
+  disableNameSuffixHash: false
+  immutable: false

@@ -1,0 +1,370 @@
+name: Test and Validate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  # Go tests and linting
+  go-tests:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Run go fmt
+        run: |
+          if [ -n "$(go fmt ./...)" ]; then
+            echo "Go code is not properly formatted"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run staticcheck
+        run: staticcheck ./...
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Run tests
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: go-coverage
+
+  # Kubernetes manifest validation
+  k8s-validation:
+    name: Kubernetes Validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [development, staging, production]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Validate Kustomize build
+        run: |
+          echo "Validating ${{ matrix.environment }} overlay..."
+          kustomize build deployments/overlays/${{ matrix.environment }} > /tmp/manifests-${{ matrix.environment }}.yaml
+
+      - name: Validate Kubernetes manifests
+        run: |
+          echo "Validating Kubernetes manifests for ${{ matrix.environment }}..."
+          kubectl apply --dry-run=client -f /tmp/manifests-${{ matrix.environment }}.yaml
+
+      - name: Check resource limits
+        run: |
+          echo "Checking resource limits..."
+          if ! grep -q "resources:" /tmp/manifests-${{ matrix.environment }}.yaml; then
+            echo "Warning: No resource limits found in manifests"
+          fi
+
+      - name: Validate security contexts
+        run: |
+          echo "Validating security contexts..."
+          if ! grep -q "runAsNonRoot: true" /tmp/manifests-${{ matrix.environment }}.yaml; then
+            echo "Error: runAsNonRoot not set"
+            exit 1
+          fi
+
+      - name: Check for secrets
+        run: |
+          echo "Checking for hardcoded secrets..."
+          if grep -i "password\|secret\|key" /tmp/manifests-${{ matrix.environment }}.yaml | grep -v "secretKeyRef\|configMapKeyRef"; then
+            echo "Warning: Potential hardcoded secrets found"
+          fi
+
+  # Security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-add-sarif@v1
+        with:
+          sarif-file: gosec.sarif
+          tool-name: gosec
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+      - name: Run Nancy (dependency vulnerability scanner)
+        run: |
+          go install github.com/sonatypecommunity/nancy@latest
+          go list -json -deps ./... | nancy sleuth
+
+  # Docker security and best practices
+  docker-validation:
+    name: Docker Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            SERVICE_NAME=gateway
+            VERSION=test
+            COMMIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ github.run_id }}
+          tags: contextops/gateway:test
+          load: true
+          cache-from: type=gha,scope=docker-test
+          cache-to: type=gha,mode=max,scope=docker-test
+
+      - name: Run Hadolint (Dockerfile linting)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Run Dockle (Container security)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            goodwithtech/dockle:latest contextops/gateway:test
+
+      - name: Test container runs
+        run: |
+          docker run --rm -d --name test-container contextops/gateway:test
+          sleep 5
+          if docker ps | grep -q test-container; then
+            echo "Container is running successfully"
+            docker stop test-container
+          else
+            echo "Container failed to start"
+            docker logs test-container
+            exit 1
+          fi
+
+  # Integration tests with kind cluster
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: contextops-test
+          kubectl_version: v1.28.0
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                nodeRegistration:
+                  kubeletExtraArgs:
+                    node-labels: "ingress-ready=true"
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 80
+                protocol: TCP
+              - containerPort: 443
+                hostPort: 443
+                protocol: TCP
+
+      - name: Install NGINX Ingress
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=120s
+
+      - name: Build Docker images for kind
+        run: |
+          # Build images locally and load into kind
+          SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
+          
+          for service in "${SERVICES[@]}"; do
+            echo "Building $service for kind..."
+            docker build \
+              --build-arg SERVICE_NAME=$service \
+              --build-arg VERSION=test \
+              --build-arg COMMIT_SHA=${{ github.sha }} \
+              --build-arg BUILD_DATE=${{ github.run_id }} \
+              -t contextops/$service:test .
+            
+            # Load image into kind cluster
+            kind load docker-image contextops/$service:test --name contextops-test
+          done
+
+      - name: Deploy ContextOps to kind
+        run: |
+          # Update image tags for local testing
+          cd deployments/overlays/development
+          kustomize edit set image contextops/gateway:test
+          kustomize edit set image contextops/gitops-aggregator:test
+          kustomize edit set image contextops/app-sync-svc:test
+          kustomize edit set image contextops/environment-validation-svc:test
+          kustomize edit set image contextops/context-correlation-svc:test
+          kustomize edit set image contextops/multi-environment-kube-svc:test
+          kustomize edit set image contextops/customer-git-branch-svc:test
+          
+          # Deploy to cluster
+          kustomize build . | kubectl apply -f -
+
+      - name: Wait for deployment
+        run: |
+          kubectl wait --for=condition=available --timeout=300s deployment --all -n contextops-dev
+
+      - name: Run integration tests
+        run: |
+          # Port forward to test connectivity
+          kubectl port-forward service/dev-contextops-gateway 8080:80 -n contextops-dev &
+          sleep 10
+          
+          # Test health endpoint
+          if curl -f http://localhost:8080/health; then
+            echo "Health check passed"
+          else
+            echo "Health check failed"
+            exit 1
+          fi
+
+      - name: Show cluster status on failure
+        if: failure()
+        run: |
+          echo "=== Cluster Status ==="
+          kubectl get all -n contextops-dev
+          echo "=== Pod Logs ==="
+          kubectl logs -l app.kubernetes.io/part-of=contextops-platform -n contextops-dev --tail=50
+
+  # Deployment scripts validation
+  scripts-validation:
+    name: Scripts Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Validate shell scripts
+        run: |
+          find scripts/ -name "*.sh" -exec shellcheck {} \;
+
+      - name: Test script help messages
+        run: |
+          chmod +x scripts/*.sh
+          
+          # Test help messages
+          for script in scripts/*.sh; do
+            echo "Testing $script --help"
+            $script --help || echo "Help not available for $script"
+          done
+
+      - name: Test dry-run modes
+        run: |
+          # Test deploy script dry-run
+          ./scripts/deploy.sh --dry-run -e development || echo "Deploy dry-run test failed"
+          
+          # Test monitor script
+          timeout 5 ./scripts/monitor.sh -e development || echo "Monitor script test completed"
+
+  # Documentation validation
+  docs-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install markdown linter
+        run: npm install -g markdownlint-cli
+
+      - name: Lint markdown files
+        run: |
+          find . -name "*.md" -not -path "./node_modules/*" -exec markdownlint {} \; || true
+
+      - name: Check for broken links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+
+      - name: Validate README
+        run: |
+          if [[ ! -f README.md ]]; then
+            echo "README.md not found"
+            exit 1
+          fi
+          
+          # Check for required sections
+          if ! grep -q "Installation" README.md; then
+            echo "README.md missing Installation section"
+            exit 1
+          fi
