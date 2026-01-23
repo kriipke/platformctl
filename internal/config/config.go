@@ -7,6 +7,7 @@ import (
 
 	"github.com/caarlos0/env/v9"
 	"github.com/joho/godotenv"
+	"github.com/contextops/platformctl/internal/observability"
 )
 
 type Config struct {
@@ -184,8 +185,8 @@ func (cfg *Config) GetMetricsConfig(serviceName string) MetricsConfig {
 	}
 }
 
-func (cfg *Config) GetHealthCheckConfig() HealthCheckConfig {
-	return HealthCheckConfig{
+func (cfg *Config) GetHealthCheckConfig() observability.HealthCheckConfig {
+	return observability.HealthCheckConfig{
 		Port:              cfg.Observability.HealthCheckPort,
 		ReadinessPath:     cfg.Observability.ReadinessPath,
 		LivenessPath:      cfg.Observability.LivenessPath,
@@ -216,11 +217,3 @@ type MetricsConfig struct {
 	Namespace   string
 }
 
-type HealthCheckConfig struct {
-	Port              string
-	ReadinessPath     string
-	LivenessPath      string
-	CheckInterval     time.Duration
-	CheckTimeout      time.Duration
-	EnableDeepChecks  bool
-}

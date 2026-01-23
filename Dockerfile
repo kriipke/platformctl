@@ -2,7 +2,7 @@
 # Optimized for production deployment with minimal attack surface
 
 # Stage 1: Build environment
-FROM golang:1.25-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -49,7 +49,7 @@ ENV CGO_ENABLED=0 \
 
 # Build the specific service
 RUN go build \
-    -ldflags="-w -s -X main.Version=${VERSION} -X main.CommitSHA=${COMMIT_SHA} -X main.BuildDate=${BUILD_DATE}" \
+    -ldflags="-w -s" \
     -a -installsuffix cgo \
     -o /build/bin/contextops \
     ./cmd/${SERVICE_NAME}/
