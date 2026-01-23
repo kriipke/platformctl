@@ -284,8 +284,9 @@ func ginBasicAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set customer in Gin context (use acme-corp for demo data access)
-		c.Set("customer_id", "acme-corp")
+		// Set customer in Gin context (configurable via environment variable)
+		customerID := getEnv("DEFAULT_CUSTOMER_ID", "acme-corp")
+		c.Set("customer_id", customerID)
 		c.Set("username", username)
 
 		// Continue to next handler

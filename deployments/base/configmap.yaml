@@ -36,3 +36,6 @@ data:
   REQUEST_TIMEOUT: "30s"
   DB_MAX_OPEN_CONNS: "25"
   DB_MAX_IDLE_CONNS: "5"
+  
+  # Authentication configuration  
+  DEFAULT_CUSTOMER_ID: "acme-corp"
