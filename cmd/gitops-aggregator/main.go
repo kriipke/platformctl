@@ -11,9 +11,9 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/contextops/platformctl/internal/aggregator"
 	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/database"
 	"github.com/contextops/platformctl/internal/events"
 	"github.com/contextops/platformctl/internal/observability"
+	"github.com/contextops/platformctl/internal/storage"
 )
 
 func main() {
@@ -37,24 +37,18 @@ func main() {
 	}
 	metrics := observability.NewMetrics(metricsConfig)
 
-	healthConfig := observability.HealthCheckConfig{
-		Port:              cfg.Observability.HealthCheckPort,
-		CheckTimeout:      5 * time.Second,
-		EnableDeepChecks:  true,
-	}
+	healthConfig := cfg.GetHealthCheckConfig()
 	healthManager := observability.NewHealthManager(healthConfig, "gitops-aggregator", "1.0.0")
 	
 	// Initialize database connection
-	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
+	dbConn, err := storage.NewDB(cfg.DatabaseURL)
 	if err != nil {
 		logger.NewContextLogger(context.Background()).Fatal().Err(err).Msg("Failed to connect to database")
 	}
-	defer db.Close()
+	defer dbConn.Close()
 	
-	// Run migrations
-	if err := database.RunMigrations(cfg.DatabaseURL, "./migrations"); err != nil {
-		logger.NewContextLogger(context.Background()).Fatal().Err(err).Msg("Failed to run database migrations")
-	}
+	// Convert to sqlx for aggregator compatibility
+	db := sqlx.NewDb(dbConn.DB, "postgres")
 
 	// Initialize RabbitMQ connection for result consumption
 	rabbitmq, err := events.NewGitOpsMessageBus(cfg.RabbitMQURL, cfg)

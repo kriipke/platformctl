@@ -33,11 +33,7 @@ func main() {
 	}
 	metrics := observability.NewMetrics(metricsConfig)
 
-	healthConfig := observability.HealthCheckConfig{
-		Port:              cfg.Observability.HealthCheckPort,
-		CheckTimeout:      5 * time.Second,
-		EnableDeepChecks:  true,
-	}
+	healthConfig := cfg.GetHealthCheckConfig()
 	healthManager := observability.NewHealthManager(healthConfig, "environment-validation-service", "1.0.0")
 
 	// Database connection
