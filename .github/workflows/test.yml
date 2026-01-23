@@ -170,7 +170,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=docker-test
 
       - name: Run Hadolint (Dockerfile linting)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Dockerfile
 
