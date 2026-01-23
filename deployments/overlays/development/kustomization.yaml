@@ -2,14 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 metadata:
-  name: contextops-development
   annotations:
     config.kubernetes.io/local-config: "true"
+  name: contextops-development
 
 # Base configuration to extend
 resources:
-  - ../../base
-  - ingress.yaml
+- ../../base
+- ingress.yaml
 
 # Development-specific namespace
 namespace: contextops-dev
@@ -24,104 +24,118 @@ commonLabels:
 
 # Development-specific annotations
 commonAnnotations:
-  deployment.kubernetes.io/environment: development
   contextops.io/deployment-target: development
+  deployment.kubernetes.io/environment: development
 
 # Image tags for development (can be different versions)
 images:
-  - name: contextops/gateway
-    newTag: dev-latest
-  - name: contextops/gitops-aggregator
-    newTag: dev-latest
-  - name: contextops/app-sync-svc
-    newTag: dev-latest
-  - name: contextops/environment-validation-svc
-    newTag: dev-latest
-  - name: contextops/context-correlation-svc
-    newTag: dev-latest
-  - name: contextops/multi-environment-kube-svc
-    newTag: dev-latest
-  - name: contextops/customer-git-branch-svc
-    newTag: dev-latest
+- name: contextops/app-sync-svc
+  newTag: dev-latest
+- name: contextops/context-correlation-svc
+  newTag: dev-latest
+- name: contextops/customer-git-branch-svc
+  newTag: dev-latest
+- name: contextops/environment-validation-svc
+  newTag: dev-latest
+- name: contextops/gateway
+  newTag: dev-latest
+- name: contextops/gitops-aggregator
+  newTag: dev-latest
+- name: contextops/multi-environment-kube-svc
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-app-sync-svc
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-context-correlation-svc
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-customer-git-branch-svc
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-environment-validation-svc
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-gateway
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-gitops-aggregator
+  newTag: dev-latest
+- name: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
+  newTag: dev-latest
 
 # Configuration patches for development environment
-patches:
   # Reduce resource requests for development
-  - target:
-      kind: Deployment
-      labelSelector: "app.kubernetes.io/component=api-gateway"
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/requests/memory
-        value: "128Mi"
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/requests/cpu
-        value: "100m"
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/limits/memory
-        value: "256Mi"
-      - op: replace
-        path: /spec/template/spec/containers/0/resources/limits/cpu
-        value: "250m"
       
   # Enable debug logging in development
-  - target:
-      kind: ConfigMap
-      name: contextops-config
-    patch: |-
-      - op: replace
-        path: /data/LOG_LEVEL
-        value: "debug"
-      - op: add
-        path: /data/ENABLE_DEBUG_ENDPOINTS
-        value: "true"
-      - op: add
-        path: /data/CORS_ALLOW_ALL
-        value: "true"
 
   # Development database configuration (smaller storage)
-  - target:
-      kind: PersistentVolumeClaim
-      name: postgres-pvc
-    patch: |-
-      - op: replace
-        path: /spec/resources/requests/storage
-        value: "5Gi"
 
   # Development RabbitMQ configuration (smaller storage)
-  - target:
-      kind: PersistentVolumeClaim
-      name: rabbitmq-pvc
-    patch: |-
-      - op: replace
-        path: /spec/resources/requests/storage
-        value: "2Gi"
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "128Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "100m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "256Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "250m"
+  target:
+    kind: Deployment
+    labelSelector: app.kubernetes.io/component=api-gateway
+- patch: |-
+    - op: replace
+      path: /data/LOG_LEVEL
+      value: "debug"
+    - op: add
+      path: /data/ENABLE_DEBUG_ENDPOINTS
+      value: "true"
+    - op: add
+      path: /data/CORS_ALLOW_ALL
+      value: "true"
+  target:
+    kind: ConfigMap
+    name: contextops-config
+- patch: |-
+    - op: replace
+      path: /spec/resources/requests/storage
+      value: "5Gi"
+  target:
+    kind: PersistentVolumeClaim
+    name: postgres-pvc
+- patch: |-
+    - op: replace
+      path: /spec/resources/requests/storage
+      value: "2Gi"
+  target:
+    kind: PersistentVolumeClaim
+    name: rabbitmq-pvc
 
 # Development-specific replica counts (lower for resource efficiency)
 replicas:
-  - name: gateway
-    count: 1
-  - name: gitops-aggregator
-    count: 1
-  - name: app-sync-svc
-    count: 1
-  - name: environment-validation-svc
-    count: 1
-  - name: context-correlation-svc
-    count: 1
-  - name: multi-environment-kube-svc
-    count: 1
-  - name: customer-git-branch-svc
-    count: 1
+- count: 1
+  name: gateway
+- count: 1
+  name: gitops-aggregator
+- count: 1
+  name: app-sync-svc
+- count: 1
+  name: environment-validation-svc
+- count: 1
+  name: context-correlation-svc
+- count: 1
+  name: multi-environment-kube-svc
+- count: 1
+  name: customer-git-branch-svc
 
 # Development-specific configuration replacements
 replacements:
-  - source:
-      kind: ConfigMap
-      name: contextops-config
-      fieldPath: data.DATABASE_HOST
-    targets:
-      - select:
-          kind: Deployment
-        fieldPaths:
-          - spec.template.spec.containers.[name=*].env.[name=DATABASE_HOST].value
+- source:
+    fieldPath: data.DATABASE_HOST
+    kind: ConfigMap
+    name: contextops-config
+  targets:
+  - fieldPaths:
+    - spec.template.spec.containers.[name=*].env.[name=DATABASE_HOST].value
+    select:
+      kind: Deployment
