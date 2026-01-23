@@ -60,7 +60,7 @@ RUN echo '#!/bin/sh' > /build/bin/healthcheck && \
     chmod +x /build/bin/healthcheck
 
 # Stage 2: Runtime environment
-FROM alpine:3.19
+FROM alpine:3.23
 
 # Install runtime dependencies
 RUN apk add --no-cache \
