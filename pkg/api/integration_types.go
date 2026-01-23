@@ -555,3 +555,24 @@ type SecretValidationResult struct {
 	Valid          bool   `json:"valid"`
 	Error          string `json:"error,omitempty"`
 }
+
+// Values Environment Correlation Types
+type ValuesEnvironmentCorrelation struct {
+	Environment       string                 `json:"environment"`
+	ValuesFile        string                 `json:"values_file"`
+	FilePath          string                 `json:"file_path,omitempty"`
+	CustomerBranch    string                 `json:"customer_branch,omitempty"`
+	CorrelationStatus string                 `json:"correlation_status"`
+	DeployedValues    map[string]interface{} `json:"deployed_values,omitempty"`
+	Differences       []ValuesDifference     `json:"differences,omitempty"`
+	LastCorrelated    time.Time              `json:"last_correlated"`
+	CorrelationScore  float64                `json:"correlation_score,omitempty"`
+}
+
+type ValuesDifference struct {
+	Key            string      `json:"key"`
+	ExpectedValue  interface{} `json:"expected_value"`
+	ActualValue    interface{} `json:"actual_value"`
+	DifferenceType string      `json:"difference_type"` // added, removed, modified
+	Severity       string      `json:"severity"`        // low, medium, high
+}

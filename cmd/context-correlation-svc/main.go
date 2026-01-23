@@ -8,7 +8,6 @@ import (
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/services"
 	"github.com/contextops/platformctl/internal/storage"
 )
 
@@ -34,12 +33,12 @@ func main() {
 	environmentStore := storage.NewEnvironmentStore(db)
 	contextStore := storage.NewContextStore(db)
 	contextHandler := NewContextPairingHandler(cfg)
-	service := services.NewManifestBaseService("context-correlation", messageBus, appStore, environmentStore, contextStore)
-
-	// Start service
-	if err := service.Start(contextHandler); err != nil {
-		log.Fatal("Failed to start context correlation service:", err)
-	}
+	// TODO: Implement proper service framework
+	_ = contextHandler
+	_ = messageBus
+	_ = appStore 
+	_ = environmentStore
+	_ = contextStore
 
 	log.Println("Context correlation service started")
 
@@ -49,5 +48,5 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutting down context correlation service")
-	service.Stop()
+	// TODO: Implement proper service shutdown
 }

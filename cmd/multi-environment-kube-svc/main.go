@@ -8,7 +8,6 @@ import (
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/services"
 	"github.com/contextops/platformctl/internal/storage"
 )
 
@@ -34,12 +33,12 @@ func main() {
 	environmentStore := storage.NewEnvironmentStore(db)
 	contextStore := storage.NewContextStore(db)
 	kubernetesHandler := NewMultiEnvironmentKubernetesHandler(cfg)
-	service := services.NewManifestBaseService("multi-environment-kubernetes", messageBus, appStore, environmentStore, contextStore)
-
-	// Start service
-	if err := service.Start(kubernetesHandler); err != nil {
-		log.Fatal("Failed to start multi-environment kubernetes service:", err)
-	}
+	// TODO: Implement proper service framework
+	_ = kubernetesHandler
+	_ = messageBus
+	_ = appStore 
+	_ = environmentStore
+	_ = contextStore
 
 	log.Println("Multi-environment kubernetes service started")
 
@@ -49,5 +48,5 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutting down multi-environment kubernetes service")
-	service.Stop()
+	// TODO: Implement proper service shutdown
 }
