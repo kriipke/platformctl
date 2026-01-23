@@ -1,0 +1,267 @@
+{{- if .Values.serviceAccount.create }}
+# ServiceAccount for ContextOps services
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "contextops.serviceAccountName" . }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service-account
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+---
+{{- if .Values.gitopsAggregator.enabled }}
+# ServiceAccount for GitOps Aggregator (needs additional permissions for read model operations)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "contextops.fullname" . }}-gitops-aggregator
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitops-aggregator
+automountServiceAccountToken: true
+---
+{{- end }}
+{{- if .Values.kubernetesIntegration.enabled }}
+# ServiceAccount for Kubernetes Integration Service (needs cluster access)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "contextops.fullname" . }}-kubernetes-integration
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kubernetes-integration
+automountServiceAccountToken: true
+---
+{{- end }}
+{{- end }}
+{{- if .Values.rbac.create }}
+# ClusterRole for Kubernetes integration (read-only access to monitor GitOps resources)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "contextops.fullname" . }}-kubernetes-reader
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cluster-role
+rules:
+# ApplicationSet and ArgoCD Application monitoring
+{{- if .Values.rbac.rules.argocd }}
+- apiGroups: ["argoproj.io"]
+  resources: 
+    - applications
+    - applicationsets
+    - appprojects
+  verbs: ["get", "list", "watch"]
+{{- end }}
+# Kubernetes native resources for GitOps monitoring
+- apiGroups: [""]
+  resources:
+    - pods
+    - services
+    - endpoints
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - persistentvolumes
+    - nodes
+    - namespaces
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+    - deployments
+    - replicasets
+    - statefulsets
+    - daemonsets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+    - jobs
+    - cronjobs
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources:
+    - ingresses
+    - networkpolicies
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["get", "list", "watch"]
+{{- if .Values.rbac.rules.helm }}
+# Helm resources for monitoring Helm deployments
+- apiGroups: [""]
+  resources:
+    - secrets
+  verbs: ["get", "list"]
+  resourceNames: ["sh.helm.release.v1.*"]
+{{- end }}
+{{- if .Values.rbac.rules.externalSecrets }}
+# External-secrets operator resources
+- apiGroups: ["external-secrets.io"]
+  resources:
+    - externalsecrets
+    - secretstores
+    - clustersecretstores
+  verbs: ["get", "list", "watch"]
+{{- end }}
+{{- if .Values.rbac.rules.vault }}
+# VaultStaticSecret monitoring (if using Vault CSI driver or Vault operator)
+- apiGroups: ["secrets.hashicorp.com"]
+  resources:
+    - vaultstaticsecrets
+    - vaultconnections
+  verbs: ["get", "list", "watch"]
+{{- end }}
+---
+{{- if .Values.gitopsAggregator.enabled }}
+# ClusterRole for GitOps aggregator (additional permissions for aggregation operations)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "contextops.fullname" . }}-aggregator
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: aggregator-cluster-role
+rules:
+# Inherit all kubernetes reader permissions
+- apiGroups: ["argoproj.io"]
+  resources: 
+    - applications
+    - applicationsets
+    - appprojects
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+    - pods
+    - services
+    - endpoints
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - persistentvolumes
+    - nodes
+    - namespaces
+    - events  # Additional permission for event aggregation
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+    - deployments
+    - replicasets
+    - statefulsets
+    - daemonsets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+    - jobs
+    - cronjobs
+  verbs: ["get", "list", "watch"]
+# Additional permissions for metrics and monitoring
+- apiGroups: ["metrics.k8s.io"]
+  resources:
+    - pods
+    - nodes
+  verbs: ["get", "list"]
+---
+{{- end }}
+# Role for ContextOps services within their namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: {{ .Values.namespace | default "contextops" }}
+  name: {{ include "contextops.fullname" . }}-service-role
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: namespace-role
+rules:
+# Access to ConfigMaps and Secrets within namespace
+- apiGroups: [""]
+  resources:
+    - configmaps
+    - secrets
+  verbs: ["get", "list", "watch"]
+# Access to service endpoints for health checking
+- apiGroups: [""]
+  resources:
+    - endpoints
+    - services
+  verbs: ["get", "list", "watch"]
+# Access to pods for debugging and health checking
+- apiGroups: [""]
+  resources:
+    - pods
+    - pods/log
+  verbs: ["get", "list", "watch"]
+# Access to events for logging and monitoring
+- apiGroups: [""]
+  resources:
+    - events
+  verbs: ["get", "list", "watch", "create"]
+---
+{{- if .Values.kubernetesIntegration.enabled }}
+# ClusterRoleBinding for Kubernetes integration service
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "contextops.fullname" . }}-kubernetes-integration
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "contextops.fullname" . }}-kubernetes-reader
+subjects:
+- kind: ServiceAccount
+  name: {{ include "contextops.fullname" . }}-kubernetes-integration
+  namespace: {{ .Values.namespace | default "contextops" }}
+---
+{{- end }}
+{{- if .Values.gitopsAggregator.enabled }}
+# ClusterRoleBinding for GitOps aggregator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "contextops.fullname" . }}-aggregator-binding
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: aggregator-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "contextops.fullname" . }}-aggregator
+subjects:
+- kind: ServiceAccount
+  name: {{ include "contextops.fullname" . }}-gitops-aggregator
+  namespace: {{ .Values.namespace | default "contextops" }}
+---
+{{- end }}
+# RoleBinding for ContextOps services within their namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: {{ .Values.namespace | default "contextops" }}
+  name: {{ include "contextops.fullname" . }}-service-binding
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "contextops.fullname" . }}-service-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "contextops.serviceAccountName" . }}
+  namespace: {{ .Values.namespace | default "contextops" }}
+{{- if .Values.gitopsAggregator.enabled }}
+- kind: ServiceAccount
+  name: {{ include "contextops.fullname" . }}-gitops-aggregator
+  namespace: {{ .Values.namespace | default "contextops" }}
+{{- end }}
+{{- end }}

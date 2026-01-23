@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "contextops.fullname" . }}-config
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  # Database configuration
+  DATABASE_HOST: {{ .Values.postgres.service.name | quote }}
+  DATABASE_PORT: {{ .Values.postgres.service.port | quote }}
+  DATABASE_NAME: {{ .Values.postgres.auth.database | quote }}
+  DATABASE_SSL_MODE: {{ .Values.postgres.sslMode | quote }}
+  
+  # RabbitMQ configuration
+  RABBITMQ_HOST: {{ .Values.rabbitmq.service.name | quote }}
+  RABBITMQ_PORT: {{ .Values.rabbitmq.service.port | quote }}
+  RABBITMQ_VHOST: {{ .Values.rabbitmq.auth.vhost | quote }}
+  
+  # Observability configuration
+  LOG_LEVEL: {{ .Values.config.logging.level | quote }}
+  LOG_FORMAT: {{ .Values.config.logging.format | quote }}
+  METRICS_ENABLED: {{ .Values.config.metrics.enabled | quote }}
+  HEALTH_CHECK_PORT: {{ .Values.config.healthCheck.port | quote }}
+  TRACING_ENABLED: {{ .Values.config.tracing.enabled | quote }}
+  
+  # GitOps service configuration
+  ENABLE_VAULT_INTEGRATION: {{ .Values.config.integrations.vault | quote }}
+  ENABLE_ARGOCD_INTEGRATION: {{ .Values.config.integrations.argocd | quote }}
+  ENABLE_GIT_INTEGRATION: {{ .Values.config.integrations.git | quote }}
+  ENABLE_KUBERNETES_INTEGRATION: {{ .Values.config.integrations.kubernetes | quote }}
+  
+  # Performance tuning
+  MAX_CONCURRENT_REQUESTS: {{ .Values.config.performance.maxConcurrentRequests | quote }}
+  REQUEST_TIMEOUT: {{ .Values.config.performance.requestTimeout | quote }}
+  DB_MAX_OPEN_CONNS: {{ .Values.config.performance.dbMaxOpenConns | quote }}
+  DB_MAX_IDLE_CONNS: {{ .Values.config.performance.dbMaxIdleConns | quote }}
+  
+  # Authentication configuration  
+  DEFAULT_CUSTOMER_ID: {{ .Values.config.auth.defaultCustomerId | quote }}
+  {{- if .Values.config.extraEnv }}
+  {{- range $key, $value := .Values.config.extraEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}

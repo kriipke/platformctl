@@ -1,0 +1,133 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "contextops.fullname" . }}-postgres-pvc
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size }}
+  {{- if .Values.postgres.persistence.storageClass }}
+  storageClassName: {{ .Values.postgres.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contextops.fullname" . }}-postgres
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "contextops.fullname" . }}-postgres
+      {{- include "contextops.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "contextops.fullname" . }}-postgres
+        {{- include "contextops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: database
+    spec:
+      securityContext:
+        {{- toYaml .Values.postgres.podSecurityContext | nindent 8 }}
+      containers:
+      - name: postgres
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+        ports:
+        - containerPort: 5432
+          name: postgres
+        securityContext:
+          {{- toYaml .Values.postgres.securityContext | nindent 10 }}
+        env:
+        - name: POSTGRES_DB
+          value: {{ .Values.postgres.auth.database | quote }}
+        - name: POSTGRES_USER
+          value: {{ .Values.postgres.auth.username | quote }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: DATABASE_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        {{- range $key, $value := .Values.postgres.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - exec pg_isready -U {{ .Values.postgres.auth.username | quote }} -d {{ .Values.postgres.auth.database | quote }} -h 127.0.0.1 -p 5432
+          initialDelaySeconds: {{ .Values.postgres.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.postgres.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.postgres.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.postgres.livenessProbe.failureThreshold }}
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - exec pg_isready -U {{ .Values.postgres.auth.username | quote }} -d {{ .Values.postgres.auth.database | quote }} -h 127.0.0.1 -p 5432
+          initialDelaySeconds: {{ .Values.postgres.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.postgres.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.postgres.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.postgres.readinessProbe.failureThreshold }}
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          {{- toYaml .Values.postgres.resources | nindent 10 }}
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: {{ include "contextops.fullname" . }}-postgres-pvc
+      {{- with .Values.postgres.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgres.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgres.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-postgres
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  {{- with .Values.postgres.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "contextops.fullname" . }}-postgres
+  ports:
+  - protocol: TCP
+    port: {{ .Values.postgres.service.port }}
+    targetPort: 5432
+    name: postgres
+{{- end }}

@@ -1,0 +1,137 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "contextops.fullname" . }}-rabbitmq-pvc
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: message-broker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.rabbitmq.persistence.size }}
+  {{- if .Values.rabbitmq.persistence.storageClass }}
+  storageClassName: {{ .Values.rabbitmq.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contextops.fullname" . }}-rabbitmq
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: message-broker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "contextops.fullname" . }}-rabbitmq
+      {{- include "contextops.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "contextops.fullname" . }}-rabbitmq
+        {{- include "contextops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: message-broker
+    spec:
+      securityContext:
+        {{- toYaml .Values.rabbitmq.podSecurityContext | nindent 8 }}
+      containers:
+      - name: rabbitmq
+        image: "{{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}"
+        imagePullPolicy: {{ .Values.rabbitmq.image.pullPolicy }}
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        securityContext:
+          {{- toYaml .Values.rabbitmq.securityContext | nindent 10 }}
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: {{ .Values.rabbitmq.auth.username | quote }}
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: {{ .Values.rabbitmq.auth.vhost | quote }}
+        {{- range $key, $value := .Values.rabbitmq.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - -q
+              - ping
+          initialDelaySeconds: {{ .Values.rabbitmq.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.rabbitmq.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.rabbitmq.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.rabbitmq.livenessProbe.failureThreshold }}
+        readinessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - -q
+              - check_port_connectivity
+          initialDelaySeconds: {{ .Values.rabbitmq.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.rabbitmq.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.rabbitmq.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.rabbitmq.readinessProbe.failureThreshold }}
+        volumeMounts:
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
+        resources:
+          {{- toYaml .Values.rabbitmq.resources | nindent 10 }}
+      volumes:
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: {{ include "contextops.fullname" . }}-rabbitmq-pvc
+      {{- with .Values.rabbitmq.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rabbitmq.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rabbitmq.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-rabbitmq
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: message-broker
+  {{- with .Values.rabbitmq.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "contextops.fullname" . }}-rabbitmq
+  ports:
+  - protocol: TCP
+    port: {{ .Values.rabbitmq.service.port }}
+    targetPort: 5672
+    name: amqp
+  - protocol: TCP
+    port: {{ .Values.rabbitmq.service.managementPort }}
+    targetPort: 15672
+    name: management
+{{- end }}
