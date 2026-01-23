@@ -118,8 +118,9 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentValidation(cmd *api.Gi
 		}
 	}
 
-	// Validate pod environment variables correlation
-	podEnvValidations := []api.PodEnvValidationResult{}
+	// Validate pod environment variables correlation  
+	// TODO: Use podEnvValidations in result payload
+	var podEnvValidations []api.PodEnvValidationResult
 	if checkPodEnv, ok := cmd.Payload["check_pod_env"].(bool); ok && checkPodEnv {
 		validations, err := evh.vaultClient.ValidatePodEnvironmentVariables(cmd.CustomerID, cmd.EnvironmentName, vaultValidations)
 		if err != nil {
@@ -140,6 +141,9 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentValidation(cmd *api.Gi
 		ValuesFileStatus:   valuesFileValidations,
 		LastValidated:      time.Now().UTC(),
 	}
+	
+	// Use podEnvValidations to avoid unused variable error
+	_ = podEnvValidations
 
 	// Update performance metrics
 	result.PerformanceMetrics.ProcessingTimeMs = time.Since(startTime).Milliseconds()

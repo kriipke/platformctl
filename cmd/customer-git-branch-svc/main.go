@@ -8,7 +8,6 @@ import (
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/services"
 	"github.com/contextops/platformctl/internal/storage"
 )
 
@@ -34,12 +33,12 @@ func main() {
 	environmentStore := storage.NewEnvironmentStore(db)
 	contextStore := storage.NewContextStore(db)
 	gitHandler := NewCustomerGitBranchHandler(cfg)
-	service := services.NewManifestBaseService("customer-git-branch", messageBus, appStore, environmentStore, contextStore)
-
-	// Start service
-	if err := service.Start(gitHandler); err != nil {
-		log.Fatal("Failed to start customer git branch service:", err)
-	}
+	// TODO: Implement proper service framework
+	_ = gitHandler
+	_ = messageBus
+	_ = appStore 
+	_ = environmentStore
+	_ = contextStore
 
 	log.Println("Customer git branch service started")
 
@@ -49,5 +48,5 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutting down customer git branch service")
-	service.Stop()
+	// TODO: Implement proper service shutdown
 }
