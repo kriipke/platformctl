@@ -1,0 +1,180 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: api-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+        app.kubernetes.io/name: gateway
+        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/component: api-gateway
+    spec:
+      serviceAccountName: contextops-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: gateway
+        image: ghcr.io/kriipke/platformctl-gateway:develop
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8081
+          name: health
+        - containerPort: 9090
+          name: metrics
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
+        env:
+        - name: SERVICE_NAME
+          value: "gateway"
+        - name: PORT
+          value: "8080"
+        - name: DATABASE_URL
+          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: "amqp://contextops:contextops@rabbitmq:5672/"
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: contextops-config
+              key: HEALTH_CHECK_PORT
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: contextops-secrets
+              key: JWT_SECRET
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: api-gateway
+spec:
+  selector:
+    app: gateway
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+    name: http
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+    name: metrics
+  type: ClusterIP

@@ -1,0 +1,106 @@
+name: Cleanup and Maintenance
+
+on:
+  schedule:
+    # Run cleanup weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: 'Type of cleanup to perform'
+        required: true
+        default: 'packages'
+        type: choice
+        options:
+          - packages
+          - artifacts
+          - caches
+          - all
+
+jobs:
+  cleanup-packages:
+    name: Cleanup Container Packages
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'packages' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        service: [gateway, gitops-aggregator, app-sync-svc, environment-validation-svc, context-correlation-svc, multi-environment-kube-svc, customer-git-branch-svc]
+    steps:
+      - name: Cleanup old container images for ${{ matrix.service }}
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: ${{ matrix.service }}
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true
+
+      - name: Cleanup development images for ${{ matrix.service }}
+        uses: actions/delete-package-versions@v4
+        continue-on-error: true
+        with:
+          package-name: ${{ matrix.service }}
+          package-type: container
+          min-versions-to-keep: 3
+          version-pattern: '^dev-.*'
+
+      - name: Cleanup PR images for ${{ matrix.service }}
+        uses: actions/delete-package-versions@v4
+        continue-on-error: true
+        with:
+          package-name: ${{ matrix.service }}
+          package-type: container
+          min-versions-to-keep: 2
+          version-pattern: '^pr-.*'
+
+  cleanup-artifacts:
+    name: Cleanup Workflow Artifacts
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'artifacts' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Cleanup old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '7 days'
+          skip-recent: 5
+
+  cleanup-caches:
+    name: Cleanup Action Caches
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'caches' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cleanup old caches
+        run: |
+          # Get list of cache keys
+          gh api repos/${{ github.repository }}/actions/caches --paginate | \
+            jq '.actions_caches[] | select(.created_at < (now - 604800)) | .key' | \
+            xargs -I {} gh api --method DELETE repos/${{ github.repository }}/actions/caches?key={} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security-maintenance:
+    name: Security Maintenance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.inputs.cleanup_type == 'all'
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run dependency security scan
+        run: |
+          # Scan Go dependencies for vulnerabilities
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Check for outdated dependencies
+        run: |
+          go list -u -m all | grep '\[.*\]'
+
+      - name: Security advisory check
+        uses: github/dependency-review-action@v3

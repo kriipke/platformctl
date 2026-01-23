@@ -1,0 +1,60 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: contextops-base
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base resources for the ContextOps GitOps monitoring platform
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - rbac.yaml
+  - security-policies.yaml
+  - gateway.yaml
+  - gitops-aggregator.yaml
+  - integration-services.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: contextops-platform
+  app.kubernetes.io/managed-by: kustomize
+
+# Generate names with suffixes to avoid conflicts
+namePrefix: contextops-
+
+# Images that can be customized in overlays
+images:
+  - name: ghcr.io/kriipke/platformctl-gateway
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-gitops-aggregator
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-app-sync-svc
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-environment-validation-svc
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-context-correlation-svc
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
+    newTag: develop
+  - name: ghcr.io/kriipke/platformctl-customer-git-branch-svc
+    newTag: develop
+
+# Configuration transformers
+replicas:
+  - name: gateway
+    count: 2
+  - name: gitops-aggregator
+    count: 1
+  - name: app-sync-svc
+    count: 2
+  - name: environment-validation-svc
+    count: 2
+  - name: context-correlation-svc
+    count: 2
+  - name: multi-environment-kube-svc
+    count: 2
+  - name: customer-git-branch-svc
+    count: 2

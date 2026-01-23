@@ -1,0 +1,220 @@
+# Pod Security Policy (for clusters that still support it)
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: contextops-psp
+  labels:
+    app.kubernetes.io/name: contextops-psp
+    app.kubernetes.io/part-of: contextops-platform
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 1000
+  readOnlyRootFilesystem: false
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+---
+# Pod Security Standards (for newer Kubernetes versions)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contextops-security-baseline
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    app.kubernetes.io/name: contextops-security-baseline
+    app.kubernetes.io/part-of: contextops-platform
+---
+# ClusterRole for Pod Security Policy usage
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: contextops-psp-user
+  labels:
+    app.kubernetes.io/name: contextops-psp-user
+    app.kubernetes.io/part-of: contextops-platform
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs: ['use']
+  resourceNames: ['contextops-psp']
+---
+# ClusterRoleBinding for Pod Security Policy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: contextops-psp-binding
+  labels:
+    app.kubernetes.io/name: contextops-psp-binding
+    app.kubernetes.io/part-of: contextops-platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: contextops-psp-user
+subjects:
+- kind: ServiceAccount
+  name: contextops-service-account
+  namespace: contextops
+- kind: ServiceAccount
+  name: gitops-aggregator-service-account
+  namespace: contextops
+- kind: ServiceAccount
+  name: kubernetes-integration-service-account
+  namespace: contextops
+---
+# Resource Quotas for the ContextOps namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: contextops-resource-quota
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-resource-quota
+    app.kubernetes.io/part-of: contextops-platform
+spec:
+  hard:
+    # Compute resources
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+    limits.cpu: "20"
+    limits.memory: "40Gi"
+    
+    # Storage resources
+    requests.storage: "100Gi"
+    persistentvolumeclaims: "10"
+    
+    # Object counts
+    pods: "50"
+    services: "20"
+    secrets: "50"
+    configmaps: "50"
+    replicationcontrollers: "20"
+    
+    # Load balancer and node port services (restrict external access)
+    services.loadbalancers: "2"
+    services.nodeports: "2"
+---
+# Limit Ranges for pod and container resource limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: contextops-limit-range
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-limit-range
+    app.kubernetes.io/part-of: contextops-platform
+spec:
+  limits:
+  # Container limits
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    max:
+      cpu: "2"
+      memory: "4Gi"
+  # Pod limits
+  - type: Pod
+    max:
+      cpu: "4"
+      memory: "8Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+  # PVC limits
+  - type: PersistentVolumeClaim
+    min:
+      storage: "1Gi"
+    max:
+      storage: "100Gi"
+---
+# Network Security Policy (additional to production overlay)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: contextops-base-security
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-base-security
+    app.kubernetes.io/part-of: contextops-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: contextops-platform
+  policyTypes:
+  - Ingress
+  - Egress
+  # Allow communication between ContextOps services
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: contextops-platform
+  # Allow outbound to system services
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: contextops-platform
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+# ValidatingAdmissionWebhook for additional security validation
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionWebhook
+metadata:
+  name: contextops-security-validation
+  labels:
+    app.kubernetes.io/name: contextops-security-validation
+    app.kubernetes.io/part-of: contextops-platform
+rules:
+- operations: ["CREATE", "UPDATE"]
+  apiGroups: [""]
+  apiVersions: ["v1"]
+  resources: ["pods"]
+- operations: ["CREATE", "UPDATE"]
+  apiGroups: ["apps"]
+  apiVersions: ["v1"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+admissionReviewVersions: ["v1", "v1beta1"]
+sideEffects: None
+failurePolicy: Fail
+namespaceSelector:
+  matchLabels:
+    app.kubernetes.io/part-of: contextops-platform
+clientConfig:
+  service:
+    name: contextops-admission-webhook
+    namespace: contextops
+    path: "/validate"
+    port: 8443

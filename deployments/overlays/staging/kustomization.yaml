@@ -1,0 +1,122 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: contextops-staging
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base configuration to extend
+resources:
+  - ../../base
+  - ingress.yaml
+
+# Staging namespace
+namespace: contextops-staging
+
+# Environment-specific name prefix
+namePrefix: staging-
+
+# Common labels for staging environment
+commonLabels:
+  app.kubernetes.io/environment: staging
+  app.kubernetes.io/instance: contextops-staging
+
+# Staging-specific annotations
+commonAnnotations:
+  deployment.kubernetes.io/environment: staging
+  contextops.io/deployment-target: staging
+  contextops.io/testing-environment: "true"
+
+# Image tags for staging (release candidates)
+images:
+  - name: contextops/gateway
+    newTag: v1.0.0-rc
+  - name: contextops/gitops-aggregator
+    newTag: v1.0.0-rc
+  - name: contextops/app-sync-svc
+    newTag: v1.0.0-rc
+  - name: contextops/environment-validation-svc
+    newTag: v1.0.0-rc
+  - name: contextops/context-correlation-svc
+    newTag: v1.0.0-rc
+  - name: contextops/multi-environment-kube-svc
+    newTag: v1.0.0-rc
+  - name: contextops/customer-git-branch-svc
+    newTag: v1.0.0-rc
+
+# Configuration patches for staging environment
+patches:
+  # Staging resource allocation (between dev and prod)
+  - target:
+      kind: Deployment
+      labelSelector: "app.kubernetes.io/component=api-gateway"
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "200m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+
+  # Staging logging configuration  
+  - target:
+      kind: ConfigMap
+      name: contextops-config
+    patch: |-
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: "info"
+      - op: add
+        path: /data/ENABLE_DEBUG_ENDPOINTS
+        value: "true"
+      - op: add
+        path: /data/CORS_ALLOW_ALL
+        value: "false"
+      - op: add
+        path: /data/ENABLE_TEST_ROUTES
+        value: "true"
+      - op: add
+        path: /data/METRICS_DETAILED
+        value: "true"
+
+  # Staging database configuration
+  - target:
+      kind: PersistentVolumeClaim
+      name: postgres-pvc
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: "20Gi"
+
+  # Staging RabbitMQ configuration
+  - target:
+      kind: PersistentVolumeClaim
+      name: rabbitmq-pvc
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: "10Gi"
+
+# Staging replica counts (production-like but smaller)
+replicas:
+  - name: gateway
+    count: 2
+  - name: gitops-aggregator
+    count: 1
+  - name: app-sync-svc
+    count: 2
+  - name: environment-validation-svc
+    count: 2
+  - name: context-correlation-svc
+    count: 1
+  - name: multi-environment-kube-svc
+    count: 1
+  - name: customer-git-branch-svc
+    count: 1

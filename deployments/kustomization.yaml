@@ -1,0 +1,27 @@
+# Root kustomization for environment management
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: contextops-environments
+  annotations:
+    config.kubernetes.io/local-config: "true"
+    contextops.io/environments: "development,staging,production"
+    contextops.io/default-environment: "development"
+
+# Environment-specific resources
+resources: []
+
+# Environment management configurations
+configurations:
+- environments/development.yaml
+- environments/staging.yaml
+- environments/production.yaml
+
+# Cross-environment patches
+patchesStrategicMerge: []
+
+# Environment-specific generators
+generators:
+- environments/secrets-generator.yaml
+- environments/configmap-generator.yaml

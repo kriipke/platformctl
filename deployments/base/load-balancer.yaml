@@ -1,0 +1,144 @@
+# LoadBalancer service for external access (cloud environments)
+apiVersion: v1
+kind: Service
+metadata:
+  name: contextops-external-lb
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-external-lb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: load-balancer
+  annotations:
+    # AWS Load Balancer Controller annotations
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-target-type: "instance"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "HTTP"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/health"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval-seconds: "30"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout-seconds: "5"
+    service.beta.kubernetes.io/aws-load-balancer-healthy-threshold-count: "2"
+    service.beta.kubernetes.io/aws-load-balancer-unhealthy-threshold-count: "3"
+    
+    # Azure Load Balancer annotations (alternative)
+    service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/health"
+    
+    # GCP Load Balancer annotations (alternative)
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+    app.kubernetes.io/component: api-gateway
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8080
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 8080
+  sessionAffinity: None
+  externalTrafficPolicy: Local
+---
+# Internal load balancer for metrics (monitoring access only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: contextops-metrics-lb
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-metrics-lb
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: metrics-load-balancer
+  annotations:
+    # AWS Internal Load Balancer
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    
+    # Azure Internal Load Balancer
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    
+    # GCP Internal Load Balancer
+    cloud.google.com/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/part-of: contextops-platform
+  ports:
+  - name: gateway-metrics
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+  - name: aggregator-metrics
+    protocol: TCP
+    port: 9091
+    targetPort: 9090
+  sessionAffinity: None
+  externalTrafficPolicy: Local
+---
+# Headless service for service discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: contextops-discovery
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-discovery
+    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/component: service-discovery
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: contextops-platform
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: health
+    protocol: TCP
+    port: 8081
+    targetPort: 8081
+  - name: metrics
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+---
+# EndpointSlice for external service discovery and monitoring
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: contextops-external-endpoints
+  namespace: contextops
+  labels:
+    app.kubernetes.io/name: contextops-external-endpoints
+    app.kubernetes.io/part-of: contextops-platform
+    kubernetes.io/service-name: contextops-discovery
+addressType: IPv4
+endpoints:
+- addresses:
+  - "10.0.0.1"  # Example internal IP - should be replaced with actual IPs
+  conditions:
+    ready: true
+    serving: true
+    terminating: false
+  hostname: gateway-1
+  targetRef:
+    kind: Pod
+    name: contextops-gateway-pod-1
+    namespace: contextops
+ports:
+- name: http
+  port: 8080
+  protocol: TCP
+- name: health
+  port: 8081
+  protocol: TCP
+- name: metrics
+  port: 9090
+  protocol: TCP
