@@ -1,0 +1,138 @@
+{{- if and .Values.vault.enabled .Values.contextopsIntegration.vault.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "contextops.fullname" . }}-vault-init
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vault-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: vault-init
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.contextopsIntegration.vault.serviceAccount }}
+      containers:
+      - name: vault-init
+        image: hashicorp/vault:1.20.1
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          
+          # Wait for Vault to be ready
+          echo "Waiting for Vault to be ready..."
+          until vault status -address=http://{{ include "contextops.fullname" . }}-vault:8200 2>/dev/null || [ $? -eq 2 ]; do
+            echo "Vault is not ready yet, waiting..."
+            sleep 5
+          done
+          
+          export VAULT_ADDR="http://{{ include "contextops.fullname" . }}-vault:8200"
+          
+          # Check if Vault is initialized
+          if ! vault status | grep -q "Initialized.*true"; then
+            echo "Initializing Vault..."
+            vault operator init -key-shares=1 -key-threshold=1 -format=json > /tmp/vault-keys.json
+            
+            # Extract keys
+            UNSEAL_KEY=$(cat /tmp/vault-keys.json | jq -r '.unseal_keys_b64[0]')
+            ROOT_TOKEN=$(cat /tmp/vault-keys.json | jq -r '.root_token')
+            
+            # Store in Kubernetes secrets for ContextOps access
+            kubectl create secret generic vault-init-keys \
+              --from-literal=unseal-key="$UNSEAL_KEY" \
+              --from-literal=root-token="$ROOT_TOKEN" \
+              -n {{ .Values.namespace | default "contextops" }} || true
+            
+            # Unseal Vault
+            vault operator unseal "$UNSEAL_KEY"
+            
+            # Authenticate with root token
+            vault auth "$ROOT_TOKEN"
+          else
+            echo "Vault is already initialized"
+            # Get root token from secret
+            ROOT_TOKEN=$(kubectl get secret vault-init-keys -n {{ .Values.namespace | default "contextops" }} -o jsonpath='{.data.root-token}' | base64 -d)
+            vault auth "$ROOT_TOKEN"
+          fi
+          
+          # Enable Kubernetes auth method
+          if ! vault auth list | grep -q kubernetes; then
+            echo "Enabling Kubernetes auth method..."
+            vault auth enable kubernetes
+          fi
+          
+          # Configure Kubernetes auth
+          echo "Configuring Kubernetes auth..."
+          vault write auth/kubernetes/config \
+            token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+            kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+            kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          
+          # Create policies for ContextOps
+          {{- range .Values.contextopsIntegration.vault.policies }}
+          echo "Creating policy {{ .name }}..."
+          vault policy write {{ .name }} - <<EOF
+          path "{{ .path }}" {
+            capabilities = {{ .capabilities | toJson }}
+          }
+          EOF
+          {{- end }}
+          
+          # Create role for ContextOps
+          echo "Creating Kubernetes auth role..."
+          vault write auth/kubernetes/role/{{ .Values.contextopsIntegration.vault.auth.role }} \
+            bound_service_account_names={{ .Values.contextopsIntegration.vault.serviceAccount }} \
+            bound_service_account_namespaces={{ .Values.namespace | default "contextops" }} \
+            policies={{- range .Values.contextopsIntegration.vault.policies }}{{ .name }},{{- end }} \
+            ttl=1h
+          
+          # Enable KV secrets engine for ContextOps
+          if ! vault secrets list | grep -q "kv/"; then
+            echo "Enabling KV secrets engine..."
+            vault secrets enable -path=kv kv-v2
+          fi
+          
+          # Enable generic secrets engine for ContextOps
+          if ! vault secrets list | grep -q "secret/"; then
+            echo "Enabling generic secrets engine..."
+            vault secrets enable -path=secret kv-v2
+          fi
+          
+          # Create sample secrets for ContextOps testing
+          echo "Creating sample secrets..."
+          vault kv put secret/contextops/dev/database \
+            username=contextops-dev \
+            password=dev-secret-123
+          
+          vault kv put secret/contextops/qa/database \
+            username=contextops-qa \
+            password=qa-secret-456
+          
+          vault kv put secret/contextops/prod/database \
+            username=contextops-prod \
+            password=prod-secret-789
+          
+          vault kv put kv/contextops/external-services \
+            github-token=gh_sample_token_123 \
+            newrelic-key=nr_sample_key_456
+          
+          echo "Vault initialization completed successfully!"
+        env:
+        - name: VAULT_ADDR
+          value: "http://{{ include "contextops.fullname" . }}-vault:8200"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+{{- end }}

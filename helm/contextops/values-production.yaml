@@ -1,0 +1,437 @@
+# Production values for ContextOps Helm Chart with ArgoCD and Vault subcharts
+# This extends the base production values with integrated GitOps stack
+
+# Use the existing namespace
+namespace: contextops
+
+# Enable subcharts
+argocd:
+  enabled: false  # Temporarily disable to test Vault first
+vault:
+  enabled: true
+
+# Service configuration to match existing setup
+gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ghcr.io/kriipke/platformctl-gateway
+    tag: develop
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8080
+
+gitopsAggregator:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ghcr.io/kriipke/platformctl-gitops-aggregator
+    tag: develop
+    pullPolicy: Always
+
+# Integration services configuration
+integrationServices:
+  app-sync-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-app-sync-svc
+      tag: develop
+      pullPolicy: Always
+  
+  environment-validation-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-environment-validation-svc
+      tag: develop
+      pullPolicy: Always
+  
+  context-correlation-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-context-correlation-svc
+      tag: develop
+      pullPolicy: Always
+  
+  multi-environment-kube-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
+      tag: develop
+      pullPolicy: Always
+  
+  customer-git-branch-svc:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kriipke/platformctl-customer-git-branch-svc
+      tag: develop
+      pullPolicy: Always
+
+# PostgreSQL configuration (keep existing data)
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "14-alpine"
+    pullPolicy: Always
+  auth:
+    username: "contextops"
+    password: "contextops"
+    database: "contextops"
+  service:
+    name: "postgres"
+    port: 5432
+  persistence:
+    size: "10Gi"
+    storageClass: "do-block-storage"
+  sslMode: "disable"
+
+# RabbitMQ configuration (keep existing data)
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: "3.12-management-alpine"
+    pullPolicy: Always
+  auth:
+    username: "contextops"
+    password: "contextops"
+    vhost: "/"
+  service:
+    name: "rabbitmq"
+    port: 5672
+    managementPort: 15672
+  persistence:
+    size: "5Gi"
+    storageClass: "do-block-storage"
+
+# LoadBalancer configuration for external access
+loadBalancer:
+  enabled: true
+  provider: "digitalocean"
+  externalTrafficPolicy: "Local"
+  https:
+    enabled: false
+
+# Service discovery enabled
+serviceDiscovery:
+  enabled: true
+
+# Metrics LoadBalancer disabled (using separate service for now)
+metricsLoadBalancer:
+  enabled: false
+
+# Configuration matching current setup
+config:
+  logging:
+    level: "info"
+    format: "json"
+  metrics:
+    enabled: true
+    port: 9090
+  healthCheck:
+    port: 8081
+  tracing:
+    enabled: false
+  integrations:
+    vault: true
+    argocd: true
+    git: true
+    kubernetes: true
+  performance:
+    maxConcurrentRequests: 100
+    requestTimeout: "30s"
+    dbMaxOpenConns: 25
+    dbMaxIdleConns: 5
+  auth:
+    defaultCustomerId: "acme-corp"
+
+# Secrets configuration (same as kustomize)
+secrets:
+  database:
+    username: "contextops"
+    password: "contextops"
+  rabbitmq:
+    username: "contextops"
+    password: "contextops"
+  jwt:
+    secret: "contextops-jwt-secret-change-me"
+
+# RBAC configuration
+rbac:
+  create: true
+  rules:
+    argocd: true
+    helm: true
+    externalSecrets: true
+    vault: true
+
+# Service Account configuration
+serviceAccount:
+  create: true
+  automountServiceAccountToken: true
+
+# Kubernetes Integration enabled
+kubernetesIntegration:
+  enabled: true
+
+# =============================================================================
+# SubChart Configurations Override for Production
+# =============================================================================
+
+# ArgoCD Configuration (Production Settings)
+argocd:
+  enabled: false
+  
+  # Disable CRD installation since we installed them manually
+  crds:
+    install: false
+  
+  # Global ArgoCD configuration
+  global:
+    image:
+      tag: "v2.12.0"  # Use stable version
+  
+  # ArgoCD Server Configuration
+  server:
+    # Enable ArgoCD UI access
+    service:
+      type: ClusterIP
+      port: 443
+      portName: https
+    
+    # Enable ingress for ArgoCD UI (optional)
+    ingress:
+      enabled: false  # Set to true if you want external access
+      
+    # Configure RBAC for ContextOps integration
+    rbacConfig:
+      policy.default: role:readonly
+      policy.csv: |
+        p, role:contextops-admin, applications, *, */*, allow
+        p, role:contextops-admin, clusters, get, *, allow
+        p, role:contextops-admin, repositories, get, *, allow
+        p, role:contextops-readonly, applications, get, */*, allow
+        p, role:contextops-readonly, clusters, get, *, allow
+        p, role:contextops-readonly, repositories, get, *, allow
+        g, contextops:admin, role:contextops-admin
+        g, contextops:readonly, role:contextops-readonly
+    
+    # Configure to work with ContextOps monitoring
+    config:
+      application.instanceLabelKey: contextops.io/instance
+      url: http://contextops-argocd-server.contextops.svc.cluster.local
+    
+    # Resource limits for production
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  
+  # ArgoCD Repository Server Configuration  
+  repoServer:
+    # Resource limits for production
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  
+  # Application Controller Configuration
+  controller:
+    # Configure for high availability
+    replicas: 1
+    
+    # Metrics configuration for ContextOps monitoring
+    metrics:
+      enabled: true
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "8082"
+    
+    # Configure resource limits
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+  
+  # Redis Configuration (for ArgoCD)
+  redis:
+    enabled: true
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  # Enable ApplicationSet controller for multi-app management
+  applicationSet:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  
+  # Disable notifications for now
+  notifications:
+    enabled: false
+        
+# Vault Configuration (Production Settings)
+vault:
+  enabled: true
+  
+  # Vault Server Configuration
+  server:
+    # Disable development mode for production
+    dev:
+      enabled: false
+    
+    # High Availability configuration (single node for now)
+    ha:
+      enabled: false
+      replicas: 1
+    
+    # Data storage configuration
+    dataStorage:
+      enabled: true
+      size: "10Gi"
+      storageClass: "do-block-storage"
+    
+    # Vault configuration for production
+    standalone:
+      enabled: true
+      config: |
+        ui = true
+        
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+        
+        storage "file" {
+          path = "/vault/data"
+        }
+        
+        api_addr = "http://POD_IP:8200"
+        cluster_addr = "http://POD_IP:8201"
+        
+        # Disable mlock for containerized environment
+        disable_mlock = true
+    
+    # Configure service for ContextOps access
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 8200
+      targetPort: 8200
+      annotations:
+        contextops.io/vault-server: "true"
+    
+    # Resource configuration for production
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsGroup: 1000
+      runAsUser: 100
+      fsGroup: 1000
+  
+  # Vault UI Configuration
+  ui:
+    enabled: true
+    serviceType: "ClusterIP"
+    
+  # Injector Configuration (for secrets injection)
+  injector:
+    enabled: true
+    
+    # Configure for ContextOps workloads
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    
+    # Configure logging
+    logLevel: "info"
+    
+    # Enable metrics for monitoring
+    metrics:
+      enabled: true
+      
+# ContextOps Integration Configuration
+contextopsIntegration:
+  # ArgoCD Integration
+  argocd:
+    enabled: true
+    # Service account for ArgoCD access
+    serviceAccount: "contextops-argocd-integration"
+    # RBAC configuration
+    rbac:
+      # ClusterRole for ArgoCD monitoring
+      clusterRole: "contextops-argocd-reader"
+      rules:
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications", "applicationsets", "appprojects"]
+          verbs: ["get", "list", "watch"]
+    # API endpoints for integration
+    endpoints:
+      applications: "/api/v1/applications"
+      clusters: "/api/v1/clusters"
+      repositories: "/api/v1/repositories"
+  
+  # Vault Integration  
+  vault:
+    enabled: true
+    # Service account for Vault access
+    serviceAccount: "contextops-vault-integration"
+    # Authentication method
+    auth:
+      method: "kubernetes"
+      path: "kubernetes"
+      role: "contextops-role"
+    # Policies for ContextOps access
+    policies:
+      - name: "contextops-secrets-read"
+        path: "secret/*"
+        capabilities: ["read", "list"]
+      - name: "contextops-kv-read"  
+        path: "kv/data/contextops/*"
+        capabilities: ["read", "list"]
+    # Secret paths for ContextOps monitoring
+    secretPaths:
+      - "secret/contextops/dev/*"
+      - "secret/contextops/qa/*" 
+      - "secret/contextops/prod/*"
+      - "kv/contextops/database"
+      - "kv/contextops/external-services"

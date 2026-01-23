@@ -25,3 +25,15 @@ maintainers:
 annotations:
   category: Monitoring
   licenses: Apache-2.0
+
+dependencies:
+  - name: argo-cd
+    version: "9.3.x"
+    repository: https://argoproj.github.io/argo-helm
+    condition: argocd.enabled
+    alias: argocd
+  - name: vault
+    version: "0.30.x"
+    repository: https://helm.releases.hashicorp.com
+    condition: vault.enabled
+    alias: vault

@@ -125,6 +125,31 @@ spec:
             secretKeyRef:
               name: {{ include "contextops.fullname" . }}-secrets
               key: JWT_SECRET
+        # Integration Configuration
+        {{- if .Values.contextopsIntegration.argocd.enabled }}
+        - name: ARGOCD_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: argocd.server.url
+        - name: ARGOCD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: argocd.enabled
+        {{- end }}
+        {{- if .Values.contextopsIntegration.vault.enabled }}
+        - name: VAULT_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: vault.server.url
+        - name: VAULT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: vault.enabled
+        {{- end }}
         {{- range $key, $value := .Values.gateway.extraEnv }}
         - name: {{ $key }}
           value: {{ $value | quote }}

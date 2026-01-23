@@ -1,0 +1,90 @@
+{{- if and .Values.argocd.enabled .Values.contextopsIntegration.argocd.enabled }}
+---
+# Sample ArgoCD Application for ContextOps to monitor
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: contextops-sample-app
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-application
+    contextops.io/monitored: "true"
+    contextops.io/customer: "acme-corp"
+    contextops.io/environment: "dev"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kriipke/platformctl.git
+    targetRevision: HEAD
+    path: examples/sample-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: contextops-sample
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  info:
+    - name: 'ContextOps Integration'
+      value: 'This application is monitored by ContextOps'
+    - name: 'Customer'  
+      value: 'acme-corp'
+    - name: 'Environment'
+      value: 'dev'
+---
+# Sample ApplicationSet for ContextOps to monitor
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: contextops-multi-env-apps
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: argocd-applicationset
+    contextops.io/monitored: "true"
+spec:
+  generators:
+  - list:
+      elements:
+      - customer: acme-corp
+        environment: dev
+        cluster: https://kubernetes.default.svc
+      - customer: acme-corp  
+        environment: qa
+        cluster: https://kubernetes.default.svc
+      - customer: techstart-io
+        environment: dev
+        cluster: https://kubernetes.default.svc
+  template:
+    metadata:
+      name: '{{ `{{customer}}` }}-{{ `{{environment}}` }}-app'
+      labels:
+        contextops.io/customer: '{{ `{{customer}}` }}'
+        contextops.io/environment: '{{ `{{environment}}` }}'
+        contextops.io/monitored: "true"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kriipke/platformctl.git
+        targetRevision: HEAD
+        path: 'examples/multi-tenant/{{ `{{customer}}` }}/{{ `{{environment}}` }}'
+      destination:
+        server: '{{ `{{cluster}}` }}'
+        namespace: '{{ `{{customer}}` }}-{{ `{{environment}}` }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+      info:
+        - name: 'ContextOps Integration'
+          value: 'Multi-environment app monitored by ContextOps'
+        - name: 'Customer'
+          value: '{{ `{{customer}}` }}'
+        - name: 'Environment'
+          value: '{{ `{{environment}}` }}'
+{{- end }}
