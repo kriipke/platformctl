@@ -284,8 +284,8 @@ func ginBasicAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set customer in Gin context (for observability middleware)
-		c.Set("customer_id", "admin")
+		// Set customer in Gin context (use acme-corp for demo data access)
+		c.Set("customer_id", "acme-corp")
 		c.Set("username", username)
 
 		// Continue to next handler
