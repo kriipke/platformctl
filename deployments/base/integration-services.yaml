@@ -24,6 +24,7 @@ spec:
       containers:
       - name: app-sync-svc
         image: ghcr.io/kriipke/platformctl-app-sync-svc:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
@@ -183,6 +184,7 @@ spec:
       containers:
       - name: environment-validation-svc
         image: ghcr.io/kriipke/platformctl-environment-validation-svc:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
@@ -342,6 +344,7 @@ spec:
       containers:
       - name: context-correlation-svc
         image: ghcr.io/kriipke/platformctl-context-correlation-svc:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
@@ -496,6 +499,7 @@ spec:
       containers:
       - name: multi-environment-kube-svc
         image: ghcr.io/kriipke/platformctl-multi-environment-kube-svc:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
@@ -655,6 +659,7 @@ spec:
       containers:
       - name: customer-git-branch-svc
         image: ghcr.io/kriipke/platformctl-customer-git-branch-svc:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
