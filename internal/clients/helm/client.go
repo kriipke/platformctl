@@ -11,6 +11,7 @@ type HelmClient interface {
 	ValidateValuesFiles(customerID, environmentName string) ([]api.ValuesFileStatus, error)
 	GetHelmReleases(customerID, environmentName, namespace string) ([]api.HelmReleaseStatus, error)
 	ValidateHelmChart(customerID, chartName, chartVersion string) (*api.HelmChartValidation, error)
+	ValidateHelmSources(customerID, appName string) ([]api.HelmSourceStatus, error)
 }
 
 type HelmClientImpl struct{}
@@ -75,7 +76,7 @@ func (hc *HelmClientImpl) GetHelmReleases(customerID, environmentName, namespace
 		AppVersion:       "2.1.0",
 		Revision:         1,
 		Status:           "deployed",
-		Updated:          time.Now().Add(-1 * time.Hour),
+		Updated:          func() *time.Time { t := time.Now().Add(-1 * time.Hour); return &t }(),
 		Values:           make(map[string]interface{}),
 		ComputedValues:   make(map[string]interface{}),
 		SourceValuesFile: fmt.Sprintf("values-%s.yaml", environmentName),
@@ -107,9 +108,9 @@ func (hc *HelmClientImpl) ValidateHelmChart(customerID, chartName, chartVersion 
 		ChartName:        chartName,
 		ChartVersion:     chartVersion,
 		ValidationStatus: "valid",
-		Dependencies:     []string{},
+		Dependencies:     []api.HelmDependency{},
 		TemplateCount:    5,
-		LastValidated:    time.Now().UTC(),
+		LastValidated:    func() *time.Time { t := time.Now().UTC(); return &t }(),
 	}
 
 	return validation, nil

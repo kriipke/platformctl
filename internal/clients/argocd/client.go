@@ -144,7 +144,7 @@ func (ac *ArgoCDClientImpl) SyncApplicationSet(customerID, appSetName string, fo
 
 	syncResult := &api.ApplicationSetSyncResult{
 		Name:        appSetName,
-		SyncStarted: time.Now().UTC(),
+		SyncStarted: func() *time.Time { t := time.Now().UTC(); return &t }(),
 		Status:      "syncing",
 		Applications: []string{
 			fmt.Sprintf("%s-dev", appSetName),

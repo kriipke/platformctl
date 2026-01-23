@@ -108,8 +108,8 @@ func (mc *MultiClusterClient) GetWorkloadStatus(customerID, environmentName, nam
 			app := api.EnvironmentApplication{
 				Name:            deployment.Name,
 				Environment:     environmentName,
-				PodCount:        int(*deployment.Spec.Replicas),
-				ReadyPodCount:   int(deployment.Status.ReadyReplicas),
+				PodCount:        int32(*deployment.Spec.Replicas),
+				ReadyPodCount:   int32(deployment.Status.ReadyReplicas),
 				OverallStatus:   "healthy",
 				Deployments:     []api.DeploymentStatus{},
 				Services:        []api.ServiceStatus{},
@@ -130,21 +130,30 @@ func (mc *MultiClusterClient) GetWorkloadStatus(customerID, environmentName, nam
 }
 
 func (mc *MultiClusterClient) GetMultiEnvironmentComparison(customerID string, environments []string) (*api.MultiEnvironmentComparison, error) {
+	envMap := make(map[string]api.EnvironmentWorkloadStatus)
+	for _, env := range environments {
+		envMap[env] = api.EnvironmentWorkloadStatus{
+			Environment: env,
+			Namespace:   fmt.Sprintf("app-%s", env),
+		}
+	}
+
 	comparison := &api.MultiEnvironmentComparison{
 		CustomerID:            customerID,
 		ContextName:           "", // Would be passed in
-		Environments:          environments,
-		EnvironmentStatuses:   make(map[string]*api.EnvironmentWorkloadStatus),
+		Environments:          envMap,
+		EnvironmentStatuses:   []api.EnvironmentWorkloadStatus{},
 		CrossEnvironmentDrift: []api.EnvironmentDrift{},
-		ComparisonSummary: &api.EnvironmentComparisonSummary{
-			TotalApplications:       0,
-			HealthyApplications:     0,
-			UnhealthyApplications:   0,
-			CrossEnvironmentDrifts:  0,
-			SecretCorrelationIssues: 0,
-			OverallHealthScore:      1.0,
+		ComparisonSummary: api.EnvironmentComparisonSummary{
+			TotalEnvironments:   len(environments),
+			HealthyEnvironments: len(environments),
+			DriftDetected:       false,
+			HighSeverityIssues:  0,
+			DriftByType:         make(map[string]int),
+			LastComparisonTime:  time.Now().UTC(),
+			RecommendedActions:  []string{},
 		},
-		LastCompared: time.Now().UTC(),
+		LastCompared: func() *time.Time { t := time.Now().UTC(); return &t }(),
 	}
 
 	// Get status for each environment
@@ -153,8 +162,21 @@ func (mc *MultiClusterClient) GetMultiEnvironmentComparison(customerID string, e
 		if err != nil {
 			continue
 		}
-		comparison.EnvironmentStatuses[env] = status
-		comparison.ComparisonSummary.TotalApplications += len(status.Applications)
+		comparison.EnvironmentStatuses = append(comparison.EnvironmentStatuses, *status)
+		// Update summary metrics based on status
+		if status.Applications != nil {
+			// Count healthy vs unhealthy applications
+			for _, app := range status.Applications {
+				if app.OverallStatus != "healthy" {
+					comparison.ComparisonSummary.HighSeverityIssues++
+					if comparison.ComparisonSummary.HealthyEnvironments > 0 {
+						comparison.ComparisonSummary.HealthyEnvironments--
+					}
+					comparison.ComparisonSummary.DriftDetected = true
+					break
+				}
+			}
+		}
 	}
 
 	return comparison, nil
@@ -201,8 +223,6 @@ func (mc *MultiClusterClient) simulateWorkloadStatus(customerID, environmentName
 			{
 				Name:            fmt.Sprintf("app-%s", environmentName),
 				Environment:     environmentName,
-				HelmReleaseName: fmt.Sprintf("app-%s", environmentName),
-				HelmRevision:    "1.0.0",
 				PodCount:        3,
 				ReadyPodCount:   3,
 				OverallStatus:   "healthy",
