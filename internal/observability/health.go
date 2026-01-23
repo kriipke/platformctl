@@ -177,9 +177,17 @@ func (hm *HealthManager) CheckReadiness(ctx context.Context) SystemHealth {
 		}
 	}
 	
-	health.Checks = readinessChecks
-	health.Status = hm.calculateOverallHealth(readinessChecks)
-	health.Summary = hm.calculateSummary(readinessChecks)
+	// If no critical checkers are registered, consider the service ready
+	// This allows services to start without health checkers configured
+	if len(readinessChecks) == 0 {
+		health.Status = HealthStatusHealthy
+		health.Checks = make(map[string]HealthResult)
+	} else {
+		health.Checks = readinessChecks
+		health.Status = hm.calculateOverallHealth(readinessChecks)
+	}
+	
+	health.Summary = hm.calculateSummary(health.Checks)
 	
 	return health
 }
