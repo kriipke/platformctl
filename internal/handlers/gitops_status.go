@@ -42,11 +42,11 @@ func (h *GitOpsStatusHandler) GetContextStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Msg("Getting context status")
 
-	status, err := h.store.GetContextStatus(c.Request.Context(), customerData.ID.String(), contextName)
+	status, err := h.store.GetContextStatus(c.Request.Context(), customerData.Name, contextName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Context status not found"})
@@ -78,7 +78,7 @@ func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Strs("health_statuses", healthStatuses).
 		Msg("Listing context statuses")
 
@@ -86,7 +86,7 @@ func (h *GitOpsStatusHandler) ListContextStatuses(c *gin.Context) {
 	var err error
 
 	if len(healthStatuses) > 0 {
-		statuses, err = h.store.GetContextsByHealthStatus(c.Request.Context(), customerData.ID.String(), healthStatuses)
+		statuses, err = h.store.GetContextsByHealthStatus(c.Request.Context(), customerData.Name, healthStatuses)
 	} else {
 		statuses, err = h.store.ListContextStatuses(c.Request.Context(), customerData.ID.String())
 	}
@@ -121,12 +121,12 @@ func (h *GitOpsStatusHandler) GetAppManifestStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Str("app_name", appName).
 		Msg("Getting app manifest status")
 
-	status, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, appName)
+	status, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.Name, contextName, appName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "App manifest status not found"})
@@ -161,12 +161,12 @@ func (h *GitOpsStatusHandler) GetEnvironmentManifestStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Str("environment_name", environmentName).
 		Msg("Getting environment manifest status")
 
-	status, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, environmentName)
+	status, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.Name, contextName, environmentName)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Environment manifest status not found"})
@@ -201,12 +201,12 @@ func (h *GitOpsStatusHandler) GetMultiEnvironmentAppStatus(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Str("app_name", appName).
 		Msg("Getting multi-environment app status")
 
-	statuses, err := h.store.GetMultiEnvironmentAppStatus(c.Request.Context(), customerData.ID.String(), contextName, appName)
+	statuses, err := h.store.GetMultiEnvironmentAppStatus(c.Request.Context(), customerData.Name, contextName, appName)
 	if err != nil {
 		h.logger.Error().Err(err).
 			Str("context_name", contextName).
@@ -240,12 +240,12 @@ func (h *GitOpsStatusHandler) GetVaultValidationDetails(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Str("environment_name", environmentName).
 		Msg("Getting vault validation details")
 
-	validations, err := h.store.GetVaultValidationDetails(c.Request.Context(), customerData.ID.String(), contextName, environmentName)
+	validations, err := h.store.GetVaultValidationDetails(c.Request.Context(), customerData.Name, contextName, environmentName)
 	if err != nil {
 		h.logger.Error().Err(err).
 			Str("context_name", contextName).
@@ -278,7 +278,7 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Str("context_name", contextName).
 		Msg("Getting context health summary")
 
@@ -295,14 +295,14 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	}
 
 	// Get app manifest status
-	appStatus, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, contextStatus.AppReference)
+	appStatus, err := h.store.GetAppManifestStatus(c.Request.Context(), customerData.Name, contextName, contextStatus.AppReference)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		h.logger.Error().Err(err).Msg("Failed to get app manifest status")
 		// Don't return error, just log it
 	}
 
 	// Get environment manifest status
-	envStatus, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.ID.String(), contextName, contextStatus.EnvironmentReference)
+	envStatus, err := h.store.GetEnvironmentManifestStatus(c.Request.Context(), customerData.Name, contextName, contextStatus.EnvironmentReference)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		h.logger.Error().Err(err).Msg("Failed to get environment manifest status")
 		// Don't return error, just log it
@@ -348,11 +348,11 @@ func (h *GitOpsStatusHandler) GetSystemHealthOverview(c *gin.Context) {
 	customerData := customer.(*models.Customer)
 
 	h.logger.Info().
-		Str("customer_id", customerData.ID.String()).
+		Str("customer_id", customerData.Name).
 		Msg("Getting system health overview")
 
 	// Get all context statuses
-	statuses, err := h.store.ListContextStatuses(c.Request.Context(), customerData.ID.String())
+	statuses, err := h.store.ListContextStatuses(c.Request.Context(), customerData.Name)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to list context statuses")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})

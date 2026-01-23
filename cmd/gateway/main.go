@@ -292,7 +292,7 @@ func ginBasicAuthMiddleware() gin.HandlerFunc {
 		// Create a Customer object for GitOps handlers
 		customer := &models.Customer{
 			ID:       uuid.New(), // Generate a UUID for the customer
-			Name:     customerID,
+			Name:     customerID, // Use customerID as the Name for database queries
 			Username: username,
 			Email:    username + "@example.com",
 			Active:   true,
