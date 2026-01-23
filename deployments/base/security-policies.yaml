@@ -175,6 +175,11 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/part-of: contextops-platform
+  # Allow LoadBalancer traffic from nodes/external sources  
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8080
   # Allow outbound to system services
   egress:
   - to:
