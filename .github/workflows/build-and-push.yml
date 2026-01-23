@@ -60,8 +60,8 @@ jobs:
           SKIP_UNCHANGED="false"
           CHANGED_SERVICES='[]'
           
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
-            echo "Force rebuild requested - building all services"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual trigger - building all services"
             CHANGED_SERVICES='["gateway","gitops-aggregator","app-sync-svc","environment-validation-svc","context-correlation-svc","multi-environment-kube-svc","customer-git-branch-svc"]'
           elif [[ "${{ github.ref }}" == refs/tags/v* ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "Tag or main branch - building all services"
