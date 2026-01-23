@@ -38,7 +38,6 @@ type ContextStatus struct {
 	LastSyncTime         *time.Time             `json:"last_sync_time" db:"last_sync_time"`
 	LastDeploymentTime   *time.Time             `json:"last_deployment_time" db:"last_deployment_time"`
 	CorrelationData      map[string]interface{} `json:"correlation_data"`
-	correlationDataJSON  []byte                 `db:"correlation_data"`
 	ValidationErrors     []string               `json:"validation_errors" db:"validation_errors"`
 	GitCommit            string                 `json:"git_commit" db:"git_commit"`
 	HelmRevision         string                 `json:"helm_revision" db:"helm_revision"`
@@ -130,6 +129,7 @@ type VaultValidationDetail struct {
 // GetContextStatus retrieves the current status of a context
 func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextName string) (*ContextStatus, error) {
 	var status ContextStatus
+	var correlationDataJSON []byte
 
 	query := `
 		SELECT customer_id, context_name, app_reference, environment_reference,
@@ -140,7 +140,24 @@ func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextN
 		WHERE customer_id = $1 AND context_name = $2
 	`
 
-	err := s.db.GetContext(ctx, &status, query, customerID, contextName)
+	row := s.db.QueryRowxContext(ctx, query, customerID, contextName)
+	err := row.Scan(
+		&status.CustomerID,
+		&status.ContextName,
+		&status.AppReference,
+		&status.EnvironmentReference,
+		&status.PairingStatus,
+		&status.SyncStatus,
+		&status.HealthStatus,
+		&status.ResourceCount,
+		&status.LastSyncTime,
+		&status.LastDeploymentTime,
+		&correlationDataJSON,
+		&status.ValidationErrors,
+		&status.GitCommit,
+		&status.HelmRevision,
+		&status.LastUpdated,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("context status not found for customer %s, context %s", customerID, contextName)
@@ -149,8 +166,8 @@ func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextN
 	}
 
 	// Parse correlation data JSON
-	if len(status.correlationDataJSON) > 0 {
-		if err := json.Unmarshal(status.correlationDataJSON, &status.CorrelationData); err != nil {
+	if len(correlationDataJSON) > 0 {
+		if err := json.Unmarshal(correlationDataJSON, &status.CorrelationData); err != nil {
 			return nil, fmt.Errorf("failed to parse correlation data: %w", err)
 		}
 	}
