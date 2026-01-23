@@ -8,11 +8,16 @@ import (
 type ApplicationSetStatus struct {
 	Name         string                   `json:"name"`
 	Namespace    string                   `json:"namespace"`
+	AppName      string                   `json:"app_name,omitempty"`
+	CustomerID   string                   `json:"customer_id,omitempty"`
 	SyncStatus   string                   `json:"sync_status"`
 	HealthStatus string                   `json:"health_status"`
 	Message      string                   `json:"message,omitempty"`
+	Generator    interface{}              `json:"generator,omitempty"`
 	Conditions   []ApplicationCondition   `json:"conditions,omitempty"`
 	Applications []ApplicationSetApplication `json:"applications,omitempty"`
+	HelmSourceStatus interface{}         `json:"helm_source_status,omitempty"`
+	GitSourceStatus  interface{}         `json:"git_source_status,omitempty"`
 	LastSyncTime *time.Time               `json:"last_sync_time,omitempty"`
 }
 
@@ -25,6 +30,8 @@ type ApplicationSetApplication struct {
 	HealthStatus string                 `json:"health_status"`
 	Source       ApplicationSource      `json:"source"`
 	Destination  ApplicationDestination `json:"destination"`
+	GitCommit    string                 `json:"git_commit,omitempty"`
+	HelmRevision string                 `json:"helm_revision,omitempty"`
 	LastDeployed *time.Time             `json:"last_deployed,omitempty"`
 }
 
@@ -80,6 +87,7 @@ type ApplicationCondition struct {
 }
 
 type ApplicationSetSyncResult struct {
+	Name            string     `json:"name,omitempty"`
 	ApplicationName string     `json:"application_name"`
 	SyncStatus      string     `json:"sync_status"`
 	Message         string     `json:"message,omitempty"`
@@ -100,16 +108,20 @@ type ResourceResult struct {
 
 // Git Integration Types
 type CustomerBranchValidation struct {
-	CustomerID    string                `json:"customer_id"`
-	BranchName    string                `json:"branch_name"`
-	Repository    string                `json:"repository"`
-	Valid         bool                  `json:"valid"`
-	Errors        []string              `json:"errors,omitempty"`
-	Warnings      []string              `json:"warnings,omitempty"`
-	LastCommit    *GitCommit            `json:"last_commit,omitempty"`
-	ValuesFiles   []HelmValuesFile      `json:"values_files,omitempty"`
-	Environments  []EnvironmentValuesValidation `json:"environments,omitempty"`
-	LastValidated time.Time             `json:"last_validated"`
+	CustomerID       string                `json:"customer_id"`
+	BranchName       string                `json:"branch_name"`
+	Repository       string                `json:"repository"`
+	BranchPattern    string                `json:"branch_pattern,omitempty"`
+	PatternCompliant bool                  `json:"pattern_compliant"`
+	BranchExists     bool                  `json:"branch_exists"`
+	Valid            bool                  `json:"valid"`
+	Errors           []string              `json:"errors,omitempty"`
+	Warnings         []string              `json:"warnings,omitempty"`
+	LastCommit       *GitCommit            `json:"last_commit,omitempty"`
+	ValuesFiles      []HelmValuesFile      `json:"values_files,omitempty"`
+	HelmValuesFiles  []HelmValuesFile      `json:"helm_values_files,omitempty"`
+	Environments     []EnvironmentValuesValidation `json:"environments,omitempty"`
+	LastValidated    time.Time             `json:"last_validated"`
 }
 
 type GitCommit struct {
@@ -123,8 +135,13 @@ type GitCommit struct {
 
 type HelmValuesFile struct {
 	Path         string                    `json:"path"`
+	FileName     string                    `json:"file_name,omitempty"`
+	FilePath     string                    `json:"file_path,omitempty"`
 	Environment  string                    `json:"environment"`
+	FileSize     int64                     `json:"file_size,omitempty"`
 	Valid        bool                      `json:"valid"`
+	SHA          string                    `json:"sha,omitempty"`
+	IsValid      bool                      `json:"is_valid"`
 	Errors       []ValidationError         `json:"errors,omitempty"`
 	Content      map[string]interface{}    `json:"content,omitempty"`
 	Size         int64                     `json:"size"`
@@ -132,22 +149,36 @@ type HelmValuesFile struct {
 }
 
 type EnvironmentValuesValidation struct {
-	Environment   string            `json:"environment"`
-	ValuesFile    string            `json:"values_file"`
-	Valid         bool              `json:"valid"`
-	RequiredKeys  []string          `json:"required_keys"`
-	MissingKeys   []string          `json:"missing_keys,omitempty"`
-	InvalidValues map[string]string `json:"invalid_values,omitempty"`
-	Warnings      []string          `json:"warnings,omitempty"`
+	Environment        string            `json:"environment"`
+	ValuesFile         string            `json:"values_file"`
+	ExpectedFileName   string            `json:"expected_file_name,omitempty"`
+	ActualFileName     string            `json:"actual_file_name,omitempty"`
+	FileExists         bool              `json:"file_exists"`
+	FileValid          bool              `json:"file_valid"`
+	Valid              bool              `json:"valid"`
+	RequiredKeys       []string          `json:"required_keys"`
+	MissingKeys        []string          `json:"missing_keys,omitempty"`
+	InvalidValues      map[string]string `json:"invalid_values,omitempty"`
+	ValidationErrors   []ValidationError `json:"validation_errors,omitempty"`
+	Warnings           []string          `json:"warnings,omitempty"`
 }
 
 // Helm Integration Types
 type HelmReleaseStatus struct {
 	Name        string               `json:"name"`
 	Namespace   string               `json:"namespace"`
+	Environment string               `json:"environment,omitempty"`
+	ChartName   string               `json:"chart_name,omitempty"`
+	ChartVersion string              `json:"chart_version,omitempty"`
+	AppVersion  string               `json:"app_version,omitempty"`
+	Revision    int                  `json:"revision,omitempty"`
 	Version     int                  `json:"version"`
 	Status      string               `json:"status"`
+	Updated     *time.Time           `json:"updated,omitempty"`
 	Chart       HelmChartInfo        `json:"chart"`
+	ComputedValues map[string]interface{} `json:"computed_values,omitempty"`
+	SourceValuesFile string           `json:"source_values_file,omitempty"`
+	ValuesFileHash string             `json:"values_file_hash,omitempty"`
 	Values      map[string]interface{} `json:"values,omitempty"`
 	Manifest    string               `json:"manifest,omitempty"`
 	Notes       string               `json:"notes,omitempty"`
@@ -167,15 +198,18 @@ type HelmChartInfo struct {
 }
 
 type HelmChartValidation struct {
-	ChartName    string            `json:"chart_name"`
-	ChartVersion string            `json:"chart_version"`
-	Repository   string            `json:"repository"`
-	Valid        bool              `json:"valid"`
-	Errors       []ValidationError `json:"errors,omitempty"`
-	Warnings     []string          `json:"warnings,omitempty"`
-	Dependencies []HelmDependency  `json:"dependencies,omitempty"`
-	Templates    []HelmTemplate    `json:"templates,omitempty"`
-	Values       HelmValuesSchema  `json:"values,omitempty"`
+	ChartName        string            `json:"chart_name"`
+	ChartVersion     string            `json:"chart_version"`
+	Repository       string            `json:"repository"`
+	ValidationStatus string            `json:"validation_status,omitempty"`
+	Valid            bool              `json:"valid"`
+	Errors           []ValidationError `json:"errors,omitempty"`
+	Warnings         []string          `json:"warnings,omitempty"`
+	Dependencies     []HelmDependency  `json:"dependencies,omitempty"`
+	Templates        []HelmTemplate    `json:"templates,omitempty"`
+	TemplateCount    int               `json:"template_count,omitempty"`
+	Values           HelmValuesSchema  `json:"values,omitempty"`
+	LastValidated    *time.Time        `json:"last_validated,omitempty"`
 }
 
 type HelmDependency struct {
@@ -296,27 +330,47 @@ type NewRelicTimeslice struct {
 
 // Additional Kubernetes Integration Types
 type EnvironmentWorkloadStatus struct {
-	Environment   string                 `json:"environment"`
-	Namespace     string                 `json:"namespace"`
-	Applications  []EnvironmentApplication `json:"applications"`
-	NetworkPolicies []NetworkPolicyStatus `json:"network_policies"`
-	PodCorrelations []PodEnvironmentCorrelation `json:"pod_correlations"`
-	ResourceQuotas  map[string]interface{} `json:"resource_quotas"`
-	LastChecked     time.Time              `json:"last_checked"`
+	Environment        string                 `json:"environment"`
+	Namespace          string                 `json:"namespace"`
+	ClusterName        string                 `json:"cluster_name,omitempty"`
+	CustomerID         string                 `json:"customer_id,omitempty"`
+	Applications       []EnvironmentApplication `json:"applications"`
+	NetworkPolicies    []NetworkPolicyStatus `json:"network_policies"`
+	PodCorrelations    []PodEnvironmentCorrelation `json:"pod_correlations"`
+	SecretCorrelations []interface{}         `json:"secret_correlations,omitempty"`
+	ResourceQuotas     map[string]interface{} `json:"resource_quotas"`
+	LastChecked        time.Time              `json:"last_checked"`
+	LastUpdated        time.Time              `json:"last_updated,omitempty"`
 }
 
 type EnvironmentApplication struct {
 	Name            string                 `json:"name"`
 	Namespace       string                 `json:"namespace"`
+	Environment     string                 `json:"environment,omitempty"`
 	Kind            string                 `json:"kind"` // Deployment, StatefulSet, etc.
 	Replicas        int32                  `json:"replicas"`
 	ReadyReplicas   int32                  `json:"ready_replicas"`
+	PodCount        int32                  `json:"pod_count,omitempty"`
+	ReadyPodCount   int32                  `json:"ready_pod_count,omitempty"`
+	OverallStatus   string                 `json:"overall_status,omitempty"`
 	Image           string                 `json:"image"`
 	Status          string                 `json:"status"`
+	Deployments     []DeploymentStatus     `json:"deployments,omitempty"`
 	Resources       KubernetesResources    `json:"resources"`
 	EnvVars         map[string]string      `json:"env_vars,omitempty"`
 	VaultSecrets    []string               `json:"vault_secrets,omitempty"`
 	LastDeployed    *time.Time             `json:"last_deployed,omitempty"`
+}
+
+type DeploymentStatus struct {
+	Name            string    `json:"name"`
+	Namespace       string    `json:"namespace"`
+	Replicas        int32     `json:"replicas"`
+	ReadyReplicas   int32     `json:"ready_replicas"`
+	UpdatedReplicas int32     `json:"updated_replicas"`
+	Status          string    `json:"status"`
+	Image           string    `json:"image"`
+	LastUpdated     *time.Time `json:"last_updated,omitempty"`
 }
 
 type NetworkPolicyStatus struct {

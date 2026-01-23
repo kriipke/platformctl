@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"

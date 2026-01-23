@@ -175,6 +175,8 @@ type PodEnvValidationResult struct {
 	PodName          string `json:"pod_name"`
 	Namespace        string `json:"namespace"`
 	EnvVarName       string `json:"env_var_name"`
+	SecretRef        string `json:"secret_ref,omitempty"`
+	SecretKey        string `json:"secret_key,omitempty"`
 	ExpectedValue    string `json:"expected_value,omitempty"`
 	ActualValue      string `json:"actual_value,omitempty"`
 	ValidationStatus string `json:"validation_status"` // match, mismatch, missing
