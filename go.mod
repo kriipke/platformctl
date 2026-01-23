@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 
 	// Message queue for GitOps events
-	github.com/rabbitmq/amqp091-go v1.9.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 
 	// Logging and observability
 	github.com/sirupsen/logrus v1.9.3 // indirect
