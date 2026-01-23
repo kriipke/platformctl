@@ -6,7 +6,7 @@ namespace: contextops
 
 # Enable subcharts
 argocd:
-  enabled: false  # Temporarily disable to test Vault first
+  enabled: true
 vault:
   enabled: true
 
@@ -186,7 +186,7 @@ kubernetesIntegration:
 
 # ArgoCD Configuration (Production Settings)
 argocd:
-  enabled: false
+  enabled: true
   
   # Disable CRD installation since we installed them manually
   crds:
