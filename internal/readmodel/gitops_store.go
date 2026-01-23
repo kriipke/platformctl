@@ -37,7 +37,7 @@ type ContextStatus struct {
 	ResourceCount        int                    `json:"resource_count" db:"resource_count"`
 	LastSyncTime         *time.Time             `json:"last_sync_time" db:"last_sync_time"`
 	LastDeploymentTime   *time.Time             `json:"last_deployment_time" db:"last_deployment_time"`
-	CorrelationData      map[string]interface{} `json:"correlation_data"`
+	CorrelationData      map[string]interface{} `json:"correlation_data" db:"correlation_data"`
 	ValidationErrors     []string               `json:"validation_errors" db:"validation_errors"`
 	GitCommit            string                 `json:"git_commit" db:"git_commit"`
 	HelmRevision         string                 `json:"helm_revision" db:"helm_revision"`
