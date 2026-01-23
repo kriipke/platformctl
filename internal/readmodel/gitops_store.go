@@ -153,7 +153,7 @@ func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextN
 		&status.LastSyncTime,
 		&status.LastDeploymentTime,
 		&correlationDataJSON,
-		&status.ValidationErrors,
+		pq.Array(&status.ValidationErrors),
 		&status.GitCommit,
 		&status.HelmRevision,
 		&status.LastUpdated,
