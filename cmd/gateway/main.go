@@ -102,8 +102,16 @@ func main() {
 	// Setup API routes
 	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler)
 
-	// TODO: Initialize health checker and observability server
-	// These functions need to be implemented or replaced with working alternatives
+	// Initialize health manager
+	healthConfig := cfg.GetHealthCheckConfig()
+	healthManager := observability.NewHealthManager(healthConfig, "gateway", "1.0.0")
+
+	// Start health server
+	go func() {
+		if err := healthManager.StartHealthServer(); err != nil {
+			log.Printf("Failed to start health server: %v", err)
+		}
+	}()
 
 	// Start main server
 	server := &http.Server{
