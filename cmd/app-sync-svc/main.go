@@ -28,6 +28,7 @@ func main() {
 	metricsConfig := observability.MetricsConfig{
 		Enabled:     cfg.Observability.MetricsEnabled,
 		Port:        cfg.Observability.MetricsPort,
+		Path:        cfg.Observability.MetricsPath,
 		ServiceName: "app-sync-service",
 		Namespace:   "contextops",
 	}
