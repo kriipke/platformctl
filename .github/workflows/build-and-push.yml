@@ -89,7 +89,7 @@ jobs:
             for service in "${SERVICES[@]}"; do
               # Check if service-specific files changed
               if echo "$CHANGED_FILES" | grep -E "(^cmd/$service/|^internal/|^pkg/|go\.mod|go\.sum|Dockerfile)" > /dev/null; then
-                CHANGED+=("\"$service\"")
+                CHANGED+=("$service")
                 echo "Service $service has changes"
               fi
             done
@@ -97,12 +97,21 @@ jobs:
             # If core files changed, rebuild all services
             if echo "$CHANGED_FILES" | grep -E "(^internal/|^pkg/|go\.mod|go\.sum|Dockerfile)" > /dev/null; then
               echo "Core files changed - building all services"
-              CHANGED=("\"gateway\"" "\"gitops-aggregator\"" "\"app-sync-svc\"" "\"environment-validation-svc\"" "\"context-correlation-svc\"" "\"multi-environment-kube-svc\"" "\"customer-git-branch-svc\"")
+              CHANGED=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
             fi
             
             # Convert to JSON array
             if [[ ${#CHANGED[@]} -gt 0 ]]; then
-              CHANGED_SERVICES="[$(IFS=,; echo "${CHANGED[*]}")]"
+              # Build JSON array with proper quoting
+              JSON_SERVICES=""
+              for i in "${!CHANGED[@]}"; do
+                if [[ $i -eq 0 ]]; then
+                  JSON_SERVICES="\"${CHANGED[i]}\""
+                else
+                  JSON_SERVICES="${JSON_SERVICES},\"${CHANGED[i]}\""
+                fi
+              done
+              CHANGED_SERVICES="[${JSON_SERVICES}]"
             else
               CHANGED_SERVICES='[]'
             fi
