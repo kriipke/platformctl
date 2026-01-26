@@ -716,23 +716,8 @@ argocd:
   
   # ArgoCD Repository Server Configuration  
   repoServer:
-    # Enable Helm support
-    env:
-      - name: HELM_CACHE_HOME
-        value: /helm-working-dir
-      - name: HELM_CONFIG_HOME
-        value: /helm-working-dir
-      - name: HELM_DATA_HOME
-        value: /helm-working-dir
-    
-    # Volume mounts for Helm
-    volumes:
-      - name: helm-working-dir
-        emptyDir: {}
-    
-    volumeMounts:
-      - name: helm-working-dir
-        mountPath: /helm-working-dir
+    # ArgoCD chart handles helm-working-dir automatically
+    # No need to define custom volumes/mounts
   
   # Application Controller Configuration
   controller:

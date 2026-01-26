@@ -28,7 +28,7 @@ annotations:
 
 dependencies:
   - name: argo-cd
-    version: "9.3.x"
+    version: "9.3.6"
     repository: https://argoproj.github.io/argo-helm
     condition: argocd.enabled
     alias: argocd
