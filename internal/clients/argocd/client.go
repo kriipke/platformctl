@@ -1,16 +1,17 @@
 package argocd
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/pkg/api"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 )
 
 // ArgoCD API types
@@ -95,88 +96,189 @@ type ArgoCDClient interface {
 }
 
 type ArgoCDClientImpl struct {
-	config     config.ArgoCDConfig
-	httpClient *http.Client
-	baseURL    string
+	config       config.ArgoCDConfig
+	kubeClient   dynamic.Interface
+	namespace    string
 }
 
 func NewArgoCDClient(cfg config.ArgoCDConfig) *ArgoCDClientImpl {
+	// Get in-cluster kubernetes config
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		fmt.Printf("Failed to get in-cluster config: %v\n", err)
+		return &ArgoCDClientImpl{
+			config:    cfg,
+			namespace: cfg.Namespace,
+		}
+	}
+
+	// Create dynamic client for accessing ArgoCD Application CRDs
+	kubeClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		fmt.Printf("Failed to create kubernetes client: %v\n", err)
+		return &ArgoCDClientImpl{
+			config:    cfg,
+			namespace: cfg.Namespace,
+		}
+	}
+
 	return &ArgoCDClientImpl{
 		config:     cfg,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		baseURL:    cfg.ServerURL,
+		kubeClient: kubeClient,
+		namespace:  cfg.Namespace,
 	}
 }
 
-// Helper method to make ArgoCD API requests
-func (ac *ArgoCDClientImpl) makeRequest(method, endpoint string, body interface{}) ([]byte, error) {
-	url := strings.TrimSuffix(ac.baseURL, "/") + "/" + strings.TrimPrefix(endpoint, "/")
-	
-	var reqBody io.Reader
-	if body != nil {
-		bodyBytes, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %w", err)
-		}
-		reqBody = bytes.NewReader(bodyBytes)
+// Helper to get ArgoCD Application GVR
+func (ac *ArgoCDClientImpl) getApplicationGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "applications",
 	}
-	
-	req, err := http.NewRequest(method, url, reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	
-	resp, err := ac.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make request to %s: %w", url, err)
-	}
-	defer resp.Body.Close()
-	
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-	
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("ArgoCD API error %d: %s", resp.StatusCode, string(respBody))
-	}
-	
-	return respBody, nil
 }
 
 // GetApplicationsForCustomer gets all ArgoCD Applications for a customer
 func (ac *ArgoCDClientImpl) GetApplicationsForCustomer(customerID string) ([]ArgoCDApplication, error) {
-	// Query applications with customer label
-	endpoint := fmt.Sprintf("/api/v1/applications?selector=contextops.io/customer=%s", customerID)
+	if ac.kubeClient == nil {
+		return nil, fmt.Errorf("kubernetes client not available")
+	}
+
+	// Query applications with customer label selector
+	labelSelector := fmt.Sprintf("contextops.io/customer=%s", customerID)
 	
-	respBody, err := ac.makeRequest("GET", endpoint, nil)
+	appGVR := ac.getApplicationGVR()
+	list, err := ac.kubeClient.Resource(appGVR).Namespace(ac.namespace).List(
+		context.Background(),
+		metav1.ListOptions{
+			LabelSelector: labelSelector,
+		},
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get applications for customer %s: %w", customerID, err)
+		return nil, fmt.Errorf("failed to list applications for customer %s: %w", customerID, err)
+	}
+
+	var applications []ArgoCDApplication
+	for _, item := range list.Items {
+		var app ArgoCDApplication
+		
+		// Extract the relevant fields from the Kubernetes object
+		app.APIVersion = "argoproj.io/v1alpha1"
+		app.Kind = "Application"
+		
+		// Parse metadata
+		app.Metadata.Name = item.GetName()
+		app.Metadata.Namespace = item.GetNamespace()
+		app.Metadata.Labels = item.GetLabels()
+		app.Metadata.Annotations = item.GetAnnotations()
+		
+		// Parse spec from the unstructured object
+		if spec, found, err := unstructured.NestedFieldCopy(item.Object, "spec"); found && err == nil {
+			if specMap, ok := spec.(map[string]interface{}); ok {
+				// Parse source
+				if source, found, _ := unstructured.NestedFieldCopy(specMap, "source"); found {
+					if sourceMap, ok := source.(map[string]interface{}); ok {
+						if repoURL, found, _ := unstructured.NestedString(sourceMap, "repoURL"); found {
+							app.Spec.Source.RepoURL = repoURL
+						}
+						if path, found, _ := unstructured.NestedString(sourceMap, "path"); found {
+							app.Spec.Source.Path = path
+						}
+						if targetRevision, found, _ := unstructured.NestedString(sourceMap, "targetRevision"); found {
+							app.Spec.Source.TargetRevision = targetRevision
+						}
+						
+						// Parse Helm configuration if present
+						if _, found, _ := unstructured.NestedFieldCopy(sourceMap, "helm"); found {
+							app.Spec.Source.Helm = &ArgoCDApplicationHelm{}
+							// Note: We could parse Helm parameters and valueFiles here if needed
+						}
+					}
+				}
+				
+				// Parse destination
+				if destination, found, _ := unstructured.NestedFieldCopy(specMap, "destination"); found {
+					if destMap, ok := destination.(map[string]interface{}); ok {
+						if server, found, _ := unstructured.NestedString(destMap, "server"); found {
+							app.Spec.Destination.Server = server
+						}
+						if namespace, found, _ := unstructured.NestedString(destMap, "namespace"); found {
+							app.Spec.Destination.Namespace = namespace
+						}
+					}
+				}
+			}
+		}
+		
+		applications = append(applications, app)
 	}
 	
-	var appList ArgoCDApplicationList
-	if err := json.Unmarshal(respBody, &appList); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal applications response: %w", err)
-	}
-	
-	return appList.Items, nil
+	return applications, nil
 }
 
 // GetApplicationByName gets a specific ArgoCD Application by name
 func (ac *ArgoCDClientImpl) GetApplicationByName(appName string) (*ArgoCDApplication, error) {
-	endpoint := fmt.Sprintf("/api/v1/applications/%s", appName)
-	
-	respBody, err := ac.makeRequest("GET", endpoint, nil)
+	if ac.kubeClient == nil {
+		return nil, fmt.Errorf("kubernetes client not available")
+	}
+
+	appGVR := ac.getApplicationGVR()
+	item, err := ac.kubeClient.Resource(appGVR).Namespace(ac.namespace).Get(
+		context.Background(),
+		appName,
+		metav1.GetOptions{},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get application %s: %w", appName, err)
 	}
-	
+
 	var app ArgoCDApplication
-	if err := json.Unmarshal(respBody, &app); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal application response: %w", err)
+	
+	// Extract the relevant fields from the Kubernetes object (same logic as above)
+	app.APIVersion = "argoproj.io/v1alpha1"
+	app.Kind = "Application"
+	
+	// Parse metadata
+	app.Metadata.Name = item.GetName()
+	app.Metadata.Namespace = item.GetNamespace()
+	app.Metadata.Labels = item.GetLabels()
+	app.Metadata.Annotations = item.GetAnnotations()
+	
+	// Parse spec from the unstructured object
+	if spec, found, err := unstructured.NestedFieldCopy(item.Object, "spec"); found && err == nil {
+		if specMap, ok := spec.(map[string]interface{}); ok {
+			// Parse source
+			if source, found, _ := unstructured.NestedFieldCopy(specMap, "source"); found {
+				if sourceMap, ok := source.(map[string]interface{}); ok {
+					if repoURL, found, _ := unstructured.NestedString(sourceMap, "repoURL"); found {
+						app.Spec.Source.RepoURL = repoURL
+					}
+					if path, found, _ := unstructured.NestedString(sourceMap, "path"); found {
+						app.Spec.Source.Path = path
+					}
+					if targetRevision, found, _ := unstructured.NestedString(sourceMap, "targetRevision"); found {
+						app.Spec.Source.TargetRevision = targetRevision
+					}
+					
+					// Parse Helm configuration if present
+					if _, found, _ := unstructured.NestedFieldCopy(sourceMap, "helm"); found {
+						app.Spec.Source.Helm = &ArgoCDApplicationHelm{}
+					}
+				}
+			}
+			
+			// Parse destination
+			if destination, found, _ := unstructured.NestedFieldCopy(specMap, "destination"); found {
+				if destMap, ok := destination.(map[string]interface{}); ok {
+					if server, found, _ := unstructured.NestedString(destMap, "server"); found {
+						app.Spec.Destination.Server = server
+					}
+					if namespace, found, _ := unstructured.NestedString(destMap, "namespace"); found {
+						app.Spec.Destination.Namespace = namespace
+					}
+				}
+			}
+		}
 	}
 	
 	return &app, nil
