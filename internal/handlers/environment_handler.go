@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-		"net/http"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/contextops/platformctl/internal/auth"
+	"github.com/contextops/platformctl/internal/clients/argocd"
 	"github.com/contextops/platformctl/internal/models"
 	"github.com/contextops/platformctl/internal/storage"
 	"github.com/contextops/platformctl/internal/validation"
@@ -15,11 +16,13 @@ import (
 
 type EnvironmentHandler struct {
 	environmentStore *storage.EnvironmentStore
+	argoCDClient     argocd.ArgoCDClient
 }
 
-func NewEnvironmentHandler(environmentStore *storage.EnvironmentStore) *EnvironmentHandler {
+func NewEnvironmentHandler(environmentStore *storage.EnvironmentStore, argoCDClient argocd.ArgoCDClient) *EnvironmentHandler {
 	return &EnvironmentHandler{
 		environmentStore: environmentStore,
+		argoCDClient:     argoCDClient,
 	}
 }
 
@@ -112,10 +115,24 @@ func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Convert pointers to values
+	// Enrich environments with ArgoCD Application data
 	envValues := make([]models.Environment, len(environments))
 	for i, env := range environments {
 		envValues[i] = *env
+		
+		// Get ArgoCD Applications for this customer and environment
+		if h.argoCDClient != nil {
+			apps, err := h.argoCDClient.GetApplicationsForCustomer(customer.CustomerID)
+			if err == nil {
+				// Find applications for this environment
+				for _, app := range apps {
+					if envLabel, exists := app.Metadata.Labels["contextops.io/environment"]; exists && envLabel == env.Metadata.Name {
+						// Enrich environment with Helm source data from ArgoCD Application
+						h.enrichEnvironmentWithArgoCDData(&envValues[i], &app)
+					}
+				}
+			}
+		}
 	}
 
 	response := api.ListEnvironmentsResponse{
@@ -125,6 +142,42 @@ func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSONResponse(w, response, http.StatusOK)
+}
+
+// enrichEnvironmentWithArgoCDData enriches environment data with live ArgoCD Application information
+func (h *EnvironmentHandler) enrichEnvironmentWithArgoCDData(env *models.Environment, app *argocd.ArgoCDApplication) {
+	// Enrich with Helm source data
+	if app.Spec.Source.Helm != nil {
+		// Update Helm values source
+		env.Spec.Helm.ValuesSource.Type = "git"
+		env.Spec.Helm.ValuesSource.Repository = app.Spec.Source.RepoURL
+		env.Spec.Helm.ValuesSource.Path = app.Spec.Source.Path
+		env.Spec.Helm.ValuesSource.Branch = app.Spec.Source.TargetRevision
+	}
+
+	// Enrich with environment data
+	env.Spec.Environment.Namespace = app.Spec.Destination.Namespace
+	
+	// Note: We would need to add ArgoCD-specific fields to the models.Environment struct
+	// to store the full ArgoCD application information. For now, we're enriching what we can.
+}
+
+// Helper function to safely get status string
+func getStatusString(status interface{}) string {
+	if status == nil {
+		return "Unknown"
+	}
+	switch s := status.(type) {
+	case *argocd.ArgoCDSyncStatus:
+		if s != nil {
+			return s.Status
+		}
+	case *argocd.ArgoCDHealthStatus:
+		if s != nil {
+			return s.Status
+		}
+	}
+	return "Unknown"
 }
 
 // UpdateEnvironment handles PUT /environments/{name}

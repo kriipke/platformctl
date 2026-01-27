@@ -1,0 +1,136 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: contextops-test-apps
+  namespace: contextops
+  labels:
+    contextops.io/customer: "acme-corp"
+    contextops.io/monitored: "true"
+  annotations:
+    contextops.io/description: "Test ApplicationSet for ContextOps monitoring"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  # Matrix generator combining environments and applications
+  - matrix:
+      generators:
+      # Environment generator
+      - list:
+          elements:
+          - name: dev
+            namespace: acme-corp-dev
+            server: https://kubernetes.default.svc
+            branch: develop
+            replicas: 1
+            resources: |
+              requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: qa
+            namespace: acme-corp-qa  
+            server: https://kubernetes.default.svc
+            branch: main
+            replicas: 1
+            resources: |
+              requests:
+                cpu: "200m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "512Mi"
+          - name: prod
+            namespace: acme-corp-prod
+            server: https://kubernetes.default.svc
+            branch: main
+            replicas: 2
+            resources: |
+              requests:
+                cpu: "500m"
+                memory: "512Mi"
+              limits:
+                cpu: "1000m"
+                memory: "1Gi"
+      
+      # Application generator
+      - list:
+          elements:
+          - name: sample-web-app
+            path: examples/sample-web-app
+            port: 8080
+            healthPath: /health
+          - name: sample-api
+            path: examples/sample-api
+            port: 3000
+            healthPath: /api/health
+
+  template:
+    metadata:
+      name: '{{ index . "name" 0 }}-{{ index . "name" 1 }}'
+      labels:
+        contextops.io/customer: "acme-corp"
+        contextops.io/environment: '{{ index . "name" 0 }}'
+        contextops.io/application: '{{ index . "name" 1 }}'
+        contextops.io/monitored: "true"
+      annotations:
+        contextops.io/git-branch: '{{ .branch }}'
+        contextops.io/replicas: '{{ .replicas }}'
+        contextops.io/description: 'ContextOps test app {{ .name }} in {{ .name }} environment'
+        argocd.argoproj.io/sync-wave: "0"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kriipke/platformctl.git
+        targetRevision: '{{ .branch }}'
+        path: '{{ .path }}'
+        helm:
+          valueFiles:
+          - values.yaml
+          - 'values-{{ .name }}.yaml'
+          parameters:
+          - name: replicaCount
+            value: '{{ .replicas }}'
+          - name: image.tag
+            value: '{{ .branch }}-latest'
+          - name: nameOverride
+            value: '{{ .name }}-{{ .name }}'
+          - name: fullnameOverride  
+            value: '{{ .name }}-{{ .name }}-sample'
+          - name: service.port
+            value: '{{ .port }}'
+          - name: ingress.enabled
+            value: '{{ if eq .name "prod" }}true{{ else }}false{{ end }}'
+          - name: resources
+            value: |
+              {{ .resources }}
+          - name: env.ENVIRONMENT
+            value: '{{ .name }}'
+          - name: env.CUSTOMER_ID
+            value: 'acme-corp'
+          
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .namespace }}'
+        
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+        - CreateNamespace=true
+        - PrunePropagationPolicy=foreground
+        - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+  syncPolicy:
+    # ApplicationSet-level sync policy
+    preserveResourcesOnDeletion: false

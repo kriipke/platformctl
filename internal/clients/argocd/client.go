@@ -1,28 +1,185 @@
 package argocd
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/pkg/api"
 )
 
+// ArgoCD API types
+type ArgoCDApplication struct {
+	APIVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Metadata   ArgoCDApplicationMetadata `json:"metadata"`
+	Spec       ArgoCDApplicationSpec     `json:"spec"`
+	Status     *ArgoCDApplicationStatus  `json:"status,omitempty"`
+}
+
+type ArgoCDApplicationMetadata struct {
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type ArgoCDApplicationSpec struct {
+	Project     string                      `json:"project"`
+	Source      ArgoCDApplicationSource     `json:"source"`
+	Destination ArgoCDApplicationDestination `json:"destination"`
+	SyncPolicy  *ArgoCDSyncPolicy           `json:"syncPolicy,omitempty"`
+}
+
+type ArgoCDApplicationSource struct {
+	RepoURL        string                    `json:"repoURL"`
+	Path           string                    `json:"path"`
+	TargetRevision string                    `json:"targetRevision"`
+	Helm           *ArgoCDApplicationHelm    `json:"helm,omitempty"`
+}
+
+type ArgoCDApplicationHelm struct {
+	Parameters []ArgoCDHelmParameter `json:"parameters,omitempty"`
+	ValueFiles []string              `json:"valueFiles,omitempty"`
+}
+
+type ArgoCDHelmParameter struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type ArgoCDApplicationDestination struct {
+	Server    string `json:"server"`
+	Namespace string `json:"namespace"`
+}
+
+type ArgoCDSyncPolicy struct {
+	Automated   *ArgoCDAutomatedPolicy `json:"automated,omitempty"`
+	SyncOptions []string               `json:"syncOptions,omitempty"`
+}
+
+type ArgoCDAutomatedPolicy struct {
+	Prune    bool `json:"prune,omitempty"`
+	SelfHeal bool `json:"selfHeal,omitempty"`
+}
+
+type ArgoCDApplicationStatus struct {
+	Health *ArgoCDHealthStatus `json:"health,omitempty"`
+	Sync   *ArgoCDSyncStatus   `json:"sync,omitempty"`
+}
+
+type ArgoCDHealthStatus struct {
+	Status string `json:"status"`
+}
+
+type ArgoCDSyncStatus struct {
+	Status string `json:"status"`
+}
+
+type ArgoCDApplicationList struct {
+	Items []ArgoCDApplication `json:"items"`
+}
+
 type ArgoCDClient interface {
 	GetApplicationSetsForApp(customerID, appName string) ([]api.ApplicationSetStatus, error)
 	GetApplicationSetApplications(customerID, appSetName string) ([]api.ApplicationSetApplication, error)
+	GetApplicationsForCustomer(customerID string) ([]ArgoCDApplication, error)
+	GetApplicationByName(appName string) (*ArgoCDApplication, error)
 	ValidateApplicationSetTemplate(customerID, appSetName string) error
 	SyncApplicationSet(customerID, appSetName string, forceSync bool) (*api.ApplicationSetSyncResult, error)
 }
 
 type ArgoCDClientImpl struct {
-	config config.ArgoCDConfig
+	config     config.ArgoCDConfig
+	httpClient *http.Client
+	baseURL    string
 }
 
 func NewArgoCDClient(cfg config.ArgoCDConfig) *ArgoCDClientImpl {
 	return &ArgoCDClientImpl{
-		config: cfg,
+		config:     cfg,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
+		baseURL:    cfg.ServerURL,
 	}
+}
+
+// Helper method to make ArgoCD API requests
+func (ac *ArgoCDClientImpl) makeRequest(method, endpoint string, body interface{}) ([]byte, error) {
+	url := strings.TrimSuffix(ac.baseURL, "/") + "/" + strings.TrimPrefix(endpoint, "/")
+	
+	var reqBody io.Reader
+	if body != nil {
+		bodyBytes, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		reqBody = bytes.NewReader(bodyBytes)
+	}
+	
+	req, err := http.NewRequest(method, url, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	
+	resp, err := ac.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request to %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+	
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("ArgoCD API error %d: %s", resp.StatusCode, string(respBody))
+	}
+	
+	return respBody, nil
+}
+
+// GetApplicationsForCustomer gets all ArgoCD Applications for a customer
+func (ac *ArgoCDClientImpl) GetApplicationsForCustomer(customerID string) ([]ArgoCDApplication, error) {
+	// Query applications with customer label
+	endpoint := fmt.Sprintf("/api/v1/applications?selector=contextops.io/customer=%s", customerID)
+	
+	respBody, err := ac.makeRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get applications for customer %s: %w", customerID, err)
+	}
+	
+	var appList ArgoCDApplicationList
+	if err := json.Unmarshal(respBody, &appList); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal applications response: %w", err)
+	}
+	
+	return appList.Items, nil
+}
+
+// GetApplicationByName gets a specific ArgoCD Application by name
+func (ac *ArgoCDClientImpl) GetApplicationByName(appName string) (*ArgoCDApplication, error) {
+	endpoint := fmt.Sprintf("/api/v1/applications/%s", appName)
+	
+	respBody, err := ac.makeRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get application %s: %w", appName, err)
+	}
+	
+	var app ArgoCDApplication
+	if err := json.Unmarshal(respBody, &app); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal application response: %w", err)
+	}
+	
+	return &app, nil
 }
 
 func (ac *ArgoCDClientImpl) GetApplicationSetsForApp(customerID, appName string) ([]api.ApplicationSetStatus, error) {
