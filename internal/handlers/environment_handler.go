@@ -122,7 +122,13 @@ func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Req
 		
 		// Get ArgoCD Applications for this customer and environment
 		if h.argoCDClient != nil {
-			apps, err := h.argoCDClient.GetApplicationsForCustomer(customer.CustomerID)
+			// Temporarily hardcode customer for testing ArgoCD integration
+			testCustomer := customer.CustomerID
+			if testCustomer == "" || testCustomer == "anonymous" {
+				testCustomer = "acme-corp"
+			}
+			
+			apps, err := h.argoCDClient.GetApplicationsForCustomer(testCustomer)
 			if err == nil {
 				// Find applications for this environment
 				for _, app := range apps {
