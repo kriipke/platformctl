@@ -1,0 +1,20 @@
+# Minimal configuration for testing
+argocd:
+  enabled: true
+  crds:
+    install: false
+
+vault:
+  enabled: false
+
+gateway:
+  enabled: false
+  
+gitopsAggregator:
+  enabled: false
+
+postgres:
+  enabled: false
+
+rabbitmq:
+  enabled: false

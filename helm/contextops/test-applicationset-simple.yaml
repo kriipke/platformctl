@@ -1,0 +1,107 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: contextops-demo-apps
+  namespace: contextops
+  labels:
+    contextops.io/customer: "acme-corp"
+    contextops.io/monitored: "true"
+  annotations:
+    contextops.io/description: "Demo ApplicationSet for ContextOps monitoring - simple multi-environment pattern"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  # Simple list generator for environments
+  - list:
+      elements:
+      - env: dev
+        namespace: contextops-demo-dev
+        server: https://kubernetes.default.svc
+        branch: develop
+        replicas: 1
+        appName: demo-app
+        path: examples/demo-app
+        port: 8080
+        
+      - env: qa
+        namespace: contextops-demo-qa  
+        server: https://kubernetes.default.svc
+        branch: main
+        replicas: 1
+        appName: demo-app
+        path: examples/demo-app
+        port: 8080
+        
+      - env: prod
+        namespace: contextops-demo-prod
+        server: https://kubernetes.default.svc
+        branch: main
+        replicas: 2
+        appName: demo-app
+        path: examples/demo-app
+        port: 8080
+
+  template:
+    metadata:
+      name: '{{ .appName }}-{{ .env }}'
+      labels:
+        contextops.io/customer: "acme-corp"
+        contextops.io/environment: '{{ .env }}'
+        contextops.io/application: '{{ .appName }}'
+        contextops.io/monitored: "true"
+      annotations:
+        contextops.io/git-branch: '{{ .branch }}'
+        contextops.io/replicas: '{{ .replicas }}'
+        contextops.io/description: 'Demo app {{ .appName }} in {{ .env }} environment for ContextOps monitoring'
+        argocd.argoproj.io/sync-wave: "0"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kriipke/platformctl.git
+        targetRevision: '{{ .branch }}'
+        path: '{{ .path }}'
+        helm:
+          valueFiles:
+          - values.yaml
+          - 'values-{{ .env }}.yaml'
+          parameters:
+          - name: replicaCount
+            value: '{{ .replicas }}'
+          - name: image.tag
+            value: '{{ .branch }}-latest'
+          - name: fullnameOverride  
+            value: '{{ .appName }}-{{ .env }}'
+          - name: service.port
+            value: '{{ .port }}'
+          - name: ingress.enabled
+            value: '{{ if eq .env "prod" }}true{{ else }}false{{ end }}'
+          - name: env.ENVIRONMENT
+            value: '{{ .env }}'
+          - name: env.CUSTOMER_ID
+            value: 'acme-corp'
+          - name: env.APP_NAME
+            value: '{{ .appName }}'
+          
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .namespace }}'
+        
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+        - CreateNamespace=true
+        - PrunePropagationPolicy=foreground
+        - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+  syncPolicy:
+    preserveResourcesOnDeletion: false
