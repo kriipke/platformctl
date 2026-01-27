@@ -95,7 +95,8 @@
       "Bash(kubectl scale:*)",
       "Bash(helm search repo:*)",
       "Bash(cat:*)",
-      "Bash(kubectl wait:*)"
+      "Bash(kubectl wait:*)",
+      "Bash(kubectl set image:*)"
     ],
     "deny": [],
     "ask": []

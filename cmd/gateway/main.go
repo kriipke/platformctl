@@ -18,6 +18,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/contextops/platformctl/internal/auth"
 	"github.com/contextops/platformctl/internal/clients/argocd"
+	"github.com/contextops/platformctl/internal/clients/git"
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/database"
 	"github.com/contextops/platformctl/internal/events"
@@ -95,10 +96,13 @@ func main() {
 	}
 	argoCDClient := argocd.NewArgoCDClient(argoCDConfig)
 
+	// Initialize Git client
+	gitClient := git.NewGitClient()
+
 	// Initialize handlers
 	appHandler := handlers.NewAppHandler(appStore)
 	environmentHandler := handlers.NewEnvironmentHandler(environmentStore, argoCDClient)
-	contextHandler := handlers.NewContextHandler(contextStore)
+	contextHandler := handlers.NewContextHandler(contextStore, argoCDClient, gitClient)
 	actionHandler := handlers.NewGitOpsActionHandler(appStore, environmentStore, contextStore, publisher)
 	// Create a simple zerolog logger for the status handler
 	statusLogger := zerolog.New(os.Stdout).With().Timestamp().Logger()
