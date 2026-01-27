@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -345,6 +346,16 @@ func ginHandlerWrapper(handler func(http.ResponseWriter, *http.Request)) gin.Han
 		// Add customer to request context for the handlers
 		ctx := context.WithValue(c.Request.Context(), auth.CustomerContextKey, customer)
 		r := c.Request.WithContext(ctx)
+
+		// Extract Gin path parameters and add them as Gorilla Mux variables
+		// This is needed because the handlers expect mux.Vars() to work
+		if len(c.Params) > 0 {
+			muxVars := make(map[string]string)
+			for _, param := range c.Params {
+				muxVars[param.Key] = param.Value
+			}
+			r = mux.SetURLVars(r, muxVars)
+		}
 
 		// Call the original handler with the modified request
 		handler(c.Writer, r)
