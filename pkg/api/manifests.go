@@ -87,8 +87,9 @@ type CreateContextResponse struct {
 }
 
 type GetContextResponse struct {
-	Success bool           `json:"success"`
-	Context models.Context `json:"context"`
+	Success   bool                `json:"success"`
+	Context   models.Context      `json:"context"`
+	Manifests []KubernetesManifest `json:"manifests,omitempty"`
 }
 
 type ListContextsResponse struct {
@@ -105,6 +106,13 @@ type UpdateContextResponse struct {
 	Success   bool   `json:"success"`
 	Message   string `json:"message"`
 	UpdatedAt string `json:"updatedAt"`
+}
+
+// Kubernetes manifest types
+type KubernetesManifest struct {
+	Path     string `json:"path"`
+	Content  string `json:"content"`
+	Filename string `json:"filename"`
 }
 
 // Common response types

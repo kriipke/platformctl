@@ -1,13 +1,30 @@
 package git
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/contextops/platformctl/pkg/api"
 )
 
+// ManifestFile represents a Kubernetes manifest file
+type ManifestFile struct {
+	Path     string `json:"path"`
+	Content  string `json:"content"`
+	Filename string `json:"filename"`
+}
+
 type GitClient interface {
+	FetchManifests(ctx context.Context, repoURL, branch, path string) ([]ManifestFile, error)
 	ValidateValuesFileExists(gitRepo, filePath string) (bool, error)
 	GetFileContent(gitRepo, filePath string) ([]byte, error)
 	GetLastModifiedTime(gitRepo, filePath string) (time.Time, error)
@@ -211,6 +228,116 @@ func (gc *GitClientImpl) ValidateGitSources(customerID, appName string) ([]api.G
 
 	sources = append(sources, source)
 	return sources, nil
+}
+
+// FetchManifests clones a repository and extracts Kubernetes manifest files from the specified path
+func (gc *GitClientImpl) FetchManifests(ctx context.Context, repoURL, branch, path string) ([]ManifestFile, error) {
+	// Create an in-memory repository to avoid disk I/O
+	storage := memory.NewStorage()
+	
+	// Clone the repository
+	repo, err := git.CloneContext(ctx, storage, nil, &git.CloneOptions{
+		URL:           repoURL,
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
+		SingleBranch:  true,
+		Depth:         1, // Shallow clone for better performance
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to clone repository %s: %w", repoURL, err)
+	}
+
+	// Get the repository worktree
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Get the filesystem from the worktree
+	fs := worktree.Filesystem
+
+	var manifests []ManifestFile
+
+	// Walk through the specified path to find manifest files
+	err = gc.walkPath(fs, path, "", &manifests)
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk path %s: %w", path, err)
+	}
+
+	return manifests, nil
+}
+
+// walkPath recursively walks through the filesystem to find Kubernetes manifest files
+func (gc *GitClientImpl) walkPath(fs billy.Filesystem, rootPath, currentPath string, manifests *[]ManifestFile) error {
+	// Combine root path with current path
+	fullPath := filepath.Join(rootPath, currentPath)
+	if fullPath == "." || fullPath == rootPath {
+		fullPath = rootPath
+	}
+
+	// List files in the current directory
+	files, err := fs.ReadDir(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Path doesn't exist, return empty result
+			return nil
+		}
+		return fmt.Errorf("failed to read directory %s: %w", fullPath, err)
+	}
+
+	for _, file := range files {
+		filePath := filepath.Join(fullPath, file.Name())
+		
+		if file.IsDir() {
+			// Recursively walk subdirectories
+			err := gc.walkPath(fs, rootPath, filepath.Join(currentPath, file.Name()), manifests)
+			if err != nil {
+				return err
+			}
+		} else if gc.isKubernetesManifest(file.Name()) {
+			// Read manifest file content
+			content, err := gc.readFile(fs, filePath)
+			if err != nil {
+				return fmt.Errorf("failed to read file %s: %w", filePath, err)
+			}
+
+			// Add to manifests list
+			*manifests = append(*manifests, ManifestFile{
+				Path:     filePath,
+				Content:  content,
+				Filename: file.Name(),
+			})
+		}
+	}
+
+	return nil
+}
+
+// isKubernetesManifest checks if a file is likely a Kubernetes manifest
+func (gc *GitClientImpl) isKubernetesManifest(filename string) bool {
+	// Check file extensions
+	if strings.HasSuffix(filename, ".yaml") || strings.HasSuffix(filename, ".yml") {
+		return true
+	}
+	
+	// Could add more sophisticated detection logic here
+	// For example, checking file content for apiVersion and kind fields
+	return false
+}
+
+// readFile reads the content of a file from the filesystem
+func (gc *GitClientImpl) readFile(fs billy.Filesystem, path string) (string, error) {
+	file, err := fs.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(content), nil
 }
 
 func timePtr(t time.Time) *time.Time {
