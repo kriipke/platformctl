@@ -29,6 +29,7 @@ spec:
       containers:
       - name: gateway
         image: ghcr.io/kriipke/platformctl-gateway:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http

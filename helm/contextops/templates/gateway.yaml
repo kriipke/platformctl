@@ -1,0 +1,225 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contextops.fullname" . }}-gateway
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "contextops.fullname" . }}-gateway
+      {{- include "contextops.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "contextops.fullname" . }}-gateway
+        {{- include "contextops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+    spec:
+      serviceAccountName: {{ include "contextops.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.gateway.podSecurityContext | nindent 8 }}
+      containers:
+      - name: gateway
+        image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.gateway.service.port }}
+          name: http
+        - containerPort: {{ .Values.config.healthCheck.port }}
+          name: health
+        - containerPort: {{ .Values.config.metrics.port }}
+          name: metrics
+        securityContext:
+          {{- toYaml .Values.gateway.securityContext | nindent 10 }}
+        env:
+        - name: SERVICE_NAME
+          value: "gateway"
+        - name: PORT
+          value: {{ .Values.gateway.service.port | quote }}
+        - name: DATABASE_URL
+          value: {{ include "contextops.databaseUrl" . | quote }}
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: {{ include "contextops.rabbitmqUrl" . | quote }}
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: HEALTH_CHECK_PORT
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: JWT_SECRET
+        # Integration Configuration
+        {{- if .Values.contextopsIntegration.argocd.enabled }}
+        - name: ARGOCD_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: argocd.server.url
+        - name: ARGOCD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: argocd.enabled
+        {{- end }}
+        {{- if .Values.contextopsIntegration.vault.enabled }}
+        - name: VAULT_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: vault.server.url
+        - name: VAULT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-integration-config
+              key: vault.enabled
+        {{- end }}
+        {{- range $key, $value := .Values.gateway.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.config.healthCheck.port }}
+          initialDelaySeconds: {{ .Values.gateway.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.gateway.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.gateway.livenessProbe.timeoutSeconds }}
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ .Values.config.healthCheck.port }}
+          initialDelaySeconds: {{ .Values.gateway.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.gateway.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.gateway.readinessProbe.timeoutSeconds }}
+        resources:
+          {{- toYaml .Values.gateway.resources | nindent 10 }}
+      {{- with .Values.gateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-gateway
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- with .Values.gateway.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.gateway.service.type }}
+  selector:
+    app: {{ include "contextops.fullname" . }}-gateway
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: {{ .Values.gateway.service.port }}
+    name: http
+    {{- if and (eq .Values.gateway.service.type "NodePort") .Values.gateway.service.nodePort }}
+    nodePort: {{ .Values.gateway.service.nodePort }}
+    {{- end }}
+  - protocol: TCP
+    port: {{ .Values.config.metrics.port }}
+    targetPort: {{ .Values.config.metrics.port }}
+    name: metrics
+  {{- if eq .Values.gateway.service.type "LoadBalancer" }}
+  {{- if .Values.gateway.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.gateway.service.loadBalancerIP }}
+  {{- end }}
+  {{- if .Values.gateway.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range .Values.gateway.service.loadBalancerSourceRanges }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

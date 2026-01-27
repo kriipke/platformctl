@@ -2,21 +2,29 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/contextops/platformctl/internal/auth"
+	"github.com/contextops/platformctl/internal/clients/argocd"
+	"github.com/contextops/platformctl/internal/clients/git"
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/database"
 	"github.com/contextops/platformctl/internal/events"
 	"github.com/contextops/platformctl/internal/handlers"
+	"github.com/contextops/platformctl/internal/models"
 	"github.com/contextops/platformctl/internal/observability"
 	"github.com/contextops/platformctl/internal/readmodel"
 	"github.com/contextops/platformctl/internal/storage"
@@ -82,10 +90,20 @@ func main() {
 	// Initialize GitOps components
 	publisher := events.NewGitOpsCommandPublisher(rabbitmq)
 
+	// Initialize ArgoCD client
+	argoCDConfig := config.ArgoCDConfig{
+		ServerURL:  "http://contextops-argocd-server",
+		Namespace:  "contextops",
+	}
+	argoCDClient := argocd.NewArgoCDClient(argoCDConfig)
+
+	// Initialize Git client
+	gitClient := git.NewGitClient()
+
 	// Initialize handlers
 	appHandler := handlers.NewAppHandler(appStore)
-	environmentHandler := handlers.NewEnvironmentHandler(environmentStore)
-	contextHandler := handlers.NewContextHandler(contextStore)
+	environmentHandler := handlers.NewEnvironmentHandler(environmentStore, argoCDClient)
+	contextHandler := handlers.NewContextHandler(contextStore, argoCDClient, gitClient)
 	actionHandler := handlers.NewGitOpsActionHandler(appStore, environmentStore, contextStore, publisher)
 	// Create a simple zerolog logger for the status handler
 	statusLogger := zerolog.New(os.Stdout).With().Timestamp().Logger()
@@ -102,8 +120,16 @@ func main() {
 	// Setup API routes
 	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler)
 
-	// TODO: Initialize health checker and observability server
-	// These functions need to be implemented or replaced with working alternatives
+	// Initialize health manager
+	healthConfig := cfg.GetHealthCheckConfig()
+	healthManager := observability.NewHealthManager(healthConfig, "gateway", "1.0.0")
+
+	// Start health server
+	go func() {
+		if err := healthManager.StartHealthServer(); err != nil {
+			log.Printf("Failed to start health server: %v", err)
+		}
+	}()
 
 	// Start main server
 	server := &http.Server{
@@ -210,16 +236,130 @@ func ginHealthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Gin-compatible basic auth middleware
+// Gin-compatible basic auth middleware that sets customer context
 func ginBasicAuthMiddleware() gin.HandlerFunc {
-	return gin.BasicAuth(gin.Accounts{
-		"admin": "admin", // TODO: Use proper authentication
-	})
+	return func(c *gin.Context) {
+		// Extract basic auth header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Authorization header required",
+				"code":    401,
+			})
+			c.Abort()
+			return
+		}
+
+		// Parse basic auth
+		const basicScheme = "Basic "
+		if !strings.HasPrefix(authHeader, basicScheme) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid authorization scheme",
+				"code":    401,
+			})
+			c.Abort()
+			return
+		}
+
+		encodedCredentials := authHeader[len(basicScheme):]
+		decodedCredentials, err := base64.StdEncoding.DecodeString(encodedCredentials)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid authorization header",
+				"code":    401,
+			})
+			c.Abort()
+			return
+		}
+
+		credentials := strings.SplitN(string(decodedCredentials), ":", 2)
+		if len(credentials) != 2 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid credentials format",
+				"code":    401,
+			})
+			c.Abort()
+			return
+		}
+
+		username, password := credentials[0], credentials[1]
+
+		// Validate credentials (simple validation for admin:admin)
+		if username != "admin" || password != "admin" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Invalid credentials",
+				"code":    401,
+			})
+			c.Abort()
+			return
+		}
+
+		// Set customer in Gin context (configurable via environment variable)
+		customerID := getEnv("DEFAULT_CUSTOMER_ID", "acme-corp")
+		
+		// Create a Customer object for GitOps handlers
+		customer := &models.Customer{
+			ID:       uuid.New(), // Generate a UUID for the customer
+			Name:     customerID, // Use customerID as the Name for database queries
+			Username: username,
+			Email:    username + "@example.com",
+			Active:   true,
+		}
+		
+		c.Set("customer_id", customerID)
+		c.Set("customer", customer)
+		c.Set("username", username)
+
+		// Continue to next handler
+		c.Next()
+	}
 }
 
-// Wrapper to convert http.HandlerFunc to gin.HandlerFunc
+// Wrapper to convert http.HandlerFunc to gin.HandlerFunc with proper auth context
 func ginHandlerWrapper(handler func(http.ResponseWriter, *http.Request)) gin.HandlerFunc {
-	return gin.WrapF(handler)
+	return func(c *gin.Context) {
+		// Get customer info from Gin context (set by auth middleware)
+		customerID, exists := c.Get("customer_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "No customer context",
+				"code":    401,
+			})
+			return
+		}
+
+		username, _ := c.Get("username")
+
+		// Create customer object for the handlers
+		customer := &auth.Customer{
+			CustomerID: customerID.(string),
+			Username:   username.(string),
+			Roles:      []string{"user"},
+		}
+
+		// Add customer to request context for the handlers
+		ctx := context.WithValue(c.Request.Context(), auth.CustomerContextKey, customer)
+		r := c.Request.WithContext(ctx)
+
+		// Extract Gin path parameters and add them as Gorilla Mux variables
+		// This is needed because the handlers expect mux.Vars() to work
+		if len(c.Params) > 0 {
+			muxVars := make(map[string]string)
+			for _, param := range c.Params {
+				muxVars[param.Key] = param.Value
+			}
+			r = mux.SetURLVars(r, muxVars)
+		}
+
+		// Call the original handler with the modified request
+		handler(c.Writer, r)
+	}
 }
 
 func getEnv(key, defaultValue string) string {

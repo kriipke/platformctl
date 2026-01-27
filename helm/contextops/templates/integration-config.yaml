@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "contextops.fullname" . }}-integration-config
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: integration-config
+data:
+  {{- if .Values.contextopsIntegration.argocd.enabled }}
+  # ArgoCD Integration Configuration
+  argocd.enabled: "true"
+  argocd.server.url: "http://{{ include "contextops.fullname" . }}-argocd-server:80"
+  argocd.server.grpc.url: "{{ include "contextops.fullname" . }}-argocd-server:443"
+  argocd.api.applications: {{ .Values.contextopsIntegration.argocd.endpoints.applications | quote }}
+  argocd.api.clusters: {{ .Values.contextopsIntegration.argocd.endpoints.clusters | quote }}
+  argocd.api.repositories: {{ .Values.contextopsIntegration.argocd.endpoints.repositories | quote }}
+  argocd.service.account: {{ .Values.contextopsIntegration.argocd.serviceAccount | quote }}
+  {{- else }}
+  argocd.enabled: "false"
+  {{- end }}
+  
+  {{- if .Values.contextopsIntegration.vault.enabled }}
+  # Vault Integration Configuration  
+  vault.enabled: "true"
+  vault.server.url: "http://{{ include "contextops.fullname" . }}-vault:8200"
+  vault.auth.method: {{ .Values.contextopsIntegration.vault.auth.method | quote }}
+  vault.auth.path: {{ .Values.contextopsIntegration.vault.auth.path | quote }}
+  vault.auth.role: {{ .Values.contextopsIntegration.vault.auth.role | quote }}
+  vault.service.account: {{ .Values.contextopsIntegration.vault.serviceAccount | quote }}
+  
+  # Vault Secret Paths for ContextOps monitoring
+  {{- range $index, $path := .Values.contextopsIntegration.vault.secretPaths }}
+  vault.secret.path.{{ $index }}: {{ $path | quote }}
+  {{- end }}
+  {{- else }}
+  vault.enabled: "false"
+  {{- end }}
+  
+  # General Integration Configuration
+  integration.namespace: {{ .Values.namespace | default "contextops" | quote }}
+  integration.labels.customer: "contextops.io/customer"
+  integration.labels.environment: "contextops.io/environment"
+  integration.labels.monitored: "contextops.io/monitored"
+  
+  # Monitoring Configuration
+  monitoring.interval.seconds: "30"
+  monitoring.timeout.seconds: "10"
+  monitoring.retry.attempts: "3"
+  monitoring.retry.delay.seconds: "5"
+  
+  # GitOps Monitoring Configuration
+  gitops.applicationsets.enabled: "true"
+  gitops.applications.enabled: "true"
+  gitops.repositories.enabled: "true"
+  gitops.clusters.enabled: "true"
+  
+  # Vault Monitoring Configuration
+  vault.secrets.monitoring.enabled: "true"
+  vault.secrets.validation.enabled: "true"
+  vault.policies.monitoring.enabled: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "contextops.fullname" . }}-integration-secrets
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: integration-secrets
+type: Opaque
+data:
+  {{- if .Values.contextopsIntegration.argocd.enabled }}
+  # ArgoCD Integration Secrets (base64 encoded)
+  argocd.admin.password: {{ "admin-password-change-me" | b64enc | quote }}
+  argocd.server.secretkey: {{ "server-secret-key-change-me" | b64enc | quote }}
+  {{- end }}
+  
+  {{- if .Values.contextopsIntegration.vault.enabled }}
+  # Vault Integration Secrets (base64 encoded)  
+  vault.token: {{ "vault-token-will-be-set-by-init-job" | b64enc | quote }}
+  {{- end }}
+  
+  # Integration API Keys
+  integration.api.key: {{ "contextops-integration-api-key" | b64enc | quote }}

@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
-		"net/http"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/contextops/platformctl/internal/auth"
+	"github.com/contextops/platformctl/internal/clients/argocd"
+	"github.com/contextops/platformctl/internal/clients/git"
 	"github.com/contextops/platformctl/internal/models"
 	"github.com/contextops/platformctl/internal/storage"
 	"github.com/contextops/platformctl/internal/validation"
@@ -15,11 +19,15 @@ import (
 
 type ContextHandler struct {
 	contextStore *storage.ContextStore
+	argoCDClient argocd.ArgoCDClient
+	gitClient    git.GitClient
 }
 
-func NewContextHandler(contextStore *storage.ContextStore) *ContextHandler {
+func NewContextHandler(contextStore *storage.ContextStore, argoCDClient argocd.ArgoCDClient, gitClient git.GitClient) *ContextHandler {
 	return &ContextHandler{
 		contextStore: contextStore,
+		argoCDClient: argoCDClient,
+		gitClient:    gitClient,
 	}
 }
 
@@ -90,12 +98,57 @@ func (h *ContextHandler) GetContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch manifests from Git repository using ArgoCD Application data
+	var manifests []api.KubernetesManifest
+	if h.argoCDClient != nil && h.gitClient != nil {
+		manifestFiles, err := h.fetchManifestsForContext(r.Context(), contextName, customer.CustomerID)
+		if err == nil {
+			// Convert git.ManifestFile to api.KubernetesManifest
+			for _, mf := range manifestFiles {
+				manifests = append(manifests, api.KubernetesManifest{
+					Path:     mf.Path,
+					Content:  mf.Content,
+					Filename: mf.Filename,
+				})
+			}
+		}
+		// Note: We silently ignore errors fetching manifests to not break the main context response
+	}
+
 	response := api.GetContextResponse{
-		Success: true,
-		Context: *context,
+		Success:   true,
+		Context:   *context,
+		Manifests: manifests,
 	}
 
 	writeJSONResponse(w, response, http.StatusOK)
+}
+
+// fetchManifestsForContext fetches Kubernetes manifests from Git repository based on ArgoCD Application configuration
+func (h *ContextHandler) fetchManifestsForContext(ctx context.Context, contextName, customerID string) ([]git.ManifestFile, error) {
+	// Find the ArgoCD Application for this context
+	// Context names should match ArgoCD Application names (e.g., "demo-app-dev")
+	app, err := h.argoCDClient.GetApplicationByName(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ArgoCD Application for context %s: %w", contextName, err)
+	}
+
+	// Extract Git repository information from the ArgoCD Application
+	repoURL := app.Spec.Source.RepoURL
+	path := app.Spec.Source.Path
+	branch := app.Spec.Source.TargetRevision
+
+	if repoURL == "" || path == "" || branch == "" {
+		return nil, fmt.Errorf("incomplete ArgoCD Application source configuration: repo=%s, path=%s, branch=%s", repoURL, path, branch)
+	}
+
+	// Fetch manifests from the Git repository
+	manifests, err := h.gitClient.FetchManifests(ctx, repoURL, branch, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch manifests from %s@%s:%s: %w", repoURL, branch, path, err)
+	}
+
+	return manifests, nil
 }
 
 // ListContexts handles GET /contexts

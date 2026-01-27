@@ -1,0 +1,173 @@
+{{- if .Values.gitopsAggregator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "contextops.fullname" . }}-gitops-aggregator
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitops-aggregator
+spec:
+  replicas: {{ .Values.gitopsAggregator.replicaCount }}  # Single replica for read model consistency
+  selector:
+    matchLabels:
+      app: {{ include "contextops.fullname" . }}-gitops-aggregator
+      {{- include "contextops.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "contextops.fullname" . }}-gitops-aggregator
+        {{- include "contextops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gitops-aggregator
+    spec:
+      serviceAccountName: {{ include "contextops.fullname" . }}-gitops-aggregator
+      securityContext:
+        {{- toYaml .Values.gitopsAggregator.podSecurityContext | nindent 8 }}
+      containers:
+      - name: gitops-aggregator
+        image: "{{ .Values.gitopsAggregator.image.repository }}:{{ .Values.gitopsAggregator.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.gitopsAggregator.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.config.healthCheck.port }}
+          name: health
+        - containerPort: {{ .Values.config.metrics.port }}
+          name: metrics
+        securityContext:
+          {{- toYaml .Values.gitopsAggregator.securityContext | nindent 10 }}
+        env:
+        - name: SERVICE_NAME
+          value: "gitops-aggregator"
+        - name: DATABASE_URL
+          value: {{ include "contextops.databaseUrl" . | quote }}
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: DATABASE_PASSWORD
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_NAME
+        - name: DATABASE_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: DATABASE_SSL_MODE
+        - name: RABBITMQ_URL
+          value: {{ include "contextops.rabbitmqUrl" . | quote }}
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "contextops.fullname" . }}-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: RABBITMQ_VHOST
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: METRICS_ENABLED
+        - name: HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "contextops.fullname" . }}-config
+              key: HEALTH_CHECK_PORT
+        {{- range $key, $value := .Values.gitopsAggregator.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.config.healthCheck.port }}
+          initialDelaySeconds: {{ .Values.gitopsAggregator.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.gitopsAggregator.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.gitopsAggregator.livenessProbe.timeoutSeconds }}
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ .Values.config.healthCheck.port }}
+          initialDelaySeconds: {{ .Values.gitopsAggregator.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.gitopsAggregator.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.gitopsAggregator.readinessProbe.timeoutSeconds }}
+        resources:
+          {{- toYaml .Values.gitopsAggregator.resources | nindent 10 }}
+      {{- with .Values.gitopsAggregator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gitopsAggregator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gitopsAggregator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "contextops.fullname" . }}-gitops-aggregator
+  namespace: {{ .Values.namespace | default "contextops" }}
+  labels:
+    {{- include "contextops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitops-aggregator
+  {{- with .Values.gitopsAggregator.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "contextops.fullname" . }}-gitops-aggregator
+  ports:
+  - protocol: TCP
+    port: {{ .Values.config.metrics.port }}
+    targetPort: {{ .Values.config.metrics.port }}
+    name: metrics
+{{- end }}

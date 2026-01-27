@@ -8,6 +8,7 @@ import (
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/internal/events"
+	"github.com/contextops/platformctl/internal/observability"
 	"github.com/contextops/platformctl/internal/storage"
 )
 
@@ -39,6 +40,17 @@ func main() {
 	_ = appStore 
 	_ = environmentStore
 	_ = contextStore
+
+	// Initialize health manager
+	healthConfig := cfg.GetHealthCheckConfig()
+	healthManager := observability.NewHealthManager(healthConfig, "customer-git-branch-service", "1.0.0")
+
+	// Start health server
+	go func() {
+		if err := healthManager.StartHealthServer(); err != nil {
+			log.Printf("Failed to start health server: %v", err)
+		}
+	}()
 
 	log.Println("Customer git branch service started")
 

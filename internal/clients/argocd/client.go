@@ -1,28 +1,287 @@
 package argocd
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/contextops/platformctl/internal/config"
 	"github.com/contextops/platformctl/pkg/api"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 )
+
+// ArgoCD API types
+type ArgoCDApplication struct {
+	APIVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Metadata   ArgoCDApplicationMetadata `json:"metadata"`
+	Spec       ArgoCDApplicationSpec     `json:"spec"`
+	Status     *ArgoCDApplicationStatus  `json:"status,omitempty"`
+}
+
+type ArgoCDApplicationMetadata struct {
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type ArgoCDApplicationSpec struct {
+	Project     string                      `json:"project"`
+	Source      ArgoCDApplicationSource     `json:"source"`
+	Destination ArgoCDApplicationDestination `json:"destination"`
+	SyncPolicy  *ArgoCDSyncPolicy           `json:"syncPolicy,omitempty"`
+}
+
+type ArgoCDApplicationSource struct {
+	RepoURL        string                    `json:"repoURL"`
+	Path           string                    `json:"path"`
+	TargetRevision string                    `json:"targetRevision"`
+	Helm           *ArgoCDApplicationHelm    `json:"helm,omitempty"`
+}
+
+type ArgoCDApplicationHelm struct {
+	Parameters []ArgoCDHelmParameter `json:"parameters,omitempty"`
+	ValueFiles []string              `json:"valueFiles,omitempty"`
+}
+
+type ArgoCDHelmParameter struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type ArgoCDApplicationDestination struct {
+	Server    string `json:"server"`
+	Namespace string `json:"namespace"`
+}
+
+type ArgoCDSyncPolicy struct {
+	Automated   *ArgoCDAutomatedPolicy `json:"automated,omitempty"`
+	SyncOptions []string               `json:"syncOptions,omitempty"`
+}
+
+type ArgoCDAutomatedPolicy struct {
+	Prune    bool `json:"prune,omitempty"`
+	SelfHeal bool `json:"selfHeal,omitempty"`
+}
+
+type ArgoCDApplicationStatus struct {
+	Health *ArgoCDHealthStatus `json:"health,omitempty"`
+	Sync   *ArgoCDSyncStatus   `json:"sync,omitempty"`
+}
+
+type ArgoCDHealthStatus struct {
+	Status string `json:"status"`
+}
+
+type ArgoCDSyncStatus struct {
+	Status string `json:"status"`
+}
+
+type ArgoCDApplicationList struct {
+	Items []ArgoCDApplication `json:"items"`
+}
 
 type ArgoCDClient interface {
 	GetApplicationSetsForApp(customerID, appName string) ([]api.ApplicationSetStatus, error)
 	GetApplicationSetApplications(customerID, appSetName string) ([]api.ApplicationSetApplication, error)
+	GetApplicationsForCustomer(customerID string) ([]ArgoCDApplication, error)
+	GetApplicationByName(appName string) (*ArgoCDApplication, error)
 	ValidateApplicationSetTemplate(customerID, appSetName string) error
 	SyncApplicationSet(customerID, appSetName string, forceSync bool) (*api.ApplicationSetSyncResult, error)
 }
 
 type ArgoCDClientImpl struct {
-	config config.ArgoCDConfig
+	config       config.ArgoCDConfig
+	kubeClient   dynamic.Interface
+	namespace    string
 }
 
 func NewArgoCDClient(cfg config.ArgoCDConfig) *ArgoCDClientImpl {
-	return &ArgoCDClientImpl{
-		config: cfg,
+	// Get in-cluster kubernetes config
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		fmt.Printf("Failed to get in-cluster config: %v\n", err)
+		return &ArgoCDClientImpl{
+			config:    cfg,
+			namespace: cfg.Namespace,
+		}
 	}
+
+	// Create dynamic client for accessing ArgoCD Application CRDs
+	kubeClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		fmt.Printf("Failed to create kubernetes client: %v\n", err)
+		return &ArgoCDClientImpl{
+			config:    cfg,
+			namespace: cfg.Namespace,
+		}
+	}
+
+	return &ArgoCDClientImpl{
+		config:     cfg,
+		kubeClient: kubeClient,
+		namespace:  cfg.Namespace,
+	}
+}
+
+// Helper to get ArgoCD Application GVR
+func (ac *ArgoCDClientImpl) getApplicationGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}
+}
+
+// GetApplicationsForCustomer gets all ArgoCD Applications for a customer
+func (ac *ArgoCDClientImpl) GetApplicationsForCustomer(customerID string) ([]ArgoCDApplication, error) {
+	if ac.kubeClient == nil {
+		return nil, fmt.Errorf("kubernetes client not available")
+	}
+
+	// Query applications with customer label selector
+	labelSelector := fmt.Sprintf("contextops.io/customer=%s", customerID)
+	
+	appGVR := ac.getApplicationGVR()
+	list, err := ac.kubeClient.Resource(appGVR).Namespace(ac.namespace).List(
+		context.Background(),
+		metav1.ListOptions{
+			LabelSelector: labelSelector,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list applications for customer %s: %w", customerID, err)
+	}
+
+	var applications []ArgoCDApplication
+	for _, item := range list.Items {
+		var app ArgoCDApplication
+		
+		// Extract the relevant fields from the Kubernetes object
+		app.APIVersion = "argoproj.io/v1alpha1"
+		app.Kind = "Application"
+		
+		// Parse metadata
+		app.Metadata.Name = item.GetName()
+		app.Metadata.Namespace = item.GetNamespace()
+		app.Metadata.Labels = item.GetLabels()
+		app.Metadata.Annotations = item.GetAnnotations()
+		
+		// Parse spec from the unstructured object
+		if spec, found, err := unstructured.NestedFieldCopy(item.Object, "spec"); found && err == nil {
+			if specMap, ok := spec.(map[string]interface{}); ok {
+				// Parse source
+				if source, found, _ := unstructured.NestedFieldCopy(specMap, "source"); found {
+					if sourceMap, ok := source.(map[string]interface{}); ok {
+						if repoURL, found, _ := unstructured.NestedString(sourceMap, "repoURL"); found {
+							app.Spec.Source.RepoURL = repoURL
+						}
+						if path, found, _ := unstructured.NestedString(sourceMap, "path"); found {
+							app.Spec.Source.Path = path
+						}
+						if targetRevision, found, _ := unstructured.NestedString(sourceMap, "targetRevision"); found {
+							app.Spec.Source.TargetRevision = targetRevision
+						}
+						
+						// Parse Helm configuration if present
+						if _, found, _ := unstructured.NestedFieldCopy(sourceMap, "helm"); found {
+							app.Spec.Source.Helm = &ArgoCDApplicationHelm{}
+							// Note: We could parse Helm parameters and valueFiles here if needed
+						}
+					}
+				}
+				
+				// Parse destination
+				if destination, found, _ := unstructured.NestedFieldCopy(specMap, "destination"); found {
+					if destMap, ok := destination.(map[string]interface{}); ok {
+						if server, found, _ := unstructured.NestedString(destMap, "server"); found {
+							app.Spec.Destination.Server = server
+						}
+						if namespace, found, _ := unstructured.NestedString(destMap, "namespace"); found {
+							app.Spec.Destination.Namespace = namespace
+						}
+					}
+				}
+			}
+		}
+		
+		applications = append(applications, app)
+	}
+	
+	return applications, nil
+}
+
+// GetApplicationByName gets a specific ArgoCD Application by name
+func (ac *ArgoCDClientImpl) GetApplicationByName(appName string) (*ArgoCDApplication, error) {
+	if ac.kubeClient == nil {
+		return nil, fmt.Errorf("kubernetes client not available")
+	}
+
+	appGVR := ac.getApplicationGVR()
+	item, err := ac.kubeClient.Resource(appGVR).Namespace(ac.namespace).Get(
+		context.Background(),
+		appName,
+		metav1.GetOptions{},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get application %s: %w", appName, err)
+	}
+
+	var app ArgoCDApplication
+	
+	// Extract the relevant fields from the Kubernetes object (same logic as above)
+	app.APIVersion = "argoproj.io/v1alpha1"
+	app.Kind = "Application"
+	
+	// Parse metadata
+	app.Metadata.Name = item.GetName()
+	app.Metadata.Namespace = item.GetNamespace()
+	app.Metadata.Labels = item.GetLabels()
+	app.Metadata.Annotations = item.GetAnnotations()
+	
+	// Parse spec from the unstructured object
+	if spec, found, err := unstructured.NestedFieldCopy(item.Object, "spec"); found && err == nil {
+		if specMap, ok := spec.(map[string]interface{}); ok {
+			// Parse source
+			if source, found, _ := unstructured.NestedFieldCopy(specMap, "source"); found {
+				if sourceMap, ok := source.(map[string]interface{}); ok {
+					if repoURL, found, _ := unstructured.NestedString(sourceMap, "repoURL"); found {
+						app.Spec.Source.RepoURL = repoURL
+					}
+					if path, found, _ := unstructured.NestedString(sourceMap, "path"); found {
+						app.Spec.Source.Path = path
+					}
+					if targetRevision, found, _ := unstructured.NestedString(sourceMap, "targetRevision"); found {
+						app.Spec.Source.TargetRevision = targetRevision
+					}
+					
+					// Parse Helm configuration if present
+					if _, found, _ := unstructured.NestedFieldCopy(sourceMap, "helm"); found {
+						app.Spec.Source.Helm = &ArgoCDApplicationHelm{}
+					}
+				}
+			}
+			
+			// Parse destination
+			if destination, found, _ := unstructured.NestedFieldCopy(specMap, "destination"); found {
+				if destMap, ok := destination.(map[string]interface{}); ok {
+					if server, found, _ := unstructured.NestedString(destMap, "server"); found {
+						app.Spec.Destination.Server = server
+					}
+					if namespace, found, _ := unstructured.NestedString(destMap, "namespace"); found {
+						app.Spec.Destination.Namespace = namespace
+					}
+				}
+			}
+		}
+	}
+	
+	return &app, nil
 }
 
 func (ac *ArgoCDClientImpl) GetApplicationSetsForApp(customerID, appName string) ([]api.ApplicationSetStatus, error) {

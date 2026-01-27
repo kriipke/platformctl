@@ -1,0 +1,39 @@
+apiVersion: v2
+name: contextops
+description: A GitOps-optimized application monitoring platform designed for DevOps engineers managing applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-secured secrets across multiple environments and customers.
+version: 0.1.0
+appVersion: "develop"
+type: application
+
+keywords:
+  - gitops
+  - monitoring
+  - argocd
+  - vault
+  - helm
+  - kubernetes
+  - devops
+
+home: https://github.com/kriipke/platformctl
+sources:
+  - https://github.com/kriipke/platformctl
+
+maintainers:
+  - name: ContextOps Team
+    email: team@contextops.io
+
+annotations:
+  category: Monitoring
+  licenses: Apache-2.0
+
+dependencies:
+  - name: argo-cd
+    version: "9.3.6"
+    repository: https://argoproj.github.io/argo-helm
+    condition: argocd.enabled
+    alias: argocd
+  - name: vault
+    version: "0.30.x"
+    repository: https://helm.releases.hashicorp.com
+    condition: vault.enabled
+    alias: vault

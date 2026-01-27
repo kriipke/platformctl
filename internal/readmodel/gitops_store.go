@@ -140,7 +140,24 @@ func (s *GitOpsStore) GetContextStatus(ctx context.Context, customerID, contextN
 		WHERE customer_id = $1 AND context_name = $2
 	`
 
-	err := s.db.GetContext(ctx, &status, query, customerID, contextName)
+	row := s.db.QueryRowxContext(ctx, query, customerID, contextName)
+	err := row.Scan(
+		&status.CustomerID,
+		&status.ContextName,
+		&status.AppReference,
+		&status.EnvironmentReference,
+		&status.PairingStatus,
+		&status.SyncStatus,
+		&status.HealthStatus,
+		&status.ResourceCount,
+		&status.LastSyncTime,
+		&status.LastDeploymentTime,
+		&correlationDataJSON,
+		pq.Array(&status.ValidationErrors),
+		&status.GitCommit,
+		&status.HelmRevision,
+		&status.LastUpdated,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("context status not found for customer %s, context %s", customerID, contextName)

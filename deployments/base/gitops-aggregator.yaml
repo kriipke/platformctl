@@ -29,6 +29,7 @@ spec:
       containers:
       - name: gitops-aggregator
         image: ghcr.io/kriipke/platformctl-gitops-aggregator:develop
+        imagePullPolicy: Always
         ports:
         - containerPort: 8081
           name: health
