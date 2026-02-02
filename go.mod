@@ -23,7 +23,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 
 	// Database and migrations
-	github.com/lib/pq v1.10.9
+	github.com/lib/pq v1.11.1
 	github.com/prometheus/client_golang v1.23.2
 
 	// Message queue for GitOps events
