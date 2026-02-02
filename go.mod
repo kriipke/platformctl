@@ -11,7 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0 // indirect
 
 	// Authentication and authorization
-	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 
 	// Utilities
