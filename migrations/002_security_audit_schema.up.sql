@@ -1,6 +1,18 @@
 -- Migration 002: Security and Audit Schema
 -- Enhances the database with comprehensive security and audit logging capabilities
 
+-- The RLS policies below target the `authenticated_users` role, which is never
+-- created elsewhere. Ensure it exists so CREATE POLICY does not fail. NOTE: on
+-- managed Postgres the migrating role needs CREATEROLE for this (or the role
+-- must be pre-provisioned out of band).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated_users') THEN
+        CREATE ROLE authenticated_users;
+    END IF;
+END
+$$;
+
 -- Create audit_logs table for comprehensive event tracking
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGSERIAL PRIMARY KEY,
