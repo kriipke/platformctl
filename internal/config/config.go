@@ -7,7 +7,7 @@ import (
 
 	"github.com/caarlos0/env/v9"
 	"github.com/joho/godotenv"
-	"github.com/contextops/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/observability"
 )
 
 type Config struct {

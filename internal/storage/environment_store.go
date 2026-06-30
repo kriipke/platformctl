@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 type EnvironmentStore struct {

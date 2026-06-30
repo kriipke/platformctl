@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/storage"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )

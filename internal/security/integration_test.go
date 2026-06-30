@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/contextops/platformctl/internal/audit"
-	"github.com/contextops/platformctl/internal/auth"
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/testutil"
+	"github.com/kriipke/platformctl/internal/audit"
+	"github.com/kriipke/platformctl/internal/auth"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/testutil"
 )
 
 // MockAuditLogger for testing

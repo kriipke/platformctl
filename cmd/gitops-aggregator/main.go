@@ -9,11 +9,11 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/contextops/platformctl/internal/aggregator"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/aggregator"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/storage"
 )
 
 func main() {

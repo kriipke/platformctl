@@ -9,8 +9,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // GitOpsAggregator processes result messages from GitOps integration services

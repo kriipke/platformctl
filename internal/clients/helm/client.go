@@ -11,10 +11,10 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
-	"github.com/contextops/platformctl/internal/circuitbreaker"
-	"github.com/contextops/platformctl/internal/clients/resilience"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/circuitbreaker"
+	"github.com/kriipke/platformctl/internal/clients/resilience"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 type HelmClient interface {

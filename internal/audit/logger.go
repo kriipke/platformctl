@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 // EventType represents the type of audit event

@@ -49,7 +49,7 @@ ContextOps is a **production-ready GitOps monitoring platform** that provides un
 
 ### 1. Clone and Build
 ```bash
-git clone https://github.com/contextops/platformctl
+git clone https://github.com/kriipke/platformctl
 cd platformctl
 
 # Build all services locally (verify everything works)

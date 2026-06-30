@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/contextops/platformctl/internal/auth"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/auth"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/storage"
 )
 
 type GitOpsActionHandler struct {

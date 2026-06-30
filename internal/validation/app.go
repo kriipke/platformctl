@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 // ValidateApp validates an App manifest

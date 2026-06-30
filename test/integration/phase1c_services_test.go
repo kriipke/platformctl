@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/pkg/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

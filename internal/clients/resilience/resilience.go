@@ -3,7 +3,7 @@
 // fast instead of cascading.
 package resilience
 
-import "github.com/contextops/platformctl/internal/circuitbreaker"
+import "github.com/kriipke/platformctl/internal/circuitbreaker"
 
 // New builds a circuit breaker for a named external service, using the default
 // per-service tuning when one exists.

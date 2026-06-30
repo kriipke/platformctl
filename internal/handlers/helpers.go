@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // writeJSONResponse writes a JSON response with the given status code

@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 func TestEnvironmentFromValuesFile(t *testing.T) {

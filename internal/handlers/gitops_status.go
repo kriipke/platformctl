@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/readmodel"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/readmodel"
 )
 
 // GitOpsStatusHandler provides GitOps status API endpoints

@@ -1,4 +1,4 @@
-module github.com/contextops/platformctl
+module github.com/kriipke/platformctl
 
 go 1.24.6
 

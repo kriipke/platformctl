@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/contextops/platformctl/internal/config"
-	vaultapi "github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/config"
+	vaultapi "github.com/kriipke/platformctl/pkg/api"
 )
 
 type VaultClient interface {

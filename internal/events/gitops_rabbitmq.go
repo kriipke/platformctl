@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/contextops/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/config"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
