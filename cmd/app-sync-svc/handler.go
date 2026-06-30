@@ -23,7 +23,7 @@ type AppSyncHandler struct {
 func NewAppSyncHandler(cfg *config.Config) *AppSyncHandler {
 	return &AppSyncHandler{
 		argoCDClient:     argocd.NewArgoCDClient(cfg.ArgoCD),
-		helmClient:       helm.NewHelmClient(),
+		helmClient:       helm.NewHelmClient(cfg.Helm),
 		gitClient:        git.NewGitClient(),
 		kubernetesClient: kubernetes.NewMultiClusterClient(cfg),
 	}
