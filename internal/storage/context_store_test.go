@@ -1,4 +1,4 @@
-package storage
+package storage_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/contextops/platformctl/internal/models"
+	"github.com/contextops/platformctl/internal/storage"
 	"github.com/contextops/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ func TestContextStore_Create(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -56,7 +57,7 @@ func TestContextStore_Create(t *testing.T) {
 			name:        "duplicate context creation should fail",
 			context:     testutil.CreateTestContext("test-context-1", "test-app-1", testutil.CreateTestContextDeployments("test-app-1", "dev-env")),
 			expectError: true,
-			errorType:   ErrConflict,
+			errorType:   storage.ErrConflict,
 		},
 	}
 
@@ -87,7 +88,7 @@ func TestContextStore_Get(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -117,14 +118,14 @@ func TestContextStore_Get(t *testing.T) {
 			contextName: "non-existent-context",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "get context with wrong customer ID",
 			contextName: "get-test-context",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -156,7 +157,7 @@ func TestContextStore_Update(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -233,7 +234,7 @@ func TestContextStore_Update(t *testing.T) {
 			},
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name: "update context with wrong customer ID",
@@ -242,7 +243,7 @@ func TestContextStore_Update(t *testing.T) {
 			},
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -283,7 +284,7 @@ func TestContextStore_Delete(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -316,21 +317,21 @@ func TestContextStore_Delete(t *testing.T) {
 			contextName: "non-existent-context",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete context with wrong customer ID",
 			contextName: "delete-test-context-2",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete already deleted context",
 			contextName: "delete-test-context-1",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -347,7 +348,7 @@ func TestContextStore_Delete(t *testing.T) {
 				
 				// Verify the context is deleted
 				_, err := store.Get(ctx, tt.contextName, tt.customerID)
-				assert.ErrorIs(t, err, ErrNotFound)
+				assert.ErrorIs(t, err, storage.ErrNotFound)
 			}
 		})
 	}
@@ -361,7 +362,7 @@ func TestContextStore_List(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID1 := "test-customer-1"
 	customerID2 := "test-customer-2"
@@ -455,7 +456,7 @@ func TestContextStore_GetByAppAndEnvironment(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -554,7 +555,7 @@ func TestContextStore_ConcurrentOperations(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-concurrent"
 
@@ -632,7 +633,7 @@ func TestContextStore_ComplexDeploymentScenarios(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-complex"
 
@@ -745,7 +746,7 @@ func TestContextStore_CustomerBranchScenarios(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-branch"
 
@@ -811,7 +812,7 @@ func TestContextStore_MonitoringConfiguration(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewContextStore(testDB.DB)
+	store := storage.NewContextStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-monitoring"
 

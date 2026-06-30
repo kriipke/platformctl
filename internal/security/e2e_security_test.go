@@ -57,7 +57,8 @@ func setupE2ESecuritySuite(t *testing.T) *E2ESecurityTestSuite {
 	require.NoError(t, err)
 
 	rbacManager := auth.NewRBACManager(testDB.DB.DB)
-	auditLogger := audit.NewPostgresLogger(testDB.DB.DB)
+	auditLogger, err := audit.NewPostgresLogger(testDB.DB.DB)
+	require.NoError(t, err)
 
 	validator, err := NewValidator(DefaultSecurityConfig())
 	require.NoError(t, err)

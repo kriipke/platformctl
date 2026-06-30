@@ -3,6 +3,7 @@ package circuitbreaker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 

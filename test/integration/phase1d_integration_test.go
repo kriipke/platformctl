@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -61,7 +62,7 @@ func (suite *Phase1DIntegrationTestSuite) SetupSuite() {
 	require.NoError(suite.T(), err)
 
 	// Setup test RabbitMQ
-	suite.rabbitmq, err = events.NewGitOpsRabbitMQ(cfg.RabbitMQURL, "phase1d-integration-test")
+	suite.rabbitmq, err = events.NewGitOpsMessageBus(cfg.RabbitMQURL, cfg)
 	require.NoError(suite.T(), err)
 
 	// Initialize components

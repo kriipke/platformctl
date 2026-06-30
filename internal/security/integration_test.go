@@ -551,7 +551,8 @@ func TestAuditingIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use real PostgreSQL audit logger
-	auditLogger := audit.NewPostgresLogger(testDB.DB.DB)
+	auditLogger, err := audit.NewPostgresLogger(testDB.DB.DB)
+	require.NoError(t, err)
 	defer auditLogger.Close()
 
 	jwtManager, err := auth.NewJWTManager(&auth.JWTConfig{})

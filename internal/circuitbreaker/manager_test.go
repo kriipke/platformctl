@@ -16,7 +16,6 @@ func TestNewManager(t *testing.T) {
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.breakers)
-	assert.NotNil(t, manager.configs)
 }
 
 func TestManagerRegisterService(t *testing.T) {
@@ -31,7 +30,7 @@ func TestManagerRegisterService(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify the service was registered
-	breaker := manager.GetBreaker("test-service")
+	breaker, _ := manager.GetBreaker("test-service")
 	assert.NotNil(t, breaker)
 	assert.Equal(t, "TestService", breaker.Name())
 }
@@ -53,7 +52,7 @@ func TestManagerRegisterServiceDuplicate(t *testing.T) {
 func TestManagerGetBreakerNonExistent(t *testing.T) {
 	manager := NewManager()
 
-	breaker := manager.GetBreaker("non-existent")
+	breaker, _ := manager.GetBreaker("non-existent")
 	assert.Nil(t, breaker)
 }
 
@@ -144,7 +143,7 @@ func TestManagerUnregisterService(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify service exists
-	breaker := manager.GetBreaker("test-service")
+	breaker, _ := manager.GetBreaker("test-service")
 	assert.NotNil(t, breaker)
 
 	// Unregister service
@@ -152,7 +151,7 @@ func TestManagerUnregisterService(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify service is removed
-	breaker = manager.GetBreaker("test-service")
+	breaker, _ = manager.GetBreaker("test-service")
 	assert.Nil(t, breaker)
 
 	// Try to unregister again - should return error
@@ -183,7 +182,7 @@ func TestManagerUpdateConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify config was updated by checking if new breaker was created
-	breaker := manager.GetBreaker("test-service")
+	breaker, _ := manager.GetBreaker("test-service")
 	assert.NotNil(t, breaker)
 	// Note: We can't directly test internal config values, but we know a new breaker was created
 }
