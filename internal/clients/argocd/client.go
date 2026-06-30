@@ -11,10 +11,10 @@ import (
 	applicationsetpkg "github.com/argoproj/argo-cd/v2/pkg/apiclient/applicationset"
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 
-	"github.com/contextops/platformctl/internal/circuitbreaker"
-	"github.com/contextops/platformctl/internal/clients/resilience"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/circuitbreaker"
+	"github.com/kriipke/platformctl/internal/clients/resilience"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 const argoCDTimeout = 30 * time.Second

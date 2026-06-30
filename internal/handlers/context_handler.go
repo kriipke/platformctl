@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/contextops/platformctl/internal/auth"
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/storage"
-	"github.com/contextops/platformctl/internal/validation"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/auth"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/validation"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 type ContextHandler struct {

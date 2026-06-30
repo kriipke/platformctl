@@ -113,7 +113,7 @@ LABEL \
     org.opencontainers.image.version="${VERSION}" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${COMMIT_SHA}" \
-    org.opencontainers.image.source="https://github.com/contextops/platformctl" \
+    org.opencontainers.image.source="https://github.com/kriipke/platformctl" \
     org.opencontainers.image.licenses="MIT"
 
 # Expose common ports (will be overridden by Kubernetes service definitions)

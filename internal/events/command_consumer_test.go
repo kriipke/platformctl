@@ -3,7 +3,7 @@ package events
 import (
 	"testing"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // TestResultRoutingKey verifies the gitops.results routing keys produced for

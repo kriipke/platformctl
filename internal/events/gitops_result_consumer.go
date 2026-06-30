@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // ResultProcessor interface for processing GitOps result messages

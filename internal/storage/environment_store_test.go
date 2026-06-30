@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/storage"
-	"github.com/contextops/platformctl/internal/testutil"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

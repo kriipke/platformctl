@@ -3,7 +3,7 @@ package aggregator
 import (
 	"testing"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // TestCustomerBranchFields verifies extraction of the customer-git-branch

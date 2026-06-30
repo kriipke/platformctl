@@ -17,14 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/contextops/platformctl/internal/aggregator"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/database"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/handlers"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/readmodel"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/aggregator"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/database"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/handlers"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/readmodel"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // Phase1DIntegrationTestSuite tests the complete Phase 1D GitOps aggregator and status API integration

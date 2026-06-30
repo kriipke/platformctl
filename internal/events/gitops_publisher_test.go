@@ -3,7 +3,7 @@ package events
 import (
 	"testing"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // TestGenerateRoutingKey documents the command routing keys per manifest type.
