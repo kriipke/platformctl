@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps needs to provide fast, consolidated status views for contexts by aggregating data from multiple integration services (Vault, ArgoCD, New Relic, Kubernetes, Git). The challenge is balancing read performance with data consistency and system complexity.
+Platformctl needs to provide fast, consolidated status views for contexts by aggregating data from multiple integration services (Vault, ArgoCD, New Relic, Kubernetes, Git). The challenge is balancing read performance with data consistency and system complexity.
 
 ### Problem Statement
 

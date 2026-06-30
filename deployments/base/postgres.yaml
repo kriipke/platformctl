@@ -2,10 +2,10 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   accessModes:
     - ReadWriteOnce
@@ -18,10 +18,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   replicas: 1
   strategy:
@@ -34,7 +34,7 @@ spec:
       labels:
         app: postgres
         app.kubernetes.io/name: postgres
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
     spec:
       containers:
       - name: postgres
@@ -45,17 +45,17 @@ spec:
         - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
@@ -98,10 +98,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   selector:
     app: postgres

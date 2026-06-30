@@ -1,12 +1,12 @@
-# ServiceAccount for ContextOps services
+# ServiceAccount for Platformctl services
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: contextops-service-account
-  namespace: contextops
+  name: platformctl-service-account
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-service-account
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-service-account
+    app.kubernetes.io/part-of: platformctl-platform
 automountServiceAccountToken: true
 ---
 # ServiceAccount for GitOps Aggregator (needs additional permissions for read model operations)
@@ -14,10 +14,10 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gitops-aggregator-service-account
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: gitops-aggregator-service-account
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: aggregator
 automountServiceAccountToken: true
 ---
@@ -26,10 +26,10 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kubernetes-integration-service-account
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: kubernetes-integration-service-account
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 automountServiceAccountToken: true
 ---
@@ -37,10 +37,10 @@ automountServiceAccountToken: true
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: contextops-kubernetes-reader
+  name: platformctl-kubernetes-reader
   labels:
-    app.kubernetes.io/name: contextops-kubernetes-reader
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-kubernetes-reader
+    app.kubernetes.io/part-of: platformctl-platform
 rules:
 # ApplicationSet and ArgoCD Application monitoring
 - apiGroups: ["argoproj.io"]
@@ -107,10 +107,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: contextops-aggregator
+  name: platformctl-aggregator
   labels:
-    app.kubernetes.io/name: contextops-aggregator
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-aggregator
+    app.kubernetes.io/part-of: platformctl-platform
 rules:
 # Inherit all kubernetes reader permissions
 - apiGroups: ["argoproj.io"]
@@ -151,15 +151,15 @@ rules:
     - nodes
   verbs: ["get", "list"]
 ---
-# Role for ContextOps services within their namespace
+# Role for Platformctl services within their namespace
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  namespace: contextops
-  name: contextops-service-role
+  namespace: platformctl
+  name: platformctl-service-role
   labels:
-    app.kubernetes.io/name: contextops-service-role
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-service-role
+    app.kubernetes.io/part-of: platformctl-platform
 rules:
 # Access to ConfigMaps and Secrets within namespace
 - apiGroups: [""]
@@ -189,56 +189,56 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: contextops-kubernetes-integration
+  name: platformctl-kubernetes-integration
   labels:
-    app.kubernetes.io/name: contextops-kubernetes-integration
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-kubernetes-integration
+    app.kubernetes.io/part-of: platformctl-platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: contextops-kubernetes-reader
+  name: platformctl-kubernetes-reader
 subjects:
 - kind: ServiceAccount
   name: kubernetes-integration-service-account
-  namespace: contextops
+  namespace: platformctl
 ---
 # ClusterRoleBinding for GitOps aggregator
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: contextops-aggregator-binding
+  name: platformctl-aggregator-binding
   labels:
-    app.kubernetes.io/name: contextops-aggregator-binding
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-aggregator-binding
+    app.kubernetes.io/part-of: platformctl-platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: contextops-aggregator
+  name: platformctl-aggregator
 subjects:
 - kind: ServiceAccount
   name: gitops-aggregator-service-account
-  namespace: contextops
+  namespace: platformctl
 ---
-# RoleBinding for ContextOps services within their namespace
+# RoleBinding for Platformctl services within their namespace
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  namespace: contextops
-  name: contextops-service-binding
+  namespace: platformctl
+  name: platformctl-service-binding
   labels:
-    app.kubernetes.io/name: contextops-service-binding
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-service-binding
+    app.kubernetes.io/part-of: platformctl-platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: contextops-service-role
+  name: platformctl-service-role
 subjects:
 - kind: ServiceAccount
-  name: contextops-service-account
-  namespace: contextops
+  name: platformctl-service-account
+  namespace: platformctl
 - kind: ServiceAccount
   name: gitops-aggregator-service-account
-  namespace: contextops
+  namespace: platformctl
 # SecurityContextConstraints (OpenShift-only) intentionally removed: this is a
 # vanilla Kubernetes cluster. Pod/container securityContext blocks in the
 # deployments enforce runAsNonRoot, drop-ALL capabilities, and no privilege

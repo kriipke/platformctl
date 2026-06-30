@@ -1,11 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# ContextOps Docker Image Build Script
+# Platformctl Docker Image Build Script
 # Builds all service containers with proper versioning and metadata
 
 # Configuration
-REGISTRY="${REGISTRY:-contextops}"
+REGISTRY="${REGISTRY:-platformctl}"
 VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo "dev")}"
 COMMIT_SHA="${COMMIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}"
 BUILD_DATE="${BUILD_DATE:-$(date -u '+%Y-%m-%dT%H:%M:%SZ')}"
@@ -49,13 +49,13 @@ log_error() {
 # Help function
 show_help() {
     cat << EOF
-ContextOps Docker Image Build Script
+Platformctl Docker Image Build Script
 
 Usage: $0 [OPTIONS] [SERVICE...]
 
 OPTIONS:
     -h, --help          Show this help message
-    -r, --registry      Set container registry (default: contextops)
+    -r, --registry      Set container registry (default: platformctl)
     -v, --version       Set image version (default: git describe)
     -p, --push          Push images to registry after building
     -f, --force         Force rebuild without cache
@@ -269,7 +269,7 @@ push_service() {
 
 # Main execution
 main() {
-    log_info "ContextOps Docker Build Script"
+    log_info "Platformctl Docker Build Script"
     log_info "Registry: $REGISTRY"
     log_info "Version: $VERSION"
     log_info "Commit: $COMMIT_SHA"

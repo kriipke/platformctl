@@ -86,7 +86,7 @@ jobs:
     if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'development'
     environment:
       name: development
-      url: https://contextops-dev.example.com
+      url: https://platformctl-dev.example.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,21 +116,21 @@ jobs:
 
       - name: Deploy to development
         run: |
-          echo "Deploying ContextOps to development environment..."
+          echo "Deploying Platformctl to development environment..."
           kustomize build deployments/overlays/development | kubectl apply -f -
 
       - name: Wait for rollout
         run: |
-          kubectl rollout status deployment --all -n contextops-dev --timeout=600s
+          kubectl rollout status deployment --all -n platformctl-dev --timeout=600s
 
       - name: Verify deployment
         run: |
           # Check pod status
-          kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform
+          kubectl get pods -n platformctl-dev -l app.kubernetes.io/part-of=platformctl-platform
           
           # Check if all pods are running
-          RUNNING_PODS=$(kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Running --no-headers | wc -l)
-          TOTAL_PODS=$(kubectl get pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform --no-headers | wc -l)
+          RUNNING_PODS=$(kubectl get pods -n platformctl-dev -l app.kubernetes.io/part-of=platformctl-platform --field-selector=status.phase=Running --no-headers | wc -l)
+          TOTAL_PODS=$(kubectl get pods -n platformctl-dev -l app.kubernetes.io/part-of=platformctl-platform --no-headers | wc -l)
           
           echo "Running pods: ${RUNNING_PODS}/${TOTAL_PODS}"
           
@@ -138,14 +138,14 @@ jobs:
             echo "✅ All pods are running"
           else
             echo "❌ Some pods are not running"
-            kubectl describe pods -n contextops-dev -l app.kubernetes.io/part-of=contextops-platform
+            kubectl describe pods -n platformctl-dev -l app.kubernetes.io/part-of=platformctl-platform
             exit 1
           fi
 
       - name: Run health checks
         run: |
           # Port forward to gateway for health check
-          kubectl port-forward service/dev-contextops-gateway 8080:80 -n contextops-dev &
+          kubectl port-forward service/dev-platformctl-gateway 8080:80 -n platformctl-dev &
           FORWARD_PID=$!
           sleep 10
           
@@ -168,7 +168,7 @@ jobs:
     if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'staging'
     environment:
       name: staging
-      url: https://staging.contextops.com
+      url: https://staging.platformctl.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -193,7 +193,7 @@ jobs:
           kubectl cluster-info
           
           # Check existing deployment
-          kubectl get deployments -n contextops-staging -l app.kubernetes.io/part-of=contextops-platform || true
+          kubectl get deployments -n platformctl-staging -l app.kubernetes.io/part-of=platformctl-platform || true
 
       - name: Update image tags
         run: |
@@ -208,19 +208,19 @@ jobs:
 
       - name: Deploy to staging
         run: |
-          echo "Deploying ContextOps to staging environment..."
+          echo "Deploying Platformctl to staging environment..."
           kustomize build deployments/overlays/staging | kubectl apply -f -
 
       - name: Wait for rollout
         run: |
-          kubectl rollout status deployment --all -n contextops-staging --timeout=900s
+          kubectl rollout status deployment --all -n platformctl-staging --timeout=900s
 
       - name: Run smoke tests
         run: |
           echo "Running smoke tests for staging..."
           
           # Port forward to gateway
-          kubectl port-forward service/staging-contextops-gateway 8080:80 -n contextops-staging &
+          kubectl port-forward service/staging-platformctl-gateway 8080:80 -n platformctl-staging &
           FORWARD_PID=$!
           sleep 15
           
@@ -254,7 +254,7 @@ jobs:
     if: needs.setup-deployment.outputs.should_deploy == 'true' && needs.setup-deployment.outputs.environment == 'production'
     environment:
       name: production
-      url: https://api.contextops.com
+      url: https://api.platformctl.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -292,8 +292,8 @@ jobs:
           echo "Creating pre-deployment backup..."
           
           # Export current deployment state
-          kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o yaml > /tmp/backup-deployments.yaml
-          kubectl get configmaps -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o yaml > /tmp/backup-configmaps.yaml
+          kubectl get deployments -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o yaml > /tmp/backup-deployments.yaml
+          kubectl get configmaps -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o yaml > /tmp/backup-configmaps.yaml
           
           # Store as artifact for rollback
           echo "Backup created successfully"
@@ -311,7 +311,7 @@ jobs:
 
       - name: Deploy to production
         run: |
-          echo "Deploying ContextOps to production environment..."
+          echo "Deploying Platformctl to production environment..."
           
           # Rolling deployment with careful monitoring
           kustomize build deployments/overlays/production | kubectl apply -f -
@@ -321,11 +321,11 @@ jobs:
           echo "Monitoring rolling deployment..."
           
           # Wait for each deployment individually
-          DEPLOYMENTS=$(kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o name)
+          DEPLOYMENTS=$(kubectl get deployments -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o name)
           
           for deployment in $DEPLOYMENTS; do
             echo "Waiting for $deployment..."
-            kubectl rollout status $deployment -n contextops-prod --timeout=600s
+            kubectl rollout status $deployment -n platformctl-prod --timeout=600s
             
             # Brief pause between deployments
             sleep 30
@@ -336,11 +336,11 @@ jobs:
           echo "Running post-deployment validation..."
           
           # Check all pods are healthy
-          UNHEALTHY_PODS=$(kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+          UNHEALTHY_PODS=$(kubectl get pods -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
           
           if [[ $UNHEALTHY_PODS -gt 0 ]]; then
             echo "❌ $UNHEALTHY_PODS unhealthy pods detected"
-            kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform
+            kubectl get pods -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform
             exit 1
           fi
           
@@ -351,12 +351,12 @@ jobs:
           echo "Running production health checks..."
           
           # External health check (if ingress is available)
-          if curl -f -s https://api.contextops.com/health; then
+          if curl -f -s https://api.platformctl.com/health; then
             echo "✅ External health check passed"
           else
             echo "❌ External health check failed"
             # Internal health check as fallback
-            kubectl port-forward service/prod-contextops-gateway 8080:80 -n contextops-prod &
+            kubectl port-forward service/prod-platformctl-gateway 8080:80 -n platformctl-prod &
             FORWARD_PID=$!
             sleep 10
             
@@ -418,23 +418,23 @@ jobs:
           echo "Production deployment failed, initiating automatic rollback..."
           
           # Rollback all deployments
-          DEPLOYMENTS=$(kubectl get deployments -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o name)
+          DEPLOYMENTS=$(kubectl get deployments -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o name)
           
           for deployment in $DEPLOYMENTS; do
             echo "Rolling back $deployment..."
-            kubectl rollout undo $deployment -n contextops-prod
+            kubectl rollout undo $deployment -n platformctl-prod
           done
 
       - name: Wait for rollback completion
         run: |
-          kubectl rollout status deployment --all -n contextops-prod --timeout=600s
+          kubectl rollout status deployment --all -n platformctl-prod --timeout=600s
 
       - name: Verify rollback
         run: |
           echo "Verifying rollback..."
           
           # Check pod health
-          UNHEALTHY_PODS=$(kubectl get pods -n contextops-prod -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+          UNHEALTHY_PODS=$(kubectl get pods -n platformctl-prod -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
           
           if [[ $UNHEALTHY_PODS -eq 0 ]]; then
             echo "✅ Rollback completed successfully"

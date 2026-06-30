@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ContextOps Rollback Script
+# Platformctl Rollback Script
 # Handles rolling back deployments to previous versions
 
 # Configuration
@@ -32,7 +32,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Help function
 show_help() {
     cat << EOF
-ContextOps Rollback Script
+Platformctl Rollback Script
 
 Usage: $0 [OPTIONS]
 
@@ -96,10 +96,10 @@ done
 # Set namespace if not provided
 if [[ -z "$NAMESPACE" ]]; then
     case $ENVIRONMENT in
-        development) NAMESPACE="contextops-dev" ;;
-        staging) NAMESPACE="contextops-staging" ;;
-        production) NAMESPACE="contextops-prod" ;;
-        *) NAMESPACE="contextops" ;;
+        development) NAMESPACE="platformctl-dev" ;;
+        staging) NAMESPACE="platformctl-staging" ;;
+        production) NAMESPACE="platformctl-prod" ;;
+        *) NAMESPACE="platformctl" ;;
     esac
 fi
 
@@ -131,7 +131,7 @@ get_deployments() {
     log_info "Getting deployments in namespace $NAMESPACE..."
     
     if [[ "$SERVICE" == "all" ]]; then
-        DEPLOYMENTS=($(kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o name))
+        DEPLOYMENTS=($(kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o name))
     else
         # Find deployment with matching service name
         DEPLOYMENTS=($(kubectl get deployments -n "$NAMESPACE" -l app="$SERVICE" -o name))
@@ -143,7 +143,7 @@ get_deployments() {
     fi
     
     if [[ ${#DEPLOYMENTS[@]} -eq 0 ]]; then
-        log_error "No ContextOps deployments found in namespace $NAMESPACE"
+        log_error "No Platformctl deployments found in namespace $NAMESPACE"
         exit 1
     fi
     
@@ -262,11 +262,11 @@ verify_rollback() {
     log_info "Verifying rollback success..."
     
     # Check pod status
-    local unhealthy_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+    local unhealthy_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
     
     if [[ $unhealthy_pods -gt 0 ]]; then
         log_warn "$unhealthy_pods pods are not running after rollback"
-        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
     else
         log_success "All pods are running after rollback"
     fi
@@ -290,13 +290,13 @@ show_summary() {
     if [[ "$DRY_RUN" == "false" ]]; then
         log_info ""
         log_info "Updated deployments:"
-        kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+        kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
     fi
 }
 
 # Main execution
 main() {
-    log_info "ContextOps Rollback Script"
+    log_info "Platformctl Rollback Script"
     log_info "Environment: $ENVIRONMENT"
     
     if [[ "$DRY_RUN" == "true" ]]; then

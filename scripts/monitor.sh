@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ContextOps Monitoring Script
+# Platformctl Monitoring Script
 # Provides health checks and monitoring for deployed services
 
 # Configuration
@@ -31,7 +31,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Help function
 show_help() {
     cat << EOF
-ContextOps Monitoring Script
+Platformctl Monitoring Script
 
 Usage: $0 [OPTIONS] [COMMAND]
 
@@ -104,10 +104,10 @@ done
 # Set namespace if not provided
 if [[ -z "$NAMESPACE" ]]; then
     case $ENVIRONMENT in
-        development) NAMESPACE="contextops-dev" ;;
-        staging) NAMESPACE="contextops-staging" ;;
-        production) NAMESPACE="contextops-prod" ;;
-        *) NAMESPACE="contextops" ;;
+        development) NAMESPACE="platformctl-dev" ;;
+        staging) NAMESPACE="platformctl-staging" ;;
+        production) NAMESPACE="platformctl-prod" ;;
+        *) NAMESPACE="platformctl" ;;
     esac
 fi
 
@@ -131,33 +131,33 @@ check_prerequisites() {
 
 # Show overall system status
 show_status() {
-    log_info "ContextOps System Status - $ENVIRONMENT"
+    log_info "Platformctl System Status - $ENVIRONMENT"
     log_info "Namespace: $NAMESPACE"
     echo
     
     # Deployment status
     echo "=== Deployments ==="
-    kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o wide
+    kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o wide
     echo
     
     # Service status
     echo "=== Services ==="
-    kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o wide
+    kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o wide
     echo
     
     # Pod summary
     echo "=== Pod Summary ==="
-    local total_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers | wc -l)
-    local running_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Running --no-headers | wc -l)
-    local pending_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Pending --no-headers | wc -l)
-    local failed_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Failed --no-headers | wc -l)
+    local total_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers | wc -l)
+    local running_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --field-selector=status.phase=Running --no-headers | wc -l)
+    local pending_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --field-selector=status.phase=Pending --no-headers | wc -l)
+    local failed_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --field-selector=status.phase=Failed --no-headers | wc -l)
     
     echo "Total: $total_pods | Running: $running_pods | Pending: $pending_pods | Failed: $failed_pods"
     
     if [[ $failed_pods -gt 0 ]]; then
         echo
         echo "=== Failed Pods ==="
-        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --field-selector=status.phase=Failed
+        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --field-selector=status.phase=Failed
     fi
 }
 
@@ -168,19 +168,19 @@ show_pods() {
     
     case $OUTPUT_FORMAT in
         json)
-            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o json
+            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o json
             ;;
         yaml)
-            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o yaml
+            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o yaml
             ;;
         *)
-            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o wide
+            kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o wide
             
             # Show resource usage if metrics-server is available
-            if kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform &> /dev/null; then
+            if kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform &> /dev/null; then
                 echo
                 echo "=== Resource Usage ==="
-                kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+                kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
             fi
             ;;
     esac
@@ -193,18 +193,18 @@ show_services() {
     
     case $OUTPUT_FORMAT in
         json)
-            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o json
+            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o json
             ;;
         yaml)
-            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o yaml
+            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o yaml
             ;;
         *)
-            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o wide
+            kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o wide
             echo
             
             # Show endpoints
             echo "=== Service Endpoints ==="
-            kubectl get endpoints -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+            kubectl get endpoints -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
             ;;
     esac
 }
@@ -221,17 +221,17 @@ show_metrics() {
         echo
         
         echo "=== Pod Metrics ==="
-        kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --sort-by=cpu
+        kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --sort-by=cpu
     else
         log_warn "Metrics server not available"
     fi
     
     # Show HPA status if available
-    local hpas=$(kubectl get hpa -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+    local hpas=$(kubectl get hpa -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
     if [[ $hpas -gt 0 ]]; then
         echo
         echo "=== Horizontal Pod Autoscalers ==="
-        kubectl get hpa -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+        kubectl get hpa -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
     fi
 }
 
@@ -241,10 +241,10 @@ show_logs() {
     echo
     
     # Get all pods
-    local pods=($(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{.items[*].metadata.name}'))
+    local pods=($(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{.items[*].metadata.name}'))
     
     if [[ ${#pods[@]} -eq 0 ]]; then
-        log_warn "No ContextOps pods found"
+        log_warn "No Platformctl pods found"
         return 0
     fi
     
@@ -264,20 +264,20 @@ perform_health_checks() {
     
     # Check pod health
     echo "=== Pod Health Check ==="
-    local unhealthy_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{" "}{.status.containerStatuses[0].ready}{"\n"}{end}' | grep -v "Running true" | wc -l)
+    local unhealthy_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{" "}{.status.containerStatuses[0].ready}{"\n"}{end}' | grep -v "Running true" | wc -l)
     
     if [[ $unhealthy_pods -eq 0 ]]; then
         log_success "All pods are healthy"
     else
         log_error "$unhealthy_pods pods are unhealthy"
-        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform | grep -v "Running"
+        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform | grep -v "Running"
         health_issues=$((health_issues + 1))
     fi
     
     # Check service endpoints
     echo
     echo "=== Service Endpoint Check ==="
-    local services_without_endpoints=$(kubectl get endpoints -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.subsets[*].addresses[*].ip}{"\n"}{end}' | grep -c "^[^ ]* *$" || true)
+    local services_without_endpoints=$(kubectl get endpoints -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.subsets[*].addresses[*].ip}{"\n"}{end}' | grep -c "^[^ ]* *$" || true)
     
     if [[ $services_without_endpoints -eq 0 ]]; then
         log_success "All services have healthy endpoints"
@@ -306,9 +306,9 @@ perform_health_checks() {
     # Check resource usage
     echo
     echo "=== Resource Usage Check ==="
-    if kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform &> /dev/null; then
-        local high_cpu_pods=$(kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers | awk '{if($2 ~ /[0-9]+m/ && $2+0 > 800) print $1}' | wc -l)
-        local high_memory_pods=$(kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers | awk '{if($3 ~ /[0-9]+Mi/ && $3+0 > 800) print $1}' | wc -l)
+    if kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform &> /dev/null; then
+        local high_cpu_pods=$(kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers | awk '{if($2 ~ /[0-9]+m/ && $2+0 > 800) print $1}' | wc -l)
+        local high_memory_pods=$(kubectl top pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers | awk '{if($3 ~ /[0-9]+Mi/ && $3+0 > 800) print $1}' | wc -l)
         
         if [[ $high_cpu_pods -eq 0 && $high_memory_pods -eq 0 ]]; then
             log_success "Resource usage is within normal limits"
@@ -337,7 +337,7 @@ run_watch_mode() {
     
     while true; do
         clear
-        echo "ContextOps Monitoring - $(date)"
+        echo "Platformctl Monitoring - $(date)"
         echo "Environment: $ENVIRONMENT | Namespace: $NAMESPACE"
         echo "========================================"
         

@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the message schemas used throughout ContextOps for RabbitMQ messages, REST API requests/responses, and inter-service communication.
+This document defines the message schemas used throughout Platformctl for RabbitMQ messages, REST API requests/responses, and inter-service communication.
 
 ---
 
@@ -441,7 +441,7 @@ Context:
   properties:
     apiVersion:
       type: string
-      enum: [contextops/v1]
+      enum: [platformctl/v1]
     kind:
       type: string
       enum: [Context]

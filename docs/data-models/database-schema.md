@@ -8,7 +8,7 @@
 
 ## Overview
 
-ContextOps uses PostgreSQL as the primary data store with a schema designed to support both operational data (contexts) and analytics (read model, audit logs). The schema evolves across development phases to support increasing functionality.
+Platformctl uses PostgreSQL as the primary data store with a schema designed to support both operational data (contexts) and analytics (read model, audit logs). The schema evolves across development phases to support increasing functionality.
 
 ---
 
@@ -20,7 +20,7 @@ ContextOps uses PostgreSQL as the primary data store with a schema designed to s
 -- Main context storage table
 CREATE TABLE contexts (
     name VARCHAR(255) PRIMARY KEY,
-    api_version VARCHAR(50) NOT NULL DEFAULT 'contextops/v1',
+    api_version VARCHAR(50) NOT NULL DEFAULT 'platformctl/v1',
     kind VARCHAR(50) NOT NULL DEFAULT 'Context',
     
     -- Metadata
@@ -41,7 +41,7 @@ CREATE TABLE contexts (
     -- Constraints
     CONSTRAINT valid_name CHECK (name ~ '^[a-z0-9-]+$'),
     CONSTRAINT valid_environment CHECK (environment IN ('dev', 'staging', 'prod')),
-    CONSTRAINT valid_api_version CHECK (api_version = 'contextops/v1'),
+    CONSTRAINT valid_api_version CHECK (api_version = 'platformctl/v1'),
     CONSTRAINT valid_kind CHECK (kind = 'Context')
 );
 
@@ -665,7 +665,7 @@ $$ LANGUAGE plpgsql;
 ### Connection Pool Settings
 
 ```sql
--- Recommended PostgreSQL configuration for ContextOps
+-- Recommended PostgreSQL configuration for Platformctl
 -- postgresql.conf settings:
 
 max_connections = 200
@@ -715,7 +715,7 @@ CREATE TABLE schema_migrations (
 
 -- Record initial schema
 INSERT INTO schema_migrations (version, description) 
-VALUES ('001', 'Initial ContextOps schema');
+VALUES ('001', 'Initial Platformctl schema');
 ```
 
 ---

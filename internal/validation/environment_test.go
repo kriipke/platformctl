@@ -18,7 +18,7 @@ func TestValidateEnvironment(t *testing.T) {
 		{
 			name: "valid environment manifest",
 			environment: models.Environment{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "Environment",
 				Metadata: models.EnvironmentMetadata{
 					Name: "valid-env",

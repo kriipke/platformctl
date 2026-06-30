@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 metadata:
-  name: contextops-production
+  name: platformctl-production
   annotations:
     config.kubernetes.io/local-config: "true"
 
@@ -15,7 +15,7 @@ resources:
   - network-policy.yaml
 
 # Production namespace
-namespace: contextops-prod
+namespace: platformctl-prod
 
 # Environment-specific name prefix
 namePrefix: prod-
@@ -23,30 +23,30 @@ namePrefix: prod-
 # Common labels for production environment
 commonLabels:
   app.kubernetes.io/environment: production
-  app.kubernetes.io/instance: contextops-prod
+  app.kubernetes.io/instance: platformctl-prod
 
 # Production-specific annotations
 commonAnnotations:
   deployment.kubernetes.io/environment: production
-  contextops.io/deployment-target: production
-  contextops.io/backup-enabled: "true"
-  contextops.io/monitoring-level: "high"
+  platformctl.io/deployment-target: production
+  platformctl.io/backup-enabled: "true"
+  platformctl.io/monitoring-level: "high"
 
 # Image tags for production (specific versions, not latest)
 images:
-  - name: contextops/gateway
+  - name: platformctl/gateway
     newTag: v1.0.0
-  - name: contextops/gitops-aggregator
+  - name: platformctl/gitops-aggregator
     newTag: v1.0.0
-  - name: contextops/app-sync-svc
+  - name: platformctl/app-sync-svc
     newTag: v1.0.0
-  - name: contextops/environment-validation-svc
+  - name: platformctl/environment-validation-svc
     newTag: v1.0.0
-  - name: contextops/context-correlation-svc
+  - name: platformctl/context-correlation-svc
     newTag: v1.0.0
-  - name: contextops/multi-environment-kube-svc
+  - name: platformctl/multi-environment-kube-svc
     newTag: v1.0.0
-  - name: contextops/customer-git-branch-svc
+  - name: platformctl/customer-git-branch-svc
     newTag: v1.0.0
 
 # Configuration patches for production environment
@@ -72,7 +72,7 @@ patches:
   # Production logging configuration
   - target:
       kind: ConfigMap
-      name: contextops-config
+      name: platformctl-config
     patch: |-
       - op: replace
         path: /data/LOG_LEVEL

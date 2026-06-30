@@ -3,11 +3,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 metadata:
-  name: contextops-environments
+  name: platformctl-environments
   annotations:
     config.kubernetes.io/local-config: "true"
-    contextops.io/environments: "development,staging,production"
-    contextops.io/default-environment: "development"
+    platformctl.io/environments: "development,staging,production"
+    platformctl.io/default-environment: "development"
 
 # Environment-specific resources
 resources: []

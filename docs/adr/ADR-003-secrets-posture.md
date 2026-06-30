@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps must handle sensitive credentials for multiple external systems:
+Platformctl must handle sensitive credentials for multiple external systems:
 - HashiCorp Vault authentication tokens
 - ArgoCD API tokens
 - New Relic API keys  
@@ -20,7 +20,7 @@ These secrets are needed by integration services to perform operations, but stor
 
 ### Problem Statement
 
-Common approaches to secret management in systems like ContextOps create security and compliance risks:
+Common approaches to secret management in systems like Platformctl create security and compliance risks:
 
 1. **Inline secrets in configuration:** Secrets stored directly in context specifications
    - High blast radius (secrets visible in logs, databases, APIs)
@@ -64,7 +64,7 @@ Common approaches to secret management in systems like ContextOps create securit
 - No audit trail
 
 #### Alternative 2: Encrypted database storage
-**Description:** Store secrets encrypted in ContextOps database with system key.
+**Description:** Store secrets encrypted in Platformctl database with system key.
 
 **Pros:**
 - Secrets not visible in plaintext
@@ -72,7 +72,7 @@ Common approaches to secret management in systems like ContextOps create securit
 - Can implement access controls
 
 **Cons:**
-- ContextOps becomes high-value target
+- Platformctl becomes high-value target
 - Key management complexity
 - Still need to decrypt for use (exposure risk)
 - Difficult to achieve compliance certification
@@ -96,7 +96,7 @@ Common approaches to secret management in systems like ContextOps create securit
 
 ## Decision
 
-We will implement a **secrets-by-reference** approach where ContextOps stores only references to secrets managed by HashiCorp Vault, never the secret values themselves.
+We will implement a **secrets-by-reference** approach where Platformctl stores only references to secrets managed by HashiCorp Vault, never the secret values themselves.
 
 ### Architecture Principles
 
@@ -112,7 +112,7 @@ argocd:
 
 #### 2. Vault as Single Source of Truth
 - All secrets stored and managed in HashiCorp Vault
-- ContextOps services authenticate to Vault using short-lived tokens
+- Platformctl services authenticate to Vault using short-lived tokens
 - Secrets fetched at runtime when needed, not cached
 
 #### 3. Just-In-Time Secret Access
@@ -151,9 +151,9 @@ func (s *ArgoCDService) handleCommand(cmd Command) error {
 - **Compliance ready:** SOC2 and other certifications available
 
 ### Why References Not Values?
-- **Blast radius reduction:** Compromise of ContextOps doesn't expose secrets
+- **Blast radius reduction:** Compromise of Platformctl doesn't expose secrets
 - **Audit visibility:** All secret access logged in Vault
-- **Rotation friendly:** Rotate secrets in Vault, no ContextOps changes needed
+- **Rotation friendly:** Rotate secrets in Vault, no Platformctl changes needed
 - **Compliance alignment:** Meets requirements for secret handling
 
 ### Why Just-In-Time Access?
@@ -169,13 +169,13 @@ func (s *ArgoCDService) handleCommand(cmd Command) error {
 ### Positive
 
 1. **Security**
-   - Minimal blast radius - ContextOps compromise doesn't expose secrets
+   - Minimal blast radius - Platformctl compromise doesn't expose secrets
    - Comprehensive audit trail in Vault for all secret access
    - Short-lived tokens limit exposure window
    - Reference-only configuration prevents accidental secret leakage
 
 2. **Compliance**
-   - Clear separation of secret storage (Vault) and business logic (ContextOps)
+   - Clear separation of secret storage (Vault) and business logic (Platformctl)
    - Professional secret management practices
    - Audit logs suitable for compliance requirements
    - Supports secret rotation requirements
@@ -183,7 +183,7 @@ func (s *ArgoCDService) handleCommand(cmd Command) error {
 3. **Operational Benefits**
    - Secret rotation handled entirely in Vault
    - No secret synchronization between systems
-   - Clear operational model - Vault owns secrets, ContextOps owns references
+   - Clear operational model - Vault owns secrets, Platformctl owns references
 
 ### Negative
 
@@ -286,8 +286,8 @@ path "auth/kubernetes/config" {
   capabilities = ["create", "read", "update"]
 }
 
-# Role for ContextOps services
-path "auth/kubernetes/role/contextops-*" {
+# Role for Platformctl services
+path "auth/kubernetes/role/platformctl-*" {
   capabilities = ["create", "read", "update"]
 }
 
@@ -333,7 +333,7 @@ func (vc *VaultClient) GetSecret(logicalName, key string) (string, error) {
 
 ### Vault Configuration Security
 ```hcl
-# Minimum Vault configuration for ContextOps
+# Minimum Vault configuration for Platformctl
 storage "raft" {
   path = "/vault/data"
 }

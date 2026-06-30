@@ -68,7 +68,7 @@ type MetricsConfig struct {
 	Port        string `env:"METRICS_PORT" envDefault:"9090"`
 	Path        string `env:"METRICS_PATH" envDefault:"/metrics"`
 	ServiceName string `env:"SERVICE_NAME" envDefault:"platformctl"`
-	Namespace   string `env:"METRICS_NAMESPACE" envDefault:"contextops"`
+	Namespace   string `env:"METRICS_NAMESPACE" envDefault:"platformctl"`
 }
 
 // NewMetrics creates a new Prometheus metrics collector with GitOps-specific metrics

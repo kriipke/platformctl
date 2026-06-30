@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Context model is the central data structure in ContextOps, representing an application-environment pairing with all necessary configuration for integrating with external systems. This document defines the complete Context schema with validation rules and implementation guidance.
+The Context model is the central data structure in Platformctl, representing an application-environment pairing with all necessary configuration for integrating with external systems. This document defines the complete Context schema with validation rules and implementation guidance.
 
 ---
 
@@ -18,7 +18,7 @@ The Context model is the central data structure in ContextOps, representing an a
 
 ```go
 type Context struct {
-    APIVersion string          `json:"apiVersion" yaml:"apiVersion" validate:"required,eq=contextops/v1"`
+    APIVersion string          `json:"apiVersion" yaml:"apiVersion" validate:"required,eq=platformctl/v1"`
     Kind       string          `json:"kind" yaml:"kind" validate:"required,eq=Context"`
     Metadata   ContextMetadata `json:"metadata" yaml:"metadata" validate:"required"`
     Spec       ContextSpec     `json:"spec" yaml:"spec" validate:"required"`
@@ -275,7 +275,7 @@ type GitBrowseConfig struct {
 ## Example Context
 
 ```yaml
-apiVersion: contextops/v1
+apiVersion: platformctl/v1
 kind: Context
 metadata:
   name: webapp-prod
@@ -312,8 +312,8 @@ spec:
     auth:
       method: kubernetes
       kubernetes:
-        role: "contextops-webapp-prod"
-        serviceAccount: "contextops-vault-reader"
+        role: "platformctl-webapp-prod"
+        serviceAccount: "platformctl-vault-reader"
     secrets:
       - logicalName: argocd
         path: "kv/platform/prod/argocd"
@@ -454,7 +454,7 @@ The Context model is stored in the database as:
 ```sql
 CREATE TABLE contexts (
     name VARCHAR(255) PRIMARY KEY,
-    api_version VARCHAR(50) NOT NULL DEFAULT 'contextops/v1',
+    api_version VARCHAR(50) NOT NULL DEFAULT 'platformctl/v1',
     kind VARCHAR(50) NOT NULL DEFAULT 'Context',
     
     -- Metadata
@@ -491,15 +491,15 @@ For API documentation and client generation:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contextops.io/schemas/context/v1",
-  "title": "ContextOps Context",
+  "$id": "https://platformctl.io/schemas/context/v1",
+  "title": "Platformctl Context",
   "description": "Application-environment context configuration",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "properties": {
     "apiVersion": {
       "type": "string",
-      "const": "contextops/v1"
+      "const": "platformctl/v1"
     },
     "kind": {
       "type": "string", 

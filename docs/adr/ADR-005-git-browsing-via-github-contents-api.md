@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps needs to browse Git repository contents to provide visibility into configuration files, Helm charts, and Kubernetes manifests referenced by ArgoCD applications. This browsing functionality supports troubleshooting, configuration validation, and operational awareness.
+Platformctl needs to browse Git repository contents to provide visibility into configuration files, Helm charts, and Kubernetes manifests referenced by ArgoCD applications. This browsing functionality supports troubleshooting, configuration validation, and operational awareness.
 
 ### Problem Statement
 
@@ -249,7 +249,7 @@ func (gc *GitHubClient) fallbackToClone(owner, repo, path, ref string) (*FileCon
     repoURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
     
     // Use temporary directory for clone
-    tempDir, err := os.MkdirTemp("", fmt.Sprintf("contextops-clone-%s-%s", owner, repo))
+    tempDir, err := os.MkdirTemp("", fmt.Sprintf("platformctl-clone-%s-%s", owner, repo))
     if err != nil {
         return nil, err
     }

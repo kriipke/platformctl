@@ -21,7 +21,7 @@ func TestPhase1CServiceIntegration(t *testing.T) {
 	// Setup test configuration
 	cfg := &config.Config{
 		RabbitMQURL: "amqp://localhost:5672/",
-		DatabaseURL: "postgres://localhost/contextops_test?sslmode=disable",
+		DatabaseURL: "postgres://localhost/platformctl_test?sslmode=disable",
 	}
 
 	// Initialize message bus

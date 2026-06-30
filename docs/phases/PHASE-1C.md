@@ -1435,7 +1435,7 @@ func SetupServiceQueues(mb *MessageBus) error {
             if err := mb.channel.QueueBind(
                 queueName,
                 routingKey,
-                "contextops.commands",
+                "platformctl.commands",
                 false,
                 nil,
             ); err != nil {

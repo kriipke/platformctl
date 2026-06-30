@@ -18,7 +18,7 @@ func TestValidateApp(t *testing.T) {
 		{
 			name: "valid app manifest",
 			app: models.App{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "App",
 				Metadata: models.AppMetadata{
 					Name: "valid-app",

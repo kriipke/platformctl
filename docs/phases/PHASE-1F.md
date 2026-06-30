@@ -8,7 +8,7 @@
 
 ## Overview
 
-Create Docker containers for all services and Kubernetes deployment manifests. Establish the foundation for running ContextOps in Kubernetes with proper service discovery, health checks, and basic networking.
+Create Docker containers for all services and Kubernetes deployment manifests. Establish the foundation for running Platformctl in Kubernetes with proper service discovery, health checks, and basic networking.
 
 ## Success Criteria
 
@@ -59,33 +59,33 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 
 # Create non-root user
-RUN adduser -D -s /bin/sh contextops
+RUN adduser -D -s /bin/sh platformctl
 
 # Set working directory
 WORKDIR /app
 
 # Copy the binary from builder stage
 ARG SERVICE_NAME
-COPY --from=builder /app/bin/${SERVICE_NAME} /app/contextops
+COPY --from=builder /app/bin/${SERVICE_NAME} /app/platformctl
 
 # Copy migration files if they exist
 COPY migrations/ /app/migrations/
 
 # Change ownership
-RUN chown -R contextops:contextops /app
+RUN chown -R platformctl:platformctl /app
 
 # Switch to non-root user
-USER contextops
+USER platformctl
 
 # Expose port
 EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/app/contextops", "healthcheck"] || exit 1
+    CMD ["/app/platformctl", "healthcheck"] || exit 1
 
 # Command to run
-ENTRYPOINT ["/app/contextops"]
+ENTRYPOINT ["/app/platformctl"]
 ```
 
 **File: `build/docker/build.sh`**
@@ -95,7 +95,7 @@ ENTRYPOINT ["/app/contextops"]
 
 set -e
 
-REGISTRY="${REGISTRY:-contextops}"
+REGISTRY="${REGISTRY:-platformctl}"
 TAG="${TAG:-latest}"
 
 # List of services to build
@@ -110,7 +110,7 @@ SERVICES=(
     "cli"
 )
 
-echo "Building ContextOps Docker images..."
+echo "Building Platformctl Docker images..."
 
 for service in "${SERVICES[@]}"; do
     echo "Building ${service}..."
@@ -143,9 +143,9 @@ fi
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: contextops
+  name: platformctl
   labels:
-    app.kubernetes.io/name: contextops
+    app.kubernetes.io/name: platformctl
     app.kubernetes.io/version: "1.0"
 ```
 
@@ -155,12 +155,12 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: contextops-config
-  namespace: contextops
+  name: platformctl-config
+  namespace: platformctl
 data:
   LOG_LEVEL: "info"
-  DATABASE_URL: "postgres://contextops:password@postgres:5432/contextops?sslmode=disable"
-  RABBITMQ_URL: "amqp://contextops:password@rabbitmq:5672/"
+  DATABASE_URL: "postgres://platformctl:password@postgres:5432/platformctl?sslmode=disable"
+  RABBITMQ_URL: "amqp://platformctl:password@rabbitmq:5672/"
   PORT: ":8080"
 ```
 
@@ -170,8 +170,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: contextops-secrets
-  namespace: contextops
+  name: platformctl-secrets
+  namespace: platformctl
 type: Opaque
 data:
   # Base64 encoded values - replace in production
@@ -188,7 +188,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gateway
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: gateway
     app.kubernetes.io/component: api-gateway
@@ -207,10 +207,10 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: contextops-gateway
+      serviceAccountName: platformctl-gateway
       containers:
       - name: gateway
-        image: contextops/gateway:latest
+        image: platformctl/gateway:latest
         ports:
         - containerPort: 8080
           name: http
@@ -220,17 +220,17 @@ spec:
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: DATABASE_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config  
+              name: platformctl-config  
               key: DATABASE_URL
         - name: RABBITMQ_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_URL
         livenessProbe:
           httpGet:
@@ -263,7 +263,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gateway
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: gateway
 spec:
@@ -283,7 +283,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aggregator
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: aggregator
     app.kubernetes.io/component: aggregator
@@ -302,10 +302,10 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: contextops-aggregator
+      serviceAccountName: platformctl-aggregator
       containers:
       - name: aggregator
-        image: contextops/aggregator:latest
+        image: platformctl/aggregator:latest
         ports:
         - containerPort: 8080
           name: metrics
@@ -313,17 +313,17 @@ spec:
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: DATABASE_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_URL
         - name: RABBITMQ_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_URL
         livenessProbe:
           httpGet:
@@ -355,7 +355,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vault-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: vault-svc
     app.kubernetes.io/component: integration-service
@@ -374,10 +374,10 @@ spec:
         prometheus.io/port: "8080" 
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: contextops-vault
+      serviceAccountName: platformctl-vault
       containers:
       - name: vault-svc
-        image: contextops/vault-svc:latest
+        image: platformctl/vault-svc:latest
         ports:
         - containerPort: 8080
           name: metrics
@@ -385,17 +385,17 @@ spec:
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: DATABASE_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_URL
         - name: RABBITMQ_URL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_URL
         # Mount service account token for Vault Kubernetes auth
         volumeMounts:
@@ -439,35 +439,35 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: contextops-gateway
-  namespace: contextops
+  name: platformctl-gateway
+  namespace: platformctl
 ---
 # Aggregator service account
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: contextops-aggregator
-  namespace: contextops
+  name: platformctl-aggregator
+  namespace: platformctl
 ---
 # Vault service account (for Vault Kubernetes auth)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: contextops-vault
-  namespace: contextops
+  name: platformctl-vault
+  namespace: platformctl
 ---
 # Kubernetes service account (for kubeconfig-less operation)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: contextops-kube
-  namespace: contextops
+  name: platformctl-kube
+  namespace: platformctl
 ---
 # ClusterRole for Kubernetes service (namespace-scoped access)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: contextops-kube-reader
+  name: platformctl-kube-reader
 rules:
 - apiGroups: [""]
   resources: ["pods", "services", "endpoints", "events", "configmaps", "secrets"]
@@ -486,15 +486,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: contextops-kube-reader
+  name: platformctl-kube-reader
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: contextops-kube-reader
+  name: platformctl-kube-reader
 subjects:
 - kind: ServiceAccount
-  name: contextops-kube
-  namespace: contextops
+  name: platformctl-kube
+  namespace: platformctl
 ```
 
 ### Task 6: Infrastructure Dependencies
@@ -506,7 +506,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: contextops
+  namespace: platformctl
 spec:
   serviceName: postgres
   replicas: 1
@@ -525,13 +525,13 @@ spec:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
-          value: contextops
+          value: platformctl
         - name: POSTGRES_USER
-          value: contextops
+          value: platformctl
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         volumeMounts:
         - name: postgres-data
@@ -556,7 +556,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: contextops
+  namespace: platformctl
 spec:
   selector:
     app: postgres
@@ -573,7 +573,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: rabbitmq
-  namespace: contextops
+  namespace: platformctl
 spec:
   serviceName: rabbitmq
   replicas: 1
@@ -595,11 +595,11 @@ spec:
           name: management
         env:
         - name: RABBITMQ_DEFAULT_USER
-          value: contextops
+          value: platformctl
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         volumeMounts:
         - name: rabbitmq-data
@@ -624,7 +624,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
-  namespace: contextops
+  namespace: platformctl
 spec:
   selector:
     app: rabbitmq
@@ -645,8 +645,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-ingress
-  namespace: contextops
+  name: platformctl-ingress
+  namespace: platformctl
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
@@ -654,7 +654,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: contextops.local
+  - host: platformctl.local
     http:
       paths:
       - path: /
@@ -682,10 +682,10 @@ spec:
 
 set -e
 
-NAMESPACE="${NAMESPACE:-contextops}"
+NAMESPACE="${NAMESPACE:-platformctl}"
 KUBECTL="${KUBECTL:-kubectl}"
 
-echo "Deploying ContextOps to Kubernetes..."
+echo "Deploying Platformctl to Kubernetes..."
 
 # Apply namespace
 echo "Creating namespace..."
@@ -712,8 +712,8 @@ ${KUBECTL} wait --for=condition=ready pod -l app=rabbitmq -n ${NAMESPACE} --time
 
 # Run database migrations
 echo "Running database migrations..."
-${KUBECTL} run migration-job --image=contextops/gateway:latest --rm -it --restart=Never \
-  -n ${NAMESPACE} -- /app/contextops migrate up
+${KUBECTL} run migration-job --image=platformctl/gateway:latest --rm -it --restart=Never \
+  -n ${NAMESPACE} -- /app/platformctl migrate up
 
 # Deploy services
 echo "Deploying services..."
@@ -731,9 +731,9 @@ echo "Waiting for services to be ready..."
 ${KUBECTL} wait --for=condition=available deployment -l app.kubernetes.io/component=api-gateway -n ${NAMESPACE} --timeout=300s
 ${KUBECTL} wait --for=condition=available deployment -l app.kubernetes.io/component=aggregator -n ${NAMESPACE} --timeout=300s
 
-echo "ContextOps deployment complete!"
-echo "Access the application at: http://contextops.local"
-echo "RabbitMQ management: http://contextops.local/rabbitmq"
+echo "Platformctl deployment complete!"
+echo "Access the application at: http://platformctl.local"
+echo "RabbitMQ management: http://platformctl.local/rabbitmq"
 ```
 
 ### Task 9: Environment Overlays with Kustomize
@@ -744,7 +744,7 @@ echo "RabbitMQ management: http://contextops.local/rabbitmq"
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: contextops-dev
+namespace: platformctl-dev
 
 resources:
 - ../../k8s
@@ -760,16 +760,16 @@ replicas:
   count: 1
 
 configMapGenerator:
-- name: contextops-config
+- name: platformctl-config
   behavior: replace
   literals:
   - LOG_LEVEL=debug
-  - DATABASE_URL=postgres://contextops:password@postgres:5432/contextops_dev?sslmode=disable
+  - DATABASE_URL=postgres://platformctl:password@postgres:5432/platformctl_dev?sslmode=disable
 
 images:
-- name: contextops/gateway
+- name: platformctl/gateway
   newTag: dev
-- name: contextops/aggregator
+- name: platformctl/aggregator
   newTag: dev
 ```
 
@@ -779,7 +779,7 @@ images:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: contextops
+namespace: platformctl
 
 resources:
 - ../../k8s
@@ -793,20 +793,20 @@ replicas:
   count: 3
 
 configMapGenerator:
-- name: contextops-config
+- name: platformctl-config
   behavior: replace
   literals:
   - LOG_LEVEL=info
-  - DATABASE_URL=postgres://contextops:password@postgres:5432/contextops?sslmode=disable
+  - DATABASE_URL=postgres://platformctl:password@postgres:5432/platformctl?sslmode=disable
 
 # Resource limits for production
 patchesStrategicMerge:
 - production-resources.yaml
 
 images:
-- name: contextops/gateway
+- name: platformctl/gateway
   newTag: v1.0.0
-- name: contextops/aggregator
+- name: platformctl/aggregator
   newTag: v1.0.0
 ```
 
@@ -852,7 +852,7 @@ Before marking Phase 1F complete:
 ## Next Steps
 
 Upon completion, Phase 1F provides:
-- Complete Kubernetes deployment for ContextOps
+- Complete Kubernetes deployment for Platformctl
 - Containerized services ready for orchestration  
 - Infrastructure dependencies properly managed
 - Foundation for production operations

@@ -79,7 +79,7 @@ func (s *ContextStore) Get(ctx context.Context, name, customerID string) (*model
 	}
 
 	contextObj := &models.Context{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Context",
 		Metadata: models.ContextMetadata{
 			Name:      name,
@@ -196,7 +196,7 @@ func (s *ContextStore) List(ctx context.Context, customerID string) ([]*models.C
 		}
 
 		contextObj := &models.Context{
-			APIVersion: "contextops/v1",
+			APIVersion: "platformctl/v1",
 			Kind:       "Context",
 			Metadata: models.ContextMetadata{
 				Name:      name,
@@ -239,7 +239,7 @@ func (s *ContextStore) GetByAppAndEnvironment(ctx context.Context, appRef, envRe
 		}
 
 		contextObj := &models.Context{
-			APIVersion: "contextops/v1",
+			APIVersion: "platformctl/v1",
 			Kind:       "Context",
 			Metadata: models.ContextMetadata{
 				Name:      name,

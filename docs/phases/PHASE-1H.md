@@ -2,7 +2,7 @@
 
 **Duration:** 2-3 days  
 **Prerequisites:** Phase 1G completed  
-**Deliverable:** Command-line interface for essential ContextOps operations
+**Deliverable:** Command-line interface for essential Platformctl operations
 
 ---
 
@@ -36,7 +36,7 @@ import (
     "os"
     
     "github.com/spf13/cobra"
-    "contextops/internal/cli"
+    "platformctl/internal/cli"
 )
 
 var version = "dev" // Set by build process
@@ -74,9 +74,9 @@ func NewRootCommand(version string) *cobra.Command {
     var globalFlags GlobalFlags
     
     rootCmd := &cobra.Command{
-        Use:   "contextops",
-        Short: "ContextOps CLI - Manage application contexts and infrastructure",
-        Long: `ContextOps CLI provides commands to manage application contexts,
+        Use:   "platformctl",
+        Short: "Platformctl CLI - Manage application contexts and infrastructure",
+        Long: `Platformctl CLI provides commands to manage application contexts,
 trigger infrastructure operations, and query system status.`,
         Version: version,
         PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -85,10 +85,10 @@ trigger infrastructure operations, and query system status.`,
     }
     
     // Global flags
-    rootCmd.PersistentFlags().StringVarP(&globalFlags.ConfigFile, "config", "c", "", "config file (default is $HOME/.contextops.yaml)")
+    rootCmd.PersistentFlags().StringVarP(&globalFlags.ConfigFile, "config", "c", "", "config file (default is $HOME/.platformctl.yaml)")
     rootCmd.PersistentFlags().StringVarP(&globalFlags.Output, "output", "o", "table", "output format (json|yaml|table)")
     rootCmd.PersistentFlags().BoolVarP(&globalFlags.Verbose, "verbose", "v", false, "verbose output")
-    rootCmd.PersistentFlags().StringVar(&globalFlags.ServerURL, "server", "", "ContextOps server URL")
+    rootCmd.PersistentFlags().StringVar(&globalFlags.ServerURL, "server", "", "Platformctl server URL")
     
     // Add subcommands
     rootCmd.AddCommand(
@@ -114,11 +114,11 @@ func initConfig(flags *GlobalFlags) error {
         viper.AddConfigPath(home)
         viper.AddConfigPath(".")
         viper.SetConfigType("yaml")
-        viper.SetConfigName(".contextops")
+        viper.SetConfigName(".platformctl")
     }
     
     // Environment variable support
-    viper.SetEnvPrefix("CONTEXTOPS")
+    viper.SetEnvPrefix("PLATFORMCTL")
     viper.AutomaticEnv()
     
     // Set defaults
@@ -164,7 +164,7 @@ func newContextCommand(globalFlags *GlobalFlags) *cobra.Command {
     contextCmd := &cobra.Command{
         Use:   "context",
         Short: "Manage contexts",
-        Long:  "Create, read, update, and delete ContextOps contexts",
+        Long:  "Create, read, update, and delete Platformctl contexts",
     }
     
     contextCmd.AddCommand(
@@ -993,13 +993,13 @@ func newCompletionCommand() *cobra.Command {
         Long: `To load completions:
 
 Bash:
-  $ source <(contextops completion bash)
+  $ source <(platformctl completion bash)
 
   # To load completions for each session, execute once:
   # Linux:
-  $ contextops completion bash > /etc/bash_completion.d/contextops
+  $ platformctl completion bash > /etc/bash_completion.d/platformctl
   # macOS:
-  $ contextops completion bash > /usr/local/etc/bash_completion.d/contextops
+  $ platformctl completion bash > /usr/local/etc/bash_completion.d/platformctl
 
 Zsh:
   # If shell completion is not already enabled in your environment,
@@ -1007,21 +1007,21 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ contextops completion zsh > "${fpath[1]}/_contextops"
+  $ platformctl completion zsh > "${fpath[1]}/_platformctl"
 
   # You will need to start a new shell for this setup to take effect.
 
 fish:
-  $ contextops completion fish | source
+  $ platformctl completion fish | source
 
   # To load completions for each session, execute once:
-  $ contextops completion fish > ~/.config/fish/completions/contextops.fish
+  $ platformctl completion fish > ~/.config/fish/completions/platformctl.fish
 
 PowerShell:
-  PS> contextops completion powershell | Out-String | Invoke-Expression
+  PS> platformctl completion powershell | Out-String | Invoke-Expression
 
   # To load completions for every new session, run:
-  PS> contextops completion powershell > contextops.ps1
+  PS> platformctl completion powershell > platformctl.ps1
   # and source this file from your PowerShell profile.
 `,
         DisableFlagsInUseLine: true,
@@ -1049,7 +1049,7 @@ func newVersionCommand(version string) *cobra.Command {
         Use:   "version",
         Short: "Print the version number",
         Run: func(cmd *cobra.Command, args []string) {
-            fmt.Printf("contextops version %s\n", version)
+            fmt.Printf("platformctl version %s\n", version)
         },
     }
     
@@ -1113,7 +1113,7 @@ func newConfigInitCommand() *cobra.Command {
                 return fmt.Errorf("could not find home directory: %w", err)
             }
             
-            configFile := filepath.Join(home, ".contextops.yaml")
+            configFile := filepath.Join(home, ".platformctl.yaml")
             
             if _, err := os.Stat(configFile); err == nil && !force {
                 return fmt.Errorf("configuration file already exists at %s (use --force to overwrite)", configFile)
@@ -1128,7 +1128,7 @@ func newConfigInitCommand() *cobra.Command {
                         Output:    "table",
                     },
                     "production": {
-                        ServerURL: "https://contextops.example.com",
+                        ServerURL: "https://platformctl.example.com",
                         Output:    "json",
                     },
                 },
@@ -1281,12 +1281,12 @@ Before marking Phase 1H complete:
 ## Next Steps
 
 Upon completion, Phase 1H provides:
-- Complete command-line interface for ContextOps
+- Complete command-line interface for Platformctl
 - User-friendly developer experience
 - Scriptable automation capabilities
 - Foundation for operator workflows
 
-**MVP Complete:** With Phase 1H, ContextOps has a fully functional MVP including:
+**MVP Complete:** With Phase 1H, Platformctl has a fully functional MVP including:
 - Core context management
 - Event-driven integration services  
 - Aggregated status views

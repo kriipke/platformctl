@@ -112,7 +112,7 @@ func sanitizeDBName(name string) string {
 func CreateTestApp(name string) models.App {
 	now := time.Now()
 	return models.App{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "App",
 		Metadata: models.AppMetadata{
 			Name: name,
@@ -188,7 +188,7 @@ func CreateTestApp(name string) models.App {
 func CreateTestEnvironment(name string) models.Environment {
 	now := time.Now()
 	return models.Environment{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Environment",
 		Metadata: models.EnvironmentMetadata{
 			Name: name,
@@ -272,7 +272,7 @@ func CreateTestEnvironment(name string) models.Environment {
 func CreateTestContext(name, appRef string, deployments []models.ContextDeployment) models.Context {
 	now := time.Now()
 	return models.Context{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Context",
 		Metadata: models.ContextMetadata{
 			Name: name,
@@ -411,7 +411,7 @@ func CreateTestEnvironmentWithTokenAuth(name string) models.Environment {
 func CreateTestEnvironmentMinimal(name string) models.Environment {
 	now := time.Now()
 	return models.Environment{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Environment",
 		Metadata: models.EnvironmentMetadata{
 			Name:      name,

@@ -1,12 +1,12 @@
-# ContextOps Makefile for building and deploying GitOps monitoring platform
+# Platformctl Makefile for building and deploying GitOps monitoring platform
 
 # Variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT_SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-REGISTRY ?= contextops
+REGISTRY ?= platformctl
 GHCR_REGISTRY ?= ghcr.io/kriipke
-NAMESPACE ?= contextops
+NAMESPACE ?= platformctl
 DOCKER_BUILDKIT ?= 1
 
 # Go variables
@@ -30,7 +30,7 @@ LDFLAGS = -w -s \
 
 .PHONY: help
 help: ## Display this help message
-	@echo "ContextOps GitOps Monitoring Platform"
+	@echo "Platformctl GitOps Monitoring Platform"
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
@@ -128,8 +128,8 @@ docker-run-%: ## Run specific service in Docker (e.g., make docker-run-gateway)
 	echo "Running $$service_name in Docker..."; \
 	docker run -it --rm \
 		-p 8080:8080 -p 8081:8081 -p 9090:9090 \
-		-e DATABASE_URL=postgres://contextops:contextops@host.docker.internal:5432/contextops \
-		-e RABBITMQ_URL=amqp://contextops:contextops@host.docker.internal:5672/ \
+		-e DATABASE_URL=postgres://platformctl:platformctl@host.docker.internal:5432/platformctl \
+		-e RABBITMQ_URL=amqp://platformctl:platformctl@host.docker.internal:5672/ \
 		$(REGISTRY)/$$service_name:latest
 
 # Database targets
@@ -262,9 +262,9 @@ ghcr-release: ci docker-build-ghcr docker-push-ghcr ## Build and push release to
 .PHONY: metrics
 metrics: ## View Prometheus metrics
 	@echo "Gateway metrics:"
-	@curl -s http://localhost:9090/metrics | grep contextops_http_requests_total | head -5
+	@curl -s http://localhost:9090/metrics | grep platformctl_http_requests_total | head -5
 	@echo "\nAggregator metrics:"
-	@curl -s http://localhost:9091/metrics | grep contextops_commands_processed_total | head -5
+	@curl -s http://localhost:9091/metrics | grep platformctl_commands_processed_total | head -5
 
 .PHONY: health
 health: ## Check service health

@@ -57,7 +57,7 @@ func SetupTestDatabase(t *testing.T) *TestDatabase {
     }
     
     // Generate unique database name
-    dbName := fmt.Sprintf("contextops_test_%s", randomString(8))
+    dbName := fmt.Sprintf("platformctl_test_%s", randomString(8))
     
     // Connect to postgres to create test database
     adminDB := connectToAdmin(t)
@@ -285,7 +285,7 @@ func TestValidateContext(t *testing.T) {
         {
             name: "valid context",
             context: &Context{
-                APIVersion: "contextops/v1",
+                APIVersion: "platformctl/v1",
                 Kind:       "Context",
                 Metadata: ContextMetadata{
                     Name: "test-app-dev",
@@ -297,7 +297,7 @@ func TestValidateContext(t *testing.T) {
         {
             name: "invalid name format",
             context: &Context{
-                APIVersion: "contextops/v1",
+                APIVersion: "platformctl/v1",
                 Kind:       "Context",
                 Metadata: ContextMetadata{
                     Name: "Test_App_Dev", // invalid characters
@@ -310,7 +310,7 @@ func TestValidateContext(t *testing.T) {
         {
             name: "inline secret forbidden",
             context: &Context{
-                APIVersion: "contextops/v1",
+                APIVersion: "platformctl/v1",
                 Kind:       "Context",
                 Metadata: ContextMetadata{
                     Name: "test-app-dev",
@@ -563,7 +563,7 @@ func TestContextValidation_Integration(t *testing.T) {
         },
         {
             name:           "missing required fields",
-            payload:        `{"apiVersion": "contextops/v1"}`,
+            payload:        `{"apiVersion": "platformctl/v1"}`,
             expectedStatus: http.StatusBadRequest,
             errorContains:  "validation failed",
         },
@@ -815,7 +815,7 @@ import (
 // Test context fixtures
 func CreateTestContext(name string) *contexts.Context {
     return &contexts.Context{
-        APIVersion: "contextops/v1",
+        APIVersion: "platformctl/v1",
         Kind:       "Context",
         Metadata: contexts.ContextMetadata{
             Name: name,

@@ -3,10 +3,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: gateway-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: gateway-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 2
@@ -19,10 +19,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: gitops-aggregator-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: gitops-aggregator-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   maxUnavailable: 0  # Never disrupt the single aggregator instance
@@ -35,10 +35,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: app-sync-svc-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: app-sync-svc-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 1
@@ -51,10 +51,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: environment-validation-svc-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: environment-validation-svc-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 1
@@ -67,10 +67,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: context-correlation-svc-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: context-correlation-svc-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 1
@@ -83,10 +83,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: multi-environment-kube-svc-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: multi-environment-kube-svc-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 1
@@ -99,10 +99,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: customer-git-branch-svc-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: customer-git-branch-svc-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   minAvailable: 1
@@ -115,10 +115,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: postgres-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: postgres-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   maxUnavailable: 0  # Never disrupt the database
@@ -131,10 +131,10 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: rabbitmq-pdb
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: rabbitmq-pdb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   maxUnavailable: 0  # Never disrupt the message queue

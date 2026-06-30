@@ -118,13 +118,13 @@ func (asc *ApplicationSetCorrelator) ListApplicationSetStatuses(ctx context.Cont
 
 // GetApplicationSetsByCustomer retrieves ApplicationSets for a specific customer
 func (asc *ApplicationSetCorrelator) GetApplicationSetsByCustomer(ctx context.Context, customerID string) ([]*ApplicationSetStatus, error) {
-	labelSelector := fmt.Sprintf("contextops.io/customer=%s", customerID)
+	labelSelector := fmt.Sprintf("platformctl.io/customer=%s", customerID)
 	return asc.ListApplicationSetStatuses(ctx, labelSelector)
 }
 
 // GetApplicationSetsByContext retrieves ApplicationSets for a specific context
 func (asc *ApplicationSetCorrelator) GetApplicationSetsByContext(ctx context.Context, contextName, customerID string) ([]*ApplicationSetStatus, error) {
-	labelSelector := fmt.Sprintf("contextops.io/customer=%s,contextops.io/context=%s", customerID, contextName)
+	labelSelector := fmt.Sprintf("platformctl.io/customer=%s,platformctl.io/context=%s", customerID, contextName)
 	return asc.ListApplicationSetStatuses(ctx, labelSelector)
 }
 
@@ -235,10 +235,10 @@ func (asc *ApplicationSetCorrelator) getGeneratedApplications(ctx context.Contex
 		}
 
 		// Extract environment and cluster information from labels or annotations
-		if env, ok := app.Labels["contextops.io/environment"]; ok {
+		if env, ok := app.Labels["platformctl.io/environment"]; ok {
 			appInfo.Environment = env
 		}
-		if cluster, ok := app.Labels["contextops.io/cluster"]; ok {
+		if cluster, ok := app.Labels["platformctl.io/cluster"]; ok {
 			appInfo.Cluster = cluster
 		}
 

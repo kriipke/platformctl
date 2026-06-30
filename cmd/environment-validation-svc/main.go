@@ -28,7 +28,7 @@ func main() {
 		Enabled:     cfg.Observability.MetricsEnabled,
 		Port:        cfg.Observability.MetricsPort,
 		ServiceName: "environment-validation-service",
-		Namespace:   "contextops",
+		Namespace:   "platformctl",
 	}
 	metrics := observability.NewMetrics(metricsConfig)
 
