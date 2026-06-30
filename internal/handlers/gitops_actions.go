@@ -207,6 +207,47 @@ func (h *GitOpsActionHandler) HandleCorrelateContexts(w http.ResponseWriter, r *
 	json.NewEncoder(w).Encode(response)
 }
 
+// Multi-environment correlation endpoint - routes work to the multi-environment
+// Kubernetes service (cmd.kubernetes.*) for cross-environment workload status.
+func (h *GitOpsActionHandler) HandleCorrelateMultiEnvironment(w http.ResponseWriter, r *http.Request) {
+	contextName := mux.Vars(r)["name"]
+	customer, ok := auth.GetCustomerFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized: no customer context", http.StatusUnauthorized)
+		return
+	}
+
+	// Verify Context exists with customer isolation
+	_, err := h.contextStore.Get(r.Context(), contextName, customer.CustomerID)
+	if err != nil {
+		if err == storage.ErrNotFound {
+			http.Error(w, "Context not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to verify Context", http.StatusInternalServerError)
+		return
+	}
+
+	// Publish multi-environment correlation command
+	cmd, err := h.publisher.PublishMultiEnvironmentCorrelation(customer.CustomerID, contextName, customer.Username)
+	if err != nil {
+		http.Error(w, "Failed to publish multi-environment correlation command", http.StatusInternalServerError)
+		return
+	}
+
+	response := GitOpsActionResponse{
+		Success:       true,
+		CorrelationID: cmd.CorrelationID,
+		Message:       "Multi-environment correlation command published successfully",
+		Action:        "correlate-multi-environment",
+		ManifestType:  "kubernetes",
+		CustomerID:    customer.CustomerID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // Manifest inspection endpoint for detailed analysis
 func (h *GitOpsActionHandler) HandleInspectManifests(w http.ResponseWriter, r *http.Request) {
 	contextName := mux.Vars(r)["name"]

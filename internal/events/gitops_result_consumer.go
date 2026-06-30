@@ -238,6 +238,10 @@ func (c *GitOpsResultConsumer) validateResultMessage(result *api.GitOpsResultMes
 		if result.ContextPairingData == nil {
 			return fmt.Errorf("context pairing data is required for context manifest type")
 		}
+	case "git":
+		// customer-git-branch results carry their detail in the payload
+	case "kubernetes":
+		// multi-environment results carry their detail in the payload
 	default:
 		return fmt.Errorf("unknown manifest type: %s", result.ManifestType)
 	}

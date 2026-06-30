@@ -162,6 +162,8 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		{"gitops.aggregator.q", "gitops.results", "evt.environment.*"},
 		{"gitops.aggregator.q", "gitops.results", "evt.context.*"},
 		{"gitops.aggregator.q", "gitops.results", "evt.correlation.*"},
+		{"gitops.aggregator.q", "gitops.results", "evt.git.*"},
+		{"gitops.aggregator.q", "gitops.results", "evt.kubernetes.*"},
 	}
 
 	for _, binding := range bindings {
