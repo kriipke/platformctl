@@ -169,6 +169,7 @@ func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environ
 	apiGroup.POST("/contexts/:name/actions/sync-apps", ginHandlerWrapper(actionHandler.HandleSyncApps))
 	apiGroup.POST("/contexts/:name/actions/validate-environments", ginHandlerWrapper(actionHandler.HandleValidateEnvironments))
 	apiGroup.POST("/contexts/:name/actions/correlate-contexts", ginHandlerWrapper(actionHandler.HandleCorrelateContexts))
+	apiGroup.POST("/contexts/:name/actions/correlate-multi-environment", ginHandlerWrapper(actionHandler.HandleCorrelateMultiEnvironment))
 	apiGroup.POST("/contexts/:name/actions/inspect-manifests", ginHandlerWrapper(actionHandler.HandleInspectManifests))
 
 	// GitOps Status routes (Phase 1D)

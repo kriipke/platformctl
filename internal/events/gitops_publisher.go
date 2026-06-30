@@ -83,6 +83,8 @@ func (p *GitOpsCommandPublisher) generateRoutingKey(cmd *api.GitOpsCommandMessag
 		return fmt.Sprintf("cmd.environment.%s", cmd.Action)
 	case "context":
 		return fmt.Sprintf("cmd.context.%s", cmd.Action)
+	case "kubernetes":
+		return fmt.Sprintf("cmd.kubernetes.%s", cmd.Action)
 	default:
 		return fmt.Sprintf("cmd.manifest.%s", cmd.Action)
 	}
@@ -157,6 +159,22 @@ func (p *GitOpsCommandPublisher) PublishCustomerBranchSync(customerID, contextNa
 	cmd.Payload["customer_branch"] = customerBranch
 	cmd.Payload["sync_all_environments"] = true
 	cmd.Payload["validate_after_sync"] = true
+
+	return cmd, p.PublishGitOpsCommand(cmd)
+}
+
+// PublishMultiEnvironmentCorrelation publishes a command for the
+// multi-environment Kubernetes service. It uses the "kubernetes" manifest type
+// so it routes to cmd.kubernetes.* (the multi-environment service's binding)
+// rather than competing with the context-correlation service on cmd.context.*.
+func (p *GitOpsCommandPublisher) PublishMultiEnvironmentCorrelation(customerID, contextName, user string) (*api.GitOpsCommandMessage, error) {
+	cmd := api.NewGitOpsCommandMessage(customerID, contextName, "correlate-context", "kubernetes", user)
+	cmd.TargetService = "multi-environment-kubernetes"
+	cmd.CommandType = "correlate"
+	cmd.Priority = 6
+
+	cmd.Payload["correlate_all_environments"] = true
+	cmd.Payload["include_workload_status"] = true
 
 	return cmd, p.PublishGitOpsCommand(cmd)
 }
