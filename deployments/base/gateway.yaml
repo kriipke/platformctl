@@ -51,7 +51,10 @@ spec:
         - name: PORT
           value: "8080"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:

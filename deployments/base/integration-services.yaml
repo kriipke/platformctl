@@ -33,7 +33,10 @@ spec:
         - name: SERVICE_NAME
           value: "app-sync-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -192,7 +195,10 @@ spec:
         - name: SERVICE_NAME
           value: "environment-validation-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -351,7 +357,10 @@ spec:
         - name: SERVICE_NAME
           value: "context-correlation-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -505,7 +514,10 @@ spec:
         - name: SERVICE_NAME
           value: "multi-environment-kube-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
@@ -664,7 +676,10 @@ spec:
         - name: SERVICE_NAME
           value: "customer-git-branch-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: contextops-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
