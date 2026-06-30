@@ -50,13 +50,13 @@ func (c *GitOpsResultConsumer) StartConsuming(ctx context.Context) error {
 		return fmt.Errorf("failed to set QoS: %w", err)
 	}
 
-	// List of result queues to consume from
+	// All service results are published to the gitops.results exchange with
+	// evt.* routing keys, which the topology binds to the single
+	// gitops.aggregator.q queue. Consume from that queue. (The previous
+	// results.* queue names were never declared in the topology, so nothing
+	// was consumed and the read model / command status never updated.)
 	resultQueues := []string{
-		"results.app-sync-service",
-		"results.environment-validator", 
-		"results.context-correlator",
-		"results.multi-environment-kube-svc",
-		"results.customer-git-branch-svc",
+		"gitops.aggregator.q",
 	}
 
 	// Start consuming from each result queue
