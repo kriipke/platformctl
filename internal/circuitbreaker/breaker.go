@@ -38,15 +38,15 @@ func (s State) String() string {
 
 // Config holds the configuration for a circuit breaker
 type Config struct {
-	Name               string        // Name of the circuit breaker for monitoring
-	MaxRequests        uint32        // Maximum requests allowed in half-open state
-	Interval           time.Duration // Statistical window for failure counting
-	Timeout            time.Duration // Time to wait before transitioning from open to half-open
-	FailureThreshold   uint32        // Number of failures to trigger open state
-	SuccessThreshold   uint32        // Number of successes to trigger closed state from half-open
-	ShouldTrip         func(counts Counts) bool // Custom logic to determine if breaker should trip
-	OnStateChange      func(name string, from State, to State) // Callback for state changes
-	IsSuccessful       func(err error) bool // Determines if an error should count as failure
+	Name             string                                  // Name of the circuit breaker for monitoring
+	MaxRequests      uint32                                  // Maximum requests allowed in half-open state
+	Interval         time.Duration                           // Statistical window for failure counting
+	Timeout          time.Duration                           // Time to wait before transitioning from open to half-open
+	FailureThreshold uint32                                  // Number of failures to trigger open state
+	SuccessThreshold uint32                                  // Number of successes to trigger closed state from half-open
+	ShouldTrip       func(counts Counts) bool                // Custom logic to determine if breaker should trip
+	OnStateChange    func(name string, from State, to State) // Callback for state changes
+	IsSuccessful     func(err error) bool                    // Determines if an error should count as failure
 }
 
 // Counts holds the statistics for the circuit breaker
@@ -67,13 +67,14 @@ func (c Counts) FailureRate() float64 {
 
 // CircuitBreaker implements the circuit breaker pattern
 type CircuitBreaker struct {
-	name         string
-	maxRequests  uint32
-	interval     time.Duration
-	timeout      time.Duration
-	shouldTrip   func(counts Counts) bool
-	onStateChange func(name string, from State, to State)
-	isSuccessful func(err error) bool
+	name             string
+	maxRequests      uint32
+	successThreshold uint32
+	interval         time.Duration
+	timeout          time.Duration
+	shouldTrip       func(counts Counts) bool
+	onStateChange    func(name string, from State, to State)
+	isSuccessful     func(err error) bool
 
 	mutex      sync.RWMutex
 	state      State
@@ -85,13 +86,14 @@ type CircuitBreaker struct {
 // New creates a new CircuitBreaker with the given config
 func New(config Config) *CircuitBreaker {
 	cb := &CircuitBreaker{
-		name:         config.Name,
-		maxRequests:  config.MaxRequests,
-		interval:     config.Interval,
-		timeout:      config.Timeout,
-		shouldTrip:   config.ShouldTrip,
-		onStateChange: config.OnStateChange,
-		isSuccessful: config.IsSuccessful,
+		name:             config.Name,
+		maxRequests:      config.MaxRequests,
+		successThreshold: config.SuccessThreshold,
+		interval:         config.Interval,
+		timeout:          config.Timeout,
+		shouldTrip:       config.ShouldTrip,
+		onStateChange:    config.OnStateChange,
+		isSuccessful:     config.IsSuccessful,
 	}
 
 	if cb.name == "" {
@@ -100,6 +102,10 @@ func New(config Config) *CircuitBreaker {
 
 	if cb.maxRequests == 0 {
 		cb.maxRequests = 1
+	}
+
+	if cb.successThreshold == 0 {
+		cb.successThreshold = 1
 	}
 
 	if cb.interval <= 0 {
@@ -229,7 +235,7 @@ func (cb *CircuitBreaker) onSuccess(state State, now time.Time) {
 	cb.counts.ConsecutiveFailures = 0
 	cb.counts.ConsecutiveSuccesses++
 
-	if state == StateHalfOpen && cb.counts.ConsecutiveSuccesses >= cb.maxRequests {
+	if state == StateHalfOpen && cb.counts.ConsecutiveSuccesses >= cb.successThreshold {
 		cb.setState(StateClosed, now)
 	}
 }

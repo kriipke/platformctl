@@ -208,6 +208,14 @@ func (j *JWTManager) ValidateToken(tokenString string) (*CustomClaims, error) {
 		return nil, err
 	}
 
+	// Ensure the metadata map is always initialized so callers can safely
+	// read from and write to it without a nil-map check. The "omitempty" tag
+	// means an empty map is dropped during serialization, so a freshly parsed
+	// token always arrives here with a nil map.
+	if claims.Metadata == nil {
+		claims.Metadata = make(map[string]interface{})
+	}
+
 	return claims, nil
 }
 

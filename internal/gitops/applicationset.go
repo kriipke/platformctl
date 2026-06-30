@@ -3,6 +3,7 @@ package gitops
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -141,7 +142,7 @@ func (asc *ApplicationSetCorrelator) buildApplicationSetStatus(ctx context.Conte
 	// Extract conditions
 	for _, condition := range appSet.Status.Conditions {
 		status.Conditions = append(status.Conditions, ApplicationSetCondition{
-			Type:               condition.Type,
+			Type:               string(condition.Type),
 			Status:             string(condition.Status),
 			LastTransitionTime: condition.LastTransitionTime.Time,
 			Reason:             condition.Reason,
@@ -171,10 +172,10 @@ func (asc *ApplicationSetCorrelator) buildApplicationSetStatus(ctx context.Conte
 func (asc *ApplicationSetCorrelator) determineApplicationSetStatus(appSet *v1alpha1.ApplicationSet) string {
 	// Check conditions for error states
 	for _, condition := range appSet.Status.Conditions {
-		if condition.Type == "ErrorOccurred" && condition.Status == metav1.ConditionTrue {
+		if condition.Type == "ErrorOccurred" && condition.Status == v1alpha1.ApplicationSetConditionStatusTrue {
 			return "degraded"
 		}
-		if condition.Type == "ResourcesUpToDate" && condition.Status == metav1.ConditionFalse {
+		if condition.Type == "ResourcesUpToDate" && condition.Status == v1alpha1.ApplicationSetConditionStatusFalse {
 			return "progressing"
 		}
 	}
@@ -192,7 +193,7 @@ func (asc *ApplicationSetCorrelator) determineApplicationSetHealth(appSet *v1alp
 	// Simple health determination based on conditions
 	hasErrorCondition := false
 	for _, condition := range appSet.Status.Conditions {
-		if strings.Contains(strings.ToLower(condition.Type), "error") && condition.Status == metav1.ConditionTrue {
+		if strings.Contains(strings.ToLower(string(condition.Type)), "error") && condition.Status == v1alpha1.ApplicationSetConditionStatusTrue {
 			hasErrorCondition = true
 			break
 		}

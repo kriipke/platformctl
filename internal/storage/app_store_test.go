@@ -1,4 +1,4 @@
-package storage
+package storage_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/contextops/platformctl/internal/models"
+	"github.com/contextops/platformctl/internal/storage"
 	"github.com/contextops/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ func TestAppStore_Create(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -53,7 +54,7 @@ func TestAppStore_Create(t *testing.T) {
 			name:        "duplicate app creation should fail",
 			app:         testutil.CreateTestApp("test-app-1"), // Same name as first test
 			expectError: true,
-			errorType:   ErrConflict,
+			errorType:   storage.ErrConflict,
 		},
 	}
 
@@ -84,7 +85,7 @@ func TestAppStore_Get(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -113,14 +114,14 @@ func TestAppStore_Get(t *testing.T) {
 			appName:     "non-existent-app",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "get app with wrong customer ID",
 			appName:     "get-test-app",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -152,7 +153,7 @@ func TestAppStore_Update(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -201,7 +202,7 @@ func TestAppStore_Update(t *testing.T) {
 			},
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name: "update app with wrong customer ID",
@@ -210,7 +211,7 @@ func TestAppStore_Update(t *testing.T) {
 			},
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -251,7 +252,7 @@ func TestAppStore_Delete(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -282,21 +283,21 @@ func TestAppStore_Delete(t *testing.T) {
 			appName:     "non-existent-app",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete app with wrong customer ID",
 			appName:     "delete-test-app-2",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete already deleted app",
 			appName:     "delete-test-app-1",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -313,7 +314,7 @@ func TestAppStore_Delete(t *testing.T) {
 				
 				// Verify the app is deleted
 				_, err := store.Get(ctx, tt.appName, tt.customerID)
-				assert.ErrorIs(t, err, ErrNotFound)
+				assert.ErrorIs(t, err, storage.ErrNotFound)
 			}
 		})
 	}
@@ -327,7 +328,7 @@ func TestAppStore_List(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID1 := "test-customer-1"
 	customerID2 := "test-customer-2"
@@ -418,7 +419,7 @@ func TestAppStore_ConcurrentOperations(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-concurrent"
 
@@ -493,7 +494,7 @@ func TestAppStore_ComplexHelmSources(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-helm"
 
@@ -571,7 +572,7 @@ func TestAppStore_ComplexApplicationSets(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewAppStore(testDB.DB)
+	store := storage.NewAppStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-appsets"
 
