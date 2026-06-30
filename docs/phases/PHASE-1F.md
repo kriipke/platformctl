@@ -210,7 +210,7 @@ spec:
       serviceAccountName: platformctl-gateway
       containers:
       - name: gateway
-        image: platformctl/gateway:latest
+        image: ghcr.io/kriipke/platformctl-gateway:latest
         ports:
         - containerPort: 8080
           name: http
@@ -305,7 +305,7 @@ spec:
       serviceAccountName: platformctl-aggregator
       containers:
       - name: aggregator
-        image: platformctl/aggregator:latest
+        image: ghcr.io/kriipke/platformctl-aggregator:latest
         ports:
         - containerPort: 8080
           name: metrics
@@ -712,7 +712,7 @@ ${KUBECTL} wait --for=condition=ready pod -l app=rabbitmq -n ${NAMESPACE} --time
 
 # Run database migrations
 echo "Running database migrations..."
-${KUBECTL} run migration-job --image=platformctl/gateway:latest --rm -it --restart=Never \
+${KUBECTL} run migration-job --image=ghcr.io/kriipke/platformctl-gateway:latest --rm -it --restart=Never \
   -n ${NAMESPACE} -- /app/platformctl migrate up
 
 # Deploy services
@@ -767,9 +767,9 @@ configMapGenerator:
   - DATABASE_URL=postgres://platformctl:password@postgres:5432/platformctl_dev?sslmode=disable
 
 images:
-- name: platformctl/gateway
+- name: ghcr.io/kriipke/platformctl-gateway
   newTag: dev
-- name: platformctl/aggregator
+- name: ghcr.io/kriipke/platformctl-aggregator
   newTag: dev
 ```
 
@@ -804,9 +804,9 @@ patchesStrategicMerge:
 - production-resources.yaml
 
 images:
-- name: platformctl/gateway
+- name: ghcr.io/kriipke/platformctl-gateway
   newTag: v1.0.0
-- name: platformctl/aggregator
+- name: ghcr.io/kriipke/platformctl-aggregator
   newTag: v1.0.0
 ```
 

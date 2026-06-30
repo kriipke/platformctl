@@ -34,19 +34,19 @@ commonAnnotations:
 
 # Image tags for production (specific versions, not latest)
 images:
-  - name: platformctl/gateway
+  - name: ghcr.io/kriipke/platformctl-gateway
     newTag: v1.0.0
-  - name: platformctl/gitops-aggregator
+  - name: ghcr.io/kriipke/platformctl-gitops-aggregator
     newTag: v1.0.0
-  - name: platformctl/app-sync-svc
+  - name: ghcr.io/kriipke/platformctl-app-sync-svc
     newTag: v1.0.0
-  - name: platformctl/environment-validation-svc
+  - name: ghcr.io/kriipke/platformctl-environment-validation-svc
     newTag: v1.0.0
-  - name: platformctl/context-correlation-svc
+  - name: ghcr.io/kriipke/platformctl-context-correlation-svc
     newTag: v1.0.0
-  - name: platformctl/multi-environment-kube-svc
+  - name: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
     newTag: v1.0.0
-  - name: platformctl/customer-git-branch-svc
+  - name: ghcr.io/kriipke/platformctl-customer-git-branch-svc
     newTag: v1.0.0
 
 # Configuration patches for production environment

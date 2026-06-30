@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
       - name: environment-validation-svc
-        image: platformctl/environment-validation-svc:latest
+        image: ghcr.io/kriipke/platformctl-environment-validation-svc:latest
         ports:
         - containerPort: 8080
         env:
@@ -105,7 +105,7 @@ spec:
     spec:
       containers:
       - name: app-sync-svc
-        image: platformctl/app-sync-svc:latest
+        image: ghcr.io/kriipke/platformctl-app-sync-svc:latest
         ports:
         - containerPort: 8080
         env:
@@ -179,7 +179,7 @@ spec:
     spec:
       containers:
       - name: context-correlation-svc
-        image: platformctl/context-correlation-svc:latest
+        image: ghcr.io/kriipke/platformctl-context-correlation-svc:latest
         ports:
         - containerPort: 8080
         env:
@@ -247,7 +247,7 @@ spec:
     spec:
       containers:
       - name: multi-environment-kube-svc
-        image: platformctl/multi-environment-kube-svc:latest
+        image: ghcr.io/kriipke/platformctl-multi-environment-kube-svc:latest
         ports:
         - containerPort: 8080
         env:
@@ -315,7 +315,7 @@ spec:
     spec:
       containers:
       - name: customer-git-branch-svc
-        image: platformctl/customer-git-branch-svc:latest
+        image: ghcr.io/kriipke/platformctl-customer-git-branch-svc:latest
         ports:
         - containerPort: 8080
         env:
