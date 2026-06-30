@@ -431,7 +431,7 @@ func TestContextStore_List(t *testing.T) {
 				for _, contextObj := range contexts {
 					assert.NotNil(t, contextObj)
 					assert.NotEmpty(t, contextObj.Metadata.Name)
-					assert.Equal(t, "contextops/v1", contextObj.APIVersion)
+					assert.Equal(t, "platformctl/v1", contextObj.APIVersion)
 					assert.Equal(t, "Context", contextObj.Kind)
 				}
 				

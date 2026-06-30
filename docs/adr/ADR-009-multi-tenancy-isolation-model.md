@@ -9,7 +9,7 @@
 
 ## Context
 
-As ContextOps grows beyond single-organization use, we need to support multiple organizations (tenants) using the same ContextOps deployment while ensuring complete data isolation, security boundaries, and resource fairness.
+As Platformctl grows beyond single-organization use, we need to support multiple organizations (tenants) using the same Platformctl deployment while ensuring complete data isolation, security boundaries, and resource fairness.
 
 ### Problem Statement
 

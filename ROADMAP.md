@@ -1,10 +1,10 @@
-# ContextOps Roadmap
+# Platformctl Roadmap
 
 **Version:** 1.0  
 **Last Updated:** 2026-01-21  
 **Status:** Draft
 
-This roadmap outlines the architectural improvements and enhancements needed to evolve ContextOps from MVP to production-ready platform.
+This roadmap outlines the architectural improvements and enhancements needed to evolve Platformctl from MVP to production-ready platform.
 
 ---
 
@@ -259,4 +259,4 @@ This roadmap outlines the architectural improvements and enhancements needed to 
 
 ---
 
-This roadmap provides a structured approach to evolving ContextOps into a production-ready platform while maintaining system stability and security throughout the transformation.
+This roadmap provides a structured approach to evolving Platformctl into a production-ready platform while maintaining system stability and security throughout the transformation.

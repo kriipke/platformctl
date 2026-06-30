@@ -3,16 +3,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: gateway-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: gateway-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-gateway
+    name: prod-platformctl-gateway
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -47,16 +47,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: app-sync-svc-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: app-sync-svc-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-app-sync-svc
+    name: prod-platformctl-app-sync-svc
   minReplicas: 2
   maxReplicas: 8
   metrics:
@@ -77,16 +77,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: environment-validation-svc-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: environment-validation-svc-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-environment-validation-svc
+    name: prod-platformctl-environment-validation-svc
   minReplicas: 2
   maxReplicas: 6
   metrics:
@@ -101,16 +101,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: context-correlation-svc-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: context-correlation-svc-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-context-correlation-svc
+    name: prod-platformctl-context-correlation-svc
   minReplicas: 2
   maxReplicas: 5
   metrics:
@@ -125,16 +125,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: multi-environment-kube-svc-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: multi-environment-kube-svc-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-multi-environment-kube-svc
+    name: prod-platformctl-multi-environment-kube-svc
   minReplicas: 2
   maxReplicas: 4
   metrics:
@@ -149,16 +149,16 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: customer-git-branch-svc-hpa
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: customer-git-branch-svc-hpa
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-contextops-customer-git-branch-svc
+    name: prod-platformctl-customer-git-branch-svc
   minReplicas: 2
   maxReplicas: 4
   metrics:

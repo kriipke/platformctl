@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps needs to collect Kubernetes workload status and operational data for each context's environment. This requires authenticating to Kubernetes clusters and scoping access appropriately to match the context's namespace and permissions.
+Platformctl needs to collect Kubernetes workload status and operational data for each context's environment. This requires authenticating to Kubernetes clusters and scoping access appropriately to match the context's namespace and permissions.
 
 ### Problem Statement
 
@@ -314,12 +314,12 @@ func (kc *KubernetesClient) GetPods(namespace string) (*v1.PodList, error) {
 
 ### RBAC Configuration
 ```yaml
-# Namespace-scoped role for ContextOps service
+# Namespace-scoped role for Platformctl service
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   namespace: app1-prod
-  name: contextops-reader
+  name: platformctl-reader
 rules:
 - apiGroups: [""]
   resources: ["pods", "services", "endpoints", "events", "configmaps"]
@@ -335,15 +335,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: contextops-reader
+  name: platformctl-reader
   namespace: app1-prod
 subjects:
 - kind: ServiceAccount
-  name: contextops-kube
-  namespace: contextops
+  name: platformctl-kube
+  namespace: platformctl
 roleRef:
   kind: Role
-  name: contextops-reader
+  name: platformctl-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -393,7 +393,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   namespace: app1-prod
-  name: contextops-minimal
+  name: platformctl-minimal
 rules:
 # Read-only access to essential resources
 - apiGroups: [""]

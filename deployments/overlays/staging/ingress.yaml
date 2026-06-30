@@ -1,15 +1,15 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-ingress
-  namespace: contextops-staging
+  name: platformctl-ingress
+  namespace: platformctl-staging
   labels:
-    app.kubernetes.io/name: contextops-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-ingress
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: staging
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://staging.contextops.com,https://contextops-staging.example.com"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://staging.platformctl.com,https://platformctl-staging.example.com"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
     nginx.ingress.kubernetes.io/enable-cors: "true"
@@ -26,21 +26,21 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - staging.contextops.com
-    - contextops-staging.example.com
-    secretName: contextops-staging-tls
+    - staging.platformctl.com
+    - platformctl-staging.example.com
+    secretName: platformctl-staging-tls
   rules:
-  - host: staging.contextops.com
+  - host: staging.platformctl.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 80
-  - host: contextops-staging.example.com
+  - host: platformctl-staging.example.com
     http:
       paths:
       # API endpoints
@@ -48,7 +48,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 80
       # Health and debug endpoints
@@ -56,14 +56,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 80
       - path: /debug
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 80
       # Test routes (staging only)
@@ -71,7 +71,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 80
 ---
@@ -79,39 +79,39 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-metrics-ingress
-  namespace: contextops-staging
+  name: platformctl-metrics-ingress
+  namespace: platformctl-staging
   labels:
-    app.kubernetes.io/name: contextops-metrics-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-metrics-ingress
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: staging
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: contextops-metrics-auth
-    nginx.ingress.kubernetes.io/auth-realm: "ContextOps Staging Metrics"
+    nginx.ingress.kubernetes.io/auth-secret: platformctl-metrics-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Platformctl Staging Metrics"
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - metrics-staging.contextops.com
-    secretName: contextops-staging-metrics-tls
+    - metrics-staging.platformctl.com
+    secretName: platformctl-staging-metrics-tls
   rules:
-  - host: metrics-staging.contextops.com
+  - host: metrics-staging.platformctl.com
     http:
       paths:
       - path: /gateway
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gateway
+            name: staging-platformctl-gateway
             port:
               number: 9090
       - path: /aggregator
         pathType: Prefix
         backend:
           service:
-            name: staging-contextops-gitops-aggregator
+            name: staging-platformctl-gitops-aggregator
             port:
               number: 9090

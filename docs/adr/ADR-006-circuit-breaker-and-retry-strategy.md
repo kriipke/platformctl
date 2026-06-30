@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps integration services make numerous calls to external systems (Vault, ArgoCD, New Relic, Kubernetes API, GitHub) that can experience failures, timeouts, or degraded performance. Without proper resilience patterns, these issues can cascade through the system, causing widespread failures and poor user experience.
+Platformctl integration services make numerous calls to external systems (Vault, ArgoCD, New Relic, Kubernetes API, GitHub) that can experience failures, timeouts, or degraded performance. Without proper resilience patterns, these issues can cascade through the system, causing widespread failures and poor user experience.
 
 ### Problem Statement
 

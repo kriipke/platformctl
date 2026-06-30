@@ -113,7 +113,7 @@ var (
     // HTTP metrics
     httpRequestsTotal = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "contextops_http_requests_total",
+            Name: "platformctl_http_requests_total",
             Help: "Total number of HTTP requests",
         },
         []string{"service", "method", "endpoint", "status_code"},
@@ -121,7 +121,7 @@ var (
     
     httpRequestDuration = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
-            Name:    "contextops_http_request_duration_seconds",
+            Name:    "platformctl_http_request_duration_seconds",
             Help:    "Duration of HTTP requests",
             Buckets: prometheus.DefBuckets,
         },
@@ -131,7 +131,7 @@ var (
     // Command processing metrics
     commandsProcessedTotal = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "contextops_commands_processed_total",
+            Name: "platformctl_commands_processed_total",
             Help: "Total number of commands processed",
         },
         []string{"service", "action", "status"},
@@ -139,7 +139,7 @@ var (
     
     commandProcessingDuration = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
-            Name:    "contextops_command_processing_duration_seconds",
+            Name:    "platformctl_command_processing_duration_seconds",
             Help:    "Duration of command processing",
             Buckets: []float64{.1, .25, .5, 1, 2.5, 5, 10, 30},
         },
@@ -149,7 +149,7 @@ var (
     // External API metrics
     externalAPICallsTotal = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "contextops_external_api_calls_total",
+            Name: "platformctl_external_api_calls_total",
             Help: "Total number of external API calls",
         },
         []string{"service", "api", "status_code"},
@@ -157,7 +157,7 @@ var (
     
     externalAPICallDuration = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
-            Name:    "contextops_external_api_call_duration_seconds",
+            Name:    "platformctl_external_api_call_duration_seconds",
             Help:    "Duration of external API calls",
             Buckets: []float64{.1, .5, 1, 2, 5, 10, 30},
         },
@@ -167,7 +167,7 @@ var (
     // RabbitMQ metrics
     rabbitmqMessagesPublished = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "contextops_rabbitmq_messages_published_total",
+            Name: "platformctl_rabbitmq_messages_published_total",
             Help: "Total number of messages published to RabbitMQ",
         },
         []string{"exchange", "routing_key"},
@@ -175,7 +175,7 @@ var (
     
     rabbitmqMessagesConsumed = prometheus.NewCounterVec(
         prometheus.CounterOpts{
-            Name: "contextops_rabbitmq_messages_consumed_total",
+            Name: "platformctl_rabbitmq_messages_consumed_total",
             Help: "Total number of messages consumed from RabbitMQ",
         },
         []string{"service", "queue", "status"},
@@ -184,14 +184,14 @@ var (
     // Business metrics
     contextsTotal = prometheus.NewGauge(
         prometheus.GaugeOpts{
-            Name: "contextops_contexts_total",
+            Name: "platformctl_contexts_total",
             Help: "Total number of contexts",
         },
     )
     
     contextStatusByHealth = prometheus.NewGaugeVec(
         prometheus.GaugeOpts{
-            Name: "contextops_context_status_by_health",
+            Name: "platformctl_context_status_by_health",
             Help: "Number of contexts by health status",
         },
         []string{"health"},
@@ -585,19 +585,19 @@ func setupRouter(
 
 ### Task 7: Dashboard Configuration
 
-**File: `deploy/dashboards/contextops-overview.json`**
+**File: `deploy/dashboards/platformctl-overview.json`**
 
 ```json
 {
   "dashboard": {
-    "title": "ContextOps Overview",
+    "title": "Platformctl Overview",
     "panels": [
       {
         "title": "Request Rate",
         "type": "graph",
         "targets": [
           {
-            "expr": "sum(rate(contextops_http_requests_total[5m])) by (service)"
+            "expr": "sum(rate(platformctl_http_requests_total[5m])) by (service)"
           }
         ]
       },
@@ -606,7 +606,7 @@ func setupRouter(
         "type": "graph", 
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(contextops_http_request_duration_seconds_bucket[5m])) by (le, service))"
+            "expr": "histogram_quantile(0.95, sum(rate(platformctl_http_request_duration_seconds_bucket[5m])) by (le, service))"
           }
         ]
       },
@@ -615,7 +615,7 @@ func setupRouter(
         "type": "graph",
         "targets": [
           {
-            "expr": "sum(rate(contextops_commands_processed_total[5m])) by (service, action)"
+            "expr": "sum(rate(platformctl_commands_processed_total[5m])) by (service, action)"
           }
         ]
       },
@@ -624,7 +624,7 @@ func setupRouter(
         "type": "pie",
         "targets": [
           {
-            "expr": "contextops_context_status_by_health"
+            "expr": "platformctl_context_status_by_health"
           }
         ]
       },
@@ -633,7 +633,7 @@ func setupRouter(
         "type": "graph",
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(contextops_external_api_call_duration_seconds_bucket[5m])) by (le, api))"
+            "expr": "histogram_quantile(0.95, sum(rate(platformctl_external_api_call_duration_seconds_bucket[5m])) by (le, api))"
           }
         ]
       }

@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: contextops
+  name: platformctl
   labels:
-    name: contextops
-    app.kubernetes.io/name: contextops
-    app.kubernetes.io/part-of: contextops-platform
+    name: platformctl
+    app.kubernetes.io/name: platformctl
+    app.kubernetes.io/part-of: platformctl-platform

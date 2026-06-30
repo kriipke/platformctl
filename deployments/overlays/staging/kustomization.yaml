@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 metadata:
-  name: contextops-staging
+  name: platformctl-staging
   annotations:
     config.kubernetes.io/local-config: "true"
 
@@ -12,7 +12,7 @@ resources:
   - ingress.yaml
 
 # Staging namespace
-namespace: contextops-staging
+namespace: platformctl-staging
 
 # Environment-specific name prefix
 namePrefix: staging-
@@ -20,29 +20,29 @@ namePrefix: staging-
 # Common labels for staging environment
 commonLabels:
   app.kubernetes.io/environment: staging
-  app.kubernetes.io/instance: contextops-staging
+  app.kubernetes.io/instance: platformctl-staging
 
 # Staging-specific annotations
 commonAnnotations:
   deployment.kubernetes.io/environment: staging
-  contextops.io/deployment-target: staging
-  contextops.io/testing-environment: "true"
+  platformctl.io/deployment-target: staging
+  platformctl.io/testing-environment: "true"
 
 # Image tags for staging (release candidates)
 images:
-  - name: contextops/gateway
+  - name: platformctl/gateway
     newTag: v1.0.0-rc
-  - name: contextops/gitops-aggregator
+  - name: platformctl/gitops-aggregator
     newTag: v1.0.0-rc
-  - name: contextops/app-sync-svc
+  - name: platformctl/app-sync-svc
     newTag: v1.0.0-rc
-  - name: contextops/environment-validation-svc
+  - name: platformctl/environment-validation-svc
     newTag: v1.0.0-rc
-  - name: contextops/context-correlation-svc
+  - name: platformctl/context-correlation-svc
     newTag: v1.0.0-rc
-  - name: contextops/multi-environment-kube-svc
+  - name: platformctl/multi-environment-kube-svc
     newTag: v1.0.0-rc
-  - name: contextops/customer-git-branch-svc
+  - name: platformctl/customer-git-branch-svc
     newTag: v1.0.0-rc
 
 # Configuration patches for staging environment
@@ -68,7 +68,7 @@ patches:
   # Staging logging configuration  
   - target:
       kind: ConfigMap
-      name: contextops-config
+      name: platformctl-config
     patch: |-
       - op: replace
         path: /data/LOG_LEVEL

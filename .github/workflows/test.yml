@@ -164,7 +164,7 @@ jobs:
             VERSION=test
             COMMIT_SHA=${{ github.sha }}
             BUILD_DATE=${{ github.run_id }}
-          tags: contextops/gateway:test
+          tags: platformctl/gateway:test
           load: true
           cache-from: type=gha,scope=docker-test
           cache-to: type=gha,mode=max,scope=docker-test
@@ -177,11 +177,11 @@ jobs:
       - name: Run Dockle (Container security)
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            goodwithtech/dockle:latest contextops/gateway:test
+            goodwithtech/dockle:latest platformctl/gateway:test
 
       - name: Test container runs
         run: |
-          docker run --rm -d --name test-container contextops/gateway:test
+          docker run --rm -d --name test-container platformctl/gateway:test
           sleep 5
           if docker ps | grep -q test-container; then
             echo "Container is running successfully"
@@ -213,7 +213,7 @@ jobs:
       - name: Create kind cluster
         uses: helm/kind-action@v1.8.0
         with:
-          cluster_name: contextops-test
+          cluster_name: platformctl-test
           kubectl_version: v1.28.0
           config: |
             kind: Cluster
@@ -254,35 +254,35 @@ jobs:
               --build-arg VERSION=test \
               --build-arg COMMIT_SHA=${{ github.sha }} \
               --build-arg BUILD_DATE=${{ github.run_id }} \
-              -t contextops/$service:test .
+              -t platformctl/$service:test .
             
             # Load image into kind cluster
-            kind load docker-image contextops/$service:test --name contextops-test
+            kind load docker-image platformctl/$service:test --name platformctl-test
           done
 
-      - name: Deploy ContextOps to kind
+      - name: Deploy Platformctl to kind
         run: |
           # Update image tags for local testing
           cd deployments/overlays/development
-          kustomize edit set image contextops/gateway:test
-          kustomize edit set image contextops/gitops-aggregator:test
-          kustomize edit set image contextops/app-sync-svc:test
-          kustomize edit set image contextops/environment-validation-svc:test
-          kustomize edit set image contextops/context-correlation-svc:test
-          kustomize edit set image contextops/multi-environment-kube-svc:test
-          kustomize edit set image contextops/customer-git-branch-svc:test
+          kustomize edit set image platformctl/gateway:test
+          kustomize edit set image platformctl/gitops-aggregator:test
+          kustomize edit set image platformctl/app-sync-svc:test
+          kustomize edit set image platformctl/environment-validation-svc:test
+          kustomize edit set image platformctl/context-correlation-svc:test
+          kustomize edit set image platformctl/multi-environment-kube-svc:test
+          kustomize edit set image platformctl/customer-git-branch-svc:test
           
           # Deploy to cluster
           kustomize build . | kubectl apply -f -
 
       - name: Wait for deployment
         run: |
-          kubectl wait --for=condition=available --timeout=300s deployment --all -n contextops-dev
+          kubectl wait --for=condition=available --timeout=300s deployment --all -n platformctl-dev
 
       - name: Run integration tests
         run: |
           # Port forward to test connectivity
-          kubectl port-forward service/dev-contextops-gateway 8080:80 -n contextops-dev &
+          kubectl port-forward service/dev-platformctl-gateway 8080:80 -n platformctl-dev &
           sleep 10
           
           # Test health endpoint
@@ -297,9 +297,9 @@ jobs:
         if: failure()
         run: |
           echo "=== Cluster Status ==="
-          kubectl get all -n contextops-dev
+          kubectl get all -n platformctl-dev
           echo "=== Pod Logs ==="
-          kubectl logs -l app.kubernetes.io/part-of=contextops-platform -n contextops-dev --tail=50
+          kubectl logs -l app.kubernetes.io/part-of=platformctl-platform -n platformctl-dev --tail=50
 
   # Deployment scripts validation
   scripts-validation:

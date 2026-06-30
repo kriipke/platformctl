@@ -45,7 +45,7 @@ func (suite *Phase1DIntegrationTestSuite) SetupSuite() {
 	cfg := config.Load()
 	cfg.DatabaseURL = os.Getenv("TEST_DATABASE_URL")
 	if cfg.DatabaseURL == "" {
-		cfg.DatabaseURL = "postgres://test:test@localhost:5432/contextops_test?sslmode=disable"
+		cfg.DatabaseURL = "postgres://test:test@localhost:5432/platformctl_test?sslmode=disable"
 	}
 	cfg.RabbitMQURL = os.Getenv("TEST_RABBITMQ_URL")
 	if cfg.RabbitMQURL == "" {

@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: contextops-external-lb
-  namespace: contextops
+  name: platformctl-external-lb
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-external-lb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-external-lb
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: load-balancer
   annotations:
     # AWS Load Balancer Controller annotations
@@ -48,11 +48,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: contextops-metrics-lb
-  namespace: contextops
+  name: platformctl-metrics-lb
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-metrics-lb
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-metrics-lb
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: metrics-load-balancer
   annotations:
     # AWS Internal Load Balancer
@@ -68,7 +68,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
   ports:
   - name: gateway-metrics
     protocol: TCP
@@ -85,16 +85,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: contextops-discovery
-  namespace: contextops
+  name: platformctl-discovery
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-discovery
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-discovery
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: service-discovery
 spec:
   clusterIP: None
   selector:
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
   ports:
   - name: http
     protocol: TCP
@@ -113,12 +113,12 @@ spec:
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
-  name: contextops-external-endpoints
-  namespace: contextops
+  name: platformctl-external-endpoints
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-external-endpoints
-    app.kubernetes.io/part-of: contextops-platform
-    kubernetes.io/service-name: contextops-discovery
+    app.kubernetes.io/name: platformctl-external-endpoints
+    app.kubernetes.io/part-of: platformctl-platform
+    kubernetes.io/service-name: platformctl-discovery
 addressType: IPv4
 endpoints:
 - addresses:
@@ -130,8 +130,8 @@ endpoints:
   hostname: gateway-1
   targetRef:
     kind: Pod
-    name: contextops-gateway-pod-1
-    namespace: contextops
+    name: platformctl-gateway-pod-1
+    namespace: platformctl
 ports:
 - name: http
   port: 8080

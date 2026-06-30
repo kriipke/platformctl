@@ -403,7 +403,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 				for _, env := range envs {
 					assert.NotNil(t, env)
 					assert.NotEmpty(t, env.Metadata.Name)
-					assert.Equal(t, "contextops/v1", env.APIVersion)
+					assert.Equal(t, "platformctl/v1", env.APIVersion)
 					assert.Equal(t, "Environment", env.Kind)
 				}
 				

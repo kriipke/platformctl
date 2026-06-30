@@ -394,7 +394,7 @@ func TestAppStore_List(t *testing.T) {
 				for _, app := range apps {
 					assert.NotNil(t, app)
 					assert.NotEmpty(t, app.Metadata.Name)
-					assert.Equal(t, "contextops/v1", app.APIVersion)
+					assert.Equal(t, "platformctl/v1", app.APIVersion)
 					assert.Equal(t, "App", app.Kind)
 				}
 				

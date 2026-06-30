@@ -2,10 +2,10 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: contextops-psp
+  name: platformctl-psp
   labels:
-    app.kubernetes.io/name: contextops-psp
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-psp
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   privileged: false
   allowPrivilegeEscalation: false
@@ -36,60 +36,60 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: contextops-security-baseline
+  name: platformctl-security-baseline
   labels:
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
-    app.kubernetes.io/name: contextops-security-baseline
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-security-baseline
+    app.kubernetes.io/part-of: platformctl-platform
 ---
 # ClusterRole for Pod Security Policy usage
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: contextops-psp-user
+  name: platformctl-psp-user
   labels:
-    app.kubernetes.io/name: contextops-psp-user
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-psp-user
+    app.kubernetes.io/part-of: platformctl-platform
 rules:
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']
   verbs: ['use']
-  resourceNames: ['contextops-psp']
+  resourceNames: ['platformctl-psp']
 ---
 # ClusterRoleBinding for Pod Security Policy
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: contextops-psp-binding
+  name: platformctl-psp-binding
   labels:
-    app.kubernetes.io/name: contextops-psp-binding
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-psp-binding
+    app.kubernetes.io/part-of: platformctl-platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: contextops-psp-user
+  name: platformctl-psp-user
 subjects:
 - kind: ServiceAccount
-  name: contextops-service-account
-  namespace: contextops
+  name: platformctl-service-account
+  namespace: platformctl
 - kind: ServiceAccount
   name: gitops-aggregator-service-account
-  namespace: contextops
+  namespace: platformctl
 - kind: ServiceAccount
   name: kubernetes-integration-service-account
-  namespace: contextops
+  namespace: platformctl
 ---
-# Resource Quotas for the ContextOps namespace
+# Resource Quotas for the Platformctl namespace
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: contextops-resource-quota
-  namespace: contextops
+  name: platformctl-resource-quota
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-resource-quota
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-resource-quota
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   hard:
     # Compute resources
@@ -117,11 +117,11 @@ spec:
 apiVersion: v1
 kind: LimitRange
 metadata:
-  name: contextops-limit-range
-  namespace: contextops
+  name: platformctl-limit-range
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-limit-range
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-limit-range
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   limits:
   # Container limits
@@ -157,30 +157,30 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: contextops-base-security
-  namespace: contextops
+  name: platformctl-base-security
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-base-security
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-base-security
+    app.kubernetes.io/part-of: platformctl-platform
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/part-of: contextops-platform
+      app.kubernetes.io/part-of: platformctl-platform
   policyTypes:
   - Ingress
   - Egress
-  # Allow communication between ContextOps services
+  # Allow communication between Platformctl services
   ingress:
   - from:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: contextops-platform
+          app.kubernetes.io/part-of: platformctl-platform
   # Allow outbound to system services
   egress:
   - to:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: contextops-platform
+          app.kubernetes.io/part-of: platformctl-platform
   # Allow DNS resolution
   - to: []
     ports:
@@ -193,10 +193,10 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionWebhook
 metadata:
-  name: contextops-security-validation
+  name: platformctl-security-validation
   labels:
-    app.kubernetes.io/name: contextops-security-validation
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-security-validation
+    app.kubernetes.io/part-of: platformctl-platform
 rules:
 - operations: ["CREATE", "UPDATE"]
   apiGroups: [""]
@@ -211,10 +211,10 @@ sideEffects: None
 failurePolicy: Fail
 namespaceSelector:
   matchLabels:
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
 clientConfig:
   service:
-    name: contextops-admission-webhook
-    namespace: contextops
+    name: platformctl-admission-webhook
+    namespace: platformctl
     path: "/validate"
     port: 8443

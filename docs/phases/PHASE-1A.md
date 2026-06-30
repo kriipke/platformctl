@@ -8,7 +8,7 @@
 
 ## Overview
 
-Establish the foundational components of the GitOps-optimized ContextOps platform: App and Environment manifest models, Context pairing system, multi-environment database schema, API Gateway with GitOps awareness, and comprehensive CRUD operations supporting App+Environment deployments, ApplicationSet correlation, customer branches, and multi-environment configurations.
+Establish the foundational components of the GitOps-optimized Platformctl platform: App and Environment manifest models, Context pairing system, multi-environment database schema, API Gateway with GitOps awareness, and comprehensive CRUD operations supporting App+Environment deployments, ApplicationSet correlation, customer branches, and multi-environment configurations.
 
 ## Success Criteria
 
@@ -35,7 +35,7 @@ Create the foundational directory structure with GitOps components:
 ```bash
 mkdir -p {cmd/gateway,internal/{contexts,gitops,storage,auth},pkg/{api,schemas,gitops}}
 mkdir -p {internal/{helm,vault,argocd},pkg/validation}
-cd /path/to/contextops
+cd /path/to/platformctl
 ```
 
 **App+Environment Manifest Files to create:**
@@ -67,7 +67,7 @@ Implement the App manifest model supporting multiple Helm sources and Applicatio
 ```go
 // App manifest struct
 type App struct {
-    APIVersion string      `json:"apiVersion" validate:"required,eq=contextops/v1"`
+    APIVersion string      `json:"apiVersion" validate:"required,eq=platformctl/v1"`
     Kind       string      `json:"kind" validate:"required,eq=App"`
     Metadata   AppMetadata `json:"metadata" validate:"required"`
     Spec       AppSpec     `json:"spec" validate:"required"`
@@ -180,7 +180,7 @@ type AppEnvironmentRef struct {
 ```go
 // Environment manifest struct  
 type Environment struct {
-    APIVersion string              `json:"apiVersion" validate:"required,eq=contextops/v1"`
+    APIVersion string              `json:"apiVersion" validate:"required,eq=platformctl/v1"`
     Kind       string              `json:"kind" validate:"required,eq=Environment"`
     Metadata   EnvironmentMetadata `json:"metadata" validate:"required"`
     Spec       EnvironmentSpec     `json:"spec" validate:"required"`
@@ -259,7 +259,7 @@ type ExpectedEnvVar struct {
 ```go
 // Context pairing struct
 type Context struct {
-    APIVersion string          `json:"apiVersion" validate:"required,eq=contextops/v1"`
+    APIVersion string          `json:"apiVersion" validate:"required,eq=platformctl/v1"`
     Kind       string          `json:"kind" validate:"required,eq=Context"`
     Metadata   ContextMetadata `json:"metadata" validate:"required"`
     Spec       ContextSpec     `json:"spec" validate:"required"`
@@ -921,7 +921,7 @@ type Config struct {
     LogLevel     string        `env:"LOG_LEVEL" envDefault:"info"`
     
     // Database configuration
-    DatabaseURL      string `env:"DATABASE_URL" envDefault:"postgres://localhost/contextops?sslmode=disable"`
+    DatabaseURL      string `env:"DATABASE_URL" envDefault:"postgres://localhost/platformctl?sslmode=disable"`
     MaxDBConnections int    `env:"MAX_DB_CONNECTIONS" envDefault:"25"`
     DBTimeout        time.Duration `env:"DB_TIMEOUT" envDefault:"10s"`
     
@@ -949,7 +949,7 @@ type VaultConfig struct {
     Enabled   bool   `env:"ENABLED" envDefault:"true"`
     Address   string `env:"ADDRESS" envDefault:"https://vault.example.com"`
     AuthPath  string `env:"AUTH_PATH" envDefault:"kubernetes"`
-    Role      string `env:"ROLE" envDefault:"contextops"`
+    Role      string `env:"ROLE" envDefault:"platformctl"`
     Namespace string `env:"NAMESPACE"`
 }
 

@@ -79,7 +79,7 @@ func (s *EnvironmentStore) Get(ctx context.Context, name, customerID string) (*m
 	}
 
 	env := &models.Environment{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Environment",
 		Metadata: models.EnvironmentMetadata{
 			Name:      name,
@@ -212,7 +212,7 @@ func (s *EnvironmentStore) List(ctx context.Context, customerID string) ([]*mode
 		}
 
 		env := &models.Environment{
-			APIVersion: "contextops/v1",
+			APIVersion: "platformctl/v1",
 			Kind:       "Environment",
 			Metadata: models.EnvironmentMetadata{
 				Name:      name,

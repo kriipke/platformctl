@@ -1,4 +1,4 @@
-# ContextOps Development Guide for Claude
+# Platformctl Development Guide for Claude
 
 **Last Updated:** 2026-01-21  
 **Status:** Ready for Implementation  
@@ -7,13 +7,13 @@
 
 ## Overview
 
-This guide provides Claude with all essential information needed to build ContextOps, a **GitOps-optimized application monitoring platform** designed specifically for DevOps engineers managing applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-secured secrets across multiple environments and customers.
+This guide provides Claude with all essential information needed to build Platformctl, a **GitOps-optimized application monitoring platform** designed specifically for DevOps engineers managing applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-secured secrets across multiple environments and customers.
 
 ---
 
 ## 🎯 What We're Building
 
-**ContextOps** is a GitOps-native application monitoring platform that:
+**Platformctl** is a GitOps-native application monitoring platform that:
 - **Monitors GitOps Workflows**: ApplicationSet → Generated Applications → Helm deployments → Vault secrets
 - **Multi-Environment Correlation**: Tracks applications across dev/qa/uat/prod with unified dashboards
 - **Real-Time Secret Validation**: Correlates Vault secrets with pod environment variables 
@@ -159,7 +159,7 @@ make docker-build                   # Build container images
 ### Required Environment Variables
 ```bash
 # Database
-DATABASE_URL=postgres://user:pass@localhost/contextops
+DATABASE_URL=postgres://user:pass@localhost/platformctl
 
 # RabbitMQ  
 RABBITMQ_URL=amqp://user:pass@localhost:5672/
@@ -228,7 +228,7 @@ type MessageEnvelope struct {
 
 ### Context Validation Rules
 - **Name:** Must match `^[a-z0-9-]+$`, 1-63 characters
-- **API Version:** Must be `contextops/v1`
+- **API Version:** Must be `platformctl/v1`
 - **Kind:** Must be `Context`  
 - **Spec:** All service configurations must validate against schemas
 
@@ -283,16 +283,16 @@ type ServiceResult struct {
 ### Required Metrics (Phase 1E)
 ```go
 // Request metrics
-contextops_requests_total{method, endpoint, status}
-contextops_request_duration_seconds{method, endpoint}
+platformctl_requests_total{method, endpoint, status}
+platformctl_request_duration_seconds{method, endpoint}
 
 // Service metrics  
-contextops_service_health{service, context, status}
-contextops_service_latency{service, context}
+platformctl_service_health{service, context, status}
+platformctl_service_latency{service, context}
 
 // Business metrics
-contextops_contexts_total{tenant, health_status}
-contextops_actions_total{action, status}
+platformctl_contexts_total{tenant, health_status}
+platformctl_actions_total{action, status}
 ```
 
 ### Structured Logging Format
@@ -449,7 +449,7 @@ readinessProbe:
 
 ## 🎉 Ready to Start!
 
-You now have all the information needed to build ContextOps. Begin with **Phase 1A** and follow the implementation guide in `docs/phases/PHASE-1A.md`.
+You now have all the information needed to build Platformctl. Begin with **Phase 1A** and follow the implementation guide in `docs/phases/PHASE-1A.md`.
 
 Remember: **Quality over speed** - implement each phase completely before moving to the next. The architecture is designed for this sequential approach.
 
