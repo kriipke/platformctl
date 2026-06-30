@@ -24,7 +24,7 @@ func NewEnvironmentValidationHandler(cfg *config.Config) *EnvironmentValidationH
 	return &EnvironmentValidationHandler{
 		vaultClient:      vault.NewHashiCorpVaultClient(cfg.Vault),
 		kubernetesClient: kubernetes.NewMultiClusterClient(cfg),
-		helmClient:       helm.NewHelmClient(),
+		helmClient:       helm.NewHelmClient(cfg.Helm),
 		gitClient:        git.NewGitClient(),
 	}
 }

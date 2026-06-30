@@ -24,7 +24,7 @@ type ValuesCorrelator interface {
 func NewCustomerGitBranchHandler(cfg *config.Config) *CustomerGitBranchHandler {
 	return &CustomerGitBranchHandler{
 		gitClient:        git.NewGitClient(),
-		helmClient:       helm.NewHelmClient(),
+		helmClient:       helm.NewHelmClient(cfg.Helm),
 		valuesCorrelator: &ValuesCorrelatorImpl{},
 	}
 }
