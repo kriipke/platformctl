@@ -239,56 +239,7 @@ subjects:
 - kind: ServiceAccount
   name: gitops-aggregator-service-account
   namespace: contextops
----
-# Security Context Constraints for OpenShift (if applicable)
-apiVersion: security.openshift.io/v1
-kind: SecurityContextConstraints
-metadata:
-  name: contextops-scc
-  labels:
-    app.kubernetes.io/name: contextops-scc
-    app.kubernetes.io/part-of: contextops-platform
-allowHostDirVolumePlugin: false
-allowHostIPC: false
-allowHostNetwork: false
-allowHostPID: false
-allowHostPorts: false
-allowPrivilegedContainer: false
-allowedCapabilities: []
-allowedFlexVolumes: []
-defaultAddCapabilities: []
-fsGroup:
-  type: MustRunAs
-  ranges:
-  - min: 1000
-    max: 1000
-priority: 10
-readOnlyRootFilesystem: false
-requiredDropCapabilities:
-- ALL
-runAsUser:
-  type: MustRunAsNonRoot
-  uid: 1000
-seLinuxContext:
-  type: MustRunAs
-  seLinuxOptions:
-    user: system_u
-    role: system_r
-    type: container_t
-    level: s0:c123,c456
-supplementalGroups:
-  type: MustRunAs
-  ranges:
-  - min: 1000
-    max: 1000
-users:
-- system:serviceaccount:contextops:contextops-service-account
-- system:serviceaccount:contextops:gitops-aggregator-service-account
-- system:serviceaccount:contextops:kubernetes-integration-service-account
-volumes:
-- configMap
-- downwardAPI
-- emptyDir
-- persistentVolumeClaim
-- projected
-- secret
+# SecurityContextConstraints (OpenShift-only) intentionally removed: this is a
+# vanilla Kubernetes cluster. Pod/container securityContext blocks in the
+# deployments enforce runAsNonRoot, drop-ALL capabilities, and no privilege
+# escalation, which is the portable equivalent.

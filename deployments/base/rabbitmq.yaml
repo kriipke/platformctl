@@ -130,4 +130,4 @@ spec:
     port: 15672
     targetPort: 15672
     name: management
-  type: NodePort
+  type: ClusterIP
