@@ -102,8 +102,16 @@ func main() {
 	// Setup API routes
 	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler)
 
-	// TODO: Initialize health checker and observability server
-	// These functions need to be implemented or replaced with working alternatives
+	// Start the health/readiness server on the dedicated health port. Kubernetes
+	// probes liveness (/health) and readiness (/ready) on this port (8081); the
+	// gin API server below only listens on cfg.Port (8080), so without this the
+	// probes get connection-refused and the kubelet kills the pod.
+	healthManager := observability.NewHealthManager(cfg.GetHealthCheckConfig(), "gateway", "1.0.0")
+	go func() {
+		if err := healthManager.StartHealthServer(); err != nil && err != http.ErrServerClosed {
+			logger.NewContextLogger(context.Background()).Error().Err(err).Msg("Health server failed")
+		}
+	}()
 
 	// Start main server
 	server := &http.Server{
