@@ -1,0 +1,28 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $merged := merge (deepCopy ($svc | default dict)) $root.Values.defaults }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platformctl.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "platformctl.labels" $root | nindent 4 }}
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/component: {{ $merged.component }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ $name }}
+  ports:
+  {{- if $merged.httpPort }}
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: {{ $merged.httpPort }}
+  {{- end }}
+  - name: metrics
+    protocol: TCP
+    port: {{ $merged.metricsPort }}
+    targetPort: {{ $merged.metricsPort }}
+{{- end }}

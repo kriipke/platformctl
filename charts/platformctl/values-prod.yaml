@@ -1,0 +1,42 @@
+# Prod overlay — deployed to namespace platformctl-prod.
+#   helm upgrade --install platformctl charts/platformctl \
+#     -n platformctl-prod -f charts/platformctl/values-prod.yaml \
+#     --set image.tag=<git-tag>
+#
+# Only deltas from values.yaml belong here.
+
+config:
+  LOG_LEVEL: "info"
+  # Shared DO managed Postgres has a small connection limit — keep this low.
+  MAX_DB_CONNECTIONS: "2"
+
+# Bundled broker in-cluster (flip to false + set config.RABBITMQ_URL to move to
+# a managed broker).
+rabbitmq:
+  enabled: true
+  persistence:
+    size: 5Gi
+
+services:
+  gateway:
+    # Enable + set hosts once DNS/cert-manager are in place.
+    ingress:
+      enabled: false
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      # tls:
+      #   - hosts: [api.platformctl.com]
+      #     secretName: platformctl-prod-tls
+      # hosts:
+      #   - host: api.platformctl.com
+      #     path: /
+    # Autoscaling is available but off by default (prod currently runs 1 replica
+    # against a connection-limited Postgres). Turn on deliberately.
+    autoscaling:
+      enabled: false
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPU: 70

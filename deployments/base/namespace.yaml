@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: platformctl
-  labels:
-    name: platformctl
-    app.kubernetes.io/name: platformctl
-    app.kubernetes.io/part-of: platformctl-platform

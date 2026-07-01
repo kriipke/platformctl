@@ -310,7 +310,10 @@ jobs:
             
             ### Installation
             ```bash
-            kubectl apply -k deployments/base
+            helm upgrade --install platformctl charts/platformctl \
+              --namespace platformctl-prod \
+              -f charts/platformctl/values-prod.yaml \
+              --set image.tag=${{ github.ref_name }}
             ```
           draft: false
           prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') }}

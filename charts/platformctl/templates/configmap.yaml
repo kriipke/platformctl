@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platformctl.fullname" . }}-config
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+    app.kubernetes.io/name: platformctl-config
+data:
+  {{- range $key, $val := .Values.config }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
