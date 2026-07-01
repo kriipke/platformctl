@@ -8,6 +8,7 @@ import (
 
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/observability"
 	"github.com/kriipke/platformctl/internal/storage"
 )
 
@@ -27,6 +28,16 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ:", err)
 	}
 	defer messageBus.Close()
+
+	// Health/readiness server on the health port. Kubernetes liveness (/health)
+	// and readiness (/ready) probes hit :8081; without this the kubelet kills the
+	// pod for a failed probe even though the consumer is running.
+	healthManager := observability.NewHealthManager(cfg.GetHealthCheckConfig(), "context-correlation-service", "1.0.0")
+	go func() {
+		if err := healthManager.StartHealthServer(); err != nil {
+			log.Printf("Health server failed: %v", err)
+		}
+	}()
 
 	// Create the context pairing handler and consume context commands
 	contextHandler := NewContextPairingHandler(cfg)
