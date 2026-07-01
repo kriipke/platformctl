@@ -6,7 +6,8 @@ COMMIT_SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 REGISTRY ?= platformctl
 GHCR_REGISTRY ?= ghcr.io/kriipke
-NAMESPACE ?= platformctl
+NAMESPACE ?= platformctl-stage
+IMAGE_TAG ?= develop
 DOCKER_BUILDKIT ?= 1
 
 # Go variables
@@ -19,7 +20,6 @@ SERVICES = gateway gitops-aggregator app-sync-svc environment-validation-svc con
 
 # Kubernetes variables
 KUBECTL ?= kubectl
-KUSTOMIZE ?= kustomize
 HELM ?= helm
 
 # Build flags
@@ -163,21 +163,31 @@ db-reset: ## Reset database (drop and recreate)
 k8s-namespace: ## Create Kubernetes namespace
 	$(KUBECTL) create namespace $(NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f -
 
-.PHONY: k8s-deploy-dev
-k8s-deploy-dev: k8s-namespace ## Deploy to development environment
-	$(KUSTOMIZE) build deployments/overlays/development | $(KUBECTL) apply -f -
+.PHONY: k8s-lint
+k8s-lint: ## Lint + render the Helm chart for both environments
+	$(HELM) lint charts/platformctl -f charts/platformctl/values-stage.yaml
+	$(HELM) lint charts/platformctl -f charts/platformctl/values-prod.yaml
+
+.PHONY: k8s-deploy-stage
+k8s-deploy-stage: ## Deploy to stage via Helm (namespace platformctl-stage). Override IMAGE_TAG=...
+	$(HELM) upgrade --install platformctl charts/platformctl \
+		--namespace platformctl-stage --create-namespace \
+		-f charts/platformctl/values-stage.yaml \
+		--set image.tag=$(IMAGE_TAG) --atomic --timeout 10m
 
 .PHONY: k8s-deploy-prod
-k8s-deploy-prod: k8s-namespace ## Deploy to production environment
-	$(KUSTOMIZE) build deployments/overlays/production | $(KUBECTL) apply -f -
+k8s-deploy-prod: ## Deploy to prod via Helm (namespace platformctl-prod). Override IMAGE_TAG=...
+	$(HELM) upgrade --install platformctl charts/platformctl \
+		--namespace platformctl-prod --create-namespace \
+		-f charts/platformctl/values-prod.yaml \
+		--set image.tag=$(IMAGE_TAG) --atomic --timeout 10m
 
 .PHONY: k8s-deploy
-k8s-deploy: k8s-deploy-dev ## Deploy to default (development) environment
+k8s-deploy: k8s-deploy-stage ## Deploy to default (stage) environment
 
 .PHONY: k8s-delete
-k8s-delete: ## Delete Kubernetes resources
-	$(KUSTOMIZE) build deployments/overlays/development | $(KUBECTL) delete -f - || true
-	$(KUBECTL) delete namespace $(NAMESPACE) || true
+k8s-delete: ## Uninstall the Helm release (NAMESPACE selects the target namespace)
+	$(HELM) uninstall platformctl --namespace $(NAMESPACE) || true
 
 .PHONY: k8s-logs-%
 k8s-logs-%: ## View logs for specific service (e.g., make k8s-logs-gateway)
@@ -195,11 +205,11 @@ k8s-status: ## Show Kubernetes deployment status
 k8s-port-forward-%: ## Port forward to specific service (e.g., make k8s-port-forward-gateway)
 	@service_name=$(subst k8s-port-forward-,,$@); \
 	port=$$(case $$service_name in \
-		gateway) echo "8080:8080";; \
-		*) echo "8081:8081";; \
+		gateway) echo "8080:80";; \
+		*) echo "9090:9090";; \
 	esac); \
 	echo "Port forwarding $$service_name on $$port..."; \
-	$(KUBECTL) port-forward -n $(NAMESPACE) service/$$service_name $$port
+	$(KUBECTL) port-forward -n $(NAMESPACE) service/platformctl-$$service_name $$port
 
 .PHONY: k8s-shell-%
 k8s-shell-%: ## Get shell in specific service pod (e.g., make k8s-shell-gateway)

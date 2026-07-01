@@ -52,8 +52,8 @@ platformctl/
 │   └── readmodel/              # Read model implementation
 ├── pkg/                        # Public packages
 ├── docs/                       # All documentation
-├── deployments/                # Kubernetes manifests
-├── scripts/                    # Build and deployment scripts
+├── charts/platformctl/         # Helm chart (deployment) + per-env values files
+├── scripts/                    # Build scripts
 └── tests/                      # Test suites
 ```
 

@@ -1,0 +1,37 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $merged := merge (deepCopy ($svc | default dict)) $root.Values.defaults }}
+{{- $hpa := $merged.autoscaling | default dict }}
+{{- if $hpa.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "platformctl.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "platformctl.labels" $root | nindent 4 }}
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "platformctl.fullname" $root }}-{{ $name }}
+  minReplicas: {{ $hpa.minReplicas | default 2 }}
+  maxReplicas: {{ $hpa.maxReplicas | default 5 }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $hpa.targetCPU | default 70 }}
+  {{- if $hpa.targetMemory }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ $hpa.targetMemory }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -59,132 +59,142 @@ make build
 make docker-build
 ```
 
-### 2. Deploy to DigitalOcean Kubernetes
+### 2. Deploy with Helm
 
-#### Step 1: Create DOKS Cluster (if needed)
-```bash
-# Create a DOKS cluster
-doctl kubernetes cluster create platformctl-cluster \
-  --region nyc3 \
-  --size s-2vcpu-2gb \
-  --count 3 \
-  --tag platformctl \
-  --wait
+Platformctl deploys as a single Helm chart (`charts/platformctl`) with one values
+file per environment. Everything runs on one DigitalOcean cluster, isolated by
+namespace:
 
-# Get cluster credentials
-doctl kubernetes cluster kubeconfig save platformctl-cluster
+| Environment | Namespace           | Values file                            |
+|-------------|---------------------|----------------------------------------|
+| stage       | `platformctl-stage` | `charts/platformctl/values-stage.yaml` |
+| prod        | `platformctl-prod`  | `charts/platformctl/values-prod.yaml`  |
+
+Postgres is **external** (DigitalOcean managed); RabbitMQ is bundled in-cluster by
+the chart (toggle with `rabbitmq.enabled`). The chart **references** two database
+secrets per namespace but never creates them — set those up once (below).
+
+#### One-time setup per environment
+
+**a) Database roles and databases** — run on the managed Postgres as an admin:
+
+```sql
+CREATE ROLE platformctl_stage LOGIN PASSWORD '<PASSWORD>';
+CREATE DATABASE platformctl_stage OWNER platformctl_stage;
+
+CREATE ROLE platformctl_prod LOGIN PASSWORD '<PASSWORD>';
+CREATE DATABASE platformctl_prod OWNER platformctl_prod;
 ```
 
-#### Step 2: Configure Container Registry
-```bash
-# Create DigitalOcean Container Registry (if needed)
-doctl registry create platformctl-registry
+DigitalOcean exposes two ports: `25060` (direct) and `25061` (PgBouncer pool). The
+gateway runs schema migrations on startup and must use the **direct** connection;
+every other service uses the **pool**.
 
-# Configure Docker authentication
-doctl registry login
+**b) Database secrets** — create both secrets in each namespace. Fill in
+`data.DATABASE_URL` with a base64-encoded connection string matching the commented
+format, then `kubectl apply -f secrets.yaml`:
 
-# Tag and push images
-docker tag platformctl-gateway:latest registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
-docker tag platformctl-gitops-aggregator:latest registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
-
-# Push all images
-docker push registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
-docker push registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
-# ... repeat for all services
-```
-
-#### Step 3: Deploy Infrastructure Dependencies
-```bash
-# Create namespace
-kubectl create namespace platformctl
-
-# Deploy PostgreSQL
-kubectl apply -f deployments/base/postgres.yaml -n platformctl
-
-# Deploy RabbitMQ  
-kubectl apply -f deployments/base/rabbitmq.yaml -n platformctl
-
-# Wait for dependencies to be ready
-kubectl wait --for=condition=ready pod -l app=postgres -n platformctl --timeout=300s
-kubectl wait --for=condition=ready pod -l app=rabbitmq -n platformctl --timeout=300s
-```
-
-#### Step 4: Configure Secrets
-```bash
-# Create database secret
-kubectl create secret generic postgres-secret \
-  --from-literal=username=platformctl \
-  --from-literal=password=$(openssl rand -base64 32) \
-  --from-literal=database=platformctl \
-  -n platformctl
-
-# Create RabbitMQ secret
-kubectl create secret generic rabbitmq-secret \
-  --from-literal=username=platformctl \
-  --from-literal=password=$(openssl rand -base64 32) \
-  -n platformctl
-
-# Create application config
-kubectl create configmap platformctl-config \
-  --from-file=deployments/base/config.yaml \
-  -n platformctl
-```
-
-#### Step 5: Deploy Platformctl Services
-```bash
-# Update image references in kustomization.yaml
-cd deployments/base
-kustomize edit set image platformctl-gateway=registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
-kustomize edit set image platformctl-gitops-aggregator=registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
-
-# Deploy all services
-kubectl apply -k deployments/base -n platformctl
-
-# Verify deployment
-kubectl get pods -n platformctl
-kubectl get services -n platformctl
-```
-
-#### Step 6: Expose Services (DigitalOcean LoadBalancer)
-```bash
-# Create LoadBalancer service for API Gateway
-cat <<EOF | kubectl apply -f -
+```yaml
+---
 apiVersion: v1
-kind: Service
+kind: Secret
+type: Opaque
 metadata:
-  name: platformctl-gateway-lb
-  namespace: platformctl
-  annotations:
-    service.beta.kubernetes.io/do-loadbalancer-name: "platformctl-gateway"
-    service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
-    service.beta.kubernetes.io/do-loadbalancer-healthcheck-path: "/health"
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 80
-    targetPort: 8080
-    protocol: TCP
-  selector:
-    app: platformctl-gateway
-EOF
+  name: platformctl-credentials
+  namespace: platformctl-prod
+data:
+  # postgresql://platformctl_prod:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25060/platformctl_prod?sslmode=require
+  DATABASE_URL: ''
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: platformctl-pool-credentials
+  namespace: platformctl-prod
+data:
+  # postgresql://platformctl_prod:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_prod_pool?sslmode=require
+  DATABASE_URL: ''
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: platformctl-credentials
+  namespace: platformctl-stage
+data:
+  # postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25060/platformctl_stage?sslmode=require
+  DATABASE_URL: ''
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: platformctl-pool-credentials
+  namespace: platformctl-stage
+data:
+  # postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_stage_pool?sslmode=require
+  DATABASE_URL: ''
+```
 
-# Get LoadBalancer IP
-kubectl get service platformctl-gateway-lb -n platformctl
+> `platformctl-credentials` (direct :25060) is read only by the gateway;
+> `platformctl-pool-credentials` (pool :25061) is read by every other service.
+> The `_pool` names are DigitalOcean PgBouncer **pool names**, not separate
+> databases — create the pool in the DO console (or `doctl databases pool create`)
+> targeting the base database; you do not create them with SQL.
+
+#### Deploy via CI/CD (GitHub Actions)
+
+The `Deploy` workflow (`.github/workflows/deploy.yml`) runs `helm upgrade --install`:
+
+| Trigger                   | Deploys to                              |
+|---------------------------|-----------------------------------------|
+| push to `main`            | **stage** (image tag `latest`)          |
+| push tag `v*.*.*`         | **prod** (image tag = the git tag)      |
+| **Run workflow** (manual) | choose `stage`/`prod` + optional tag    |
+
+Images are built by the `Build and Push Container Images` workflow on the same
+event; the deploy job waits for the gateway image before proceeding.
+
+Required repository **Secrets**:
+
+| Secret           | Purpose                                                                 |
+|------------------|-------------------------------------------------------------------------|
+| `KUBECONFIG_B64` | base64 kubeconfig (`doctl kubernetes cluster kubeconfig save <cluster>` then `base64 -w0 ~/.kube/config`) |
+| `GHCR_PULL_PAT`  | PAT with `read:packages`; used to create the in-namespace `ghcr-pull` pull secret |
+
+#### Deploy manually / from a laptop
+
+```bash
+# Point kubectl at the cluster
+doctl kubernetes cluster kubeconfig save <cluster>
+
+# Prod (immutable tag-style image)
+helm upgrade --install platformctl charts/platformctl \
+  --namespace platformctl-prod \
+  -f charts/platformctl/values-prod.yaml \
+  --set image.tag=v1.2.3 \
+  --atomic --timeout 10m
+
+# Render locally without touching the cluster
+helm template platformctl charts/platformctl \
+  -n platformctl-prod -f charts/platformctl/values-prod.yaml --set image.tag=v1.2.3
 ```
 
 ### 3. Verify Installation
 ```bash
 # Check all pods are running
-kubectl get pods -n platformctl
+kubectl get pods -n platformctl-prod
 
 # Check services
-kubectl get svc -n platformctl
+kubectl get svc -n platformctl-prod
 
-# Test API endpoint (replace <LOAD_BALANCER_IP> with actual IP)
-curl http://<LOAD_BALANCER_IP>/health
+# Gateway health (via port-forward)
+kubectl port-forward svc/platformctl-gateway 8080:80 -n platformctl-prod
+curl http://localhost:8080/health
 
-# View logs
-kubectl logs -l app=platformctl-gateway -n platformctl
+# View gateway logs
+kubectl logs -l app=gateway -n platformctl-prod
 ```
 
 ---
@@ -408,18 +418,15 @@ kubectl logs -f deployment/platformctl-app-sync-svc -n platformctl | grep correl
 ## 🔒 Security
 
 ### RBAC Configuration
+ServiceAccounts and the read-only GitOps-monitoring ClusterRoles ship with the
+Helm chart (`charts/platformctl/templates/{serviceaccount,rbac}.yaml`) and are
+created automatically on `helm upgrade --install`. ClusterRole/Binding names are
+suffixed with the release namespace so stage and prod can coexist on one cluster.
+Toggle with `rbac.create` in values. To inspect what will be applied:
 ```bash
-# Create service account
-kubectl create serviceaccount platformctl-sa -n platformctl
-
-# Apply RBAC manifests
-kubectl apply -f deployments/base/rbac.yaml -n platformctl
-```
-
-### Network Policies
-```bash
-# Apply network policies for micro-segmentation
-kubectl apply -f deployments/base/network-policies.yaml -n platformctl
+helm template platformctl charts/platformctl \
+  -n platformctl-prod -f charts/platformctl/values-prod.yaml \
+  --show-only templates/rbac.yaml
 ```
 
 ### Secret Management

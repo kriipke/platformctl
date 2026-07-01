@@ -1,0 +1,188 @@
+# Default values for the platformctl chart.
+# Environment overlays live next to this file: values-stage.yaml, values-prod.yaml.
+# The namespace is NOT set here — it is supplied at deploy time via `helm --namespace`.
+
+# -----------------------------------------------------------------------------
+# Container image
+#   full ref = "{registry}/{repoPrefix}{service}:{tag}"
+#   e.g. ghcr.io/kriipke/platformctl-gateway:v1.2.3
+# The tag is injected by CI at deploy time (`--set image.tag=...`); the default
+# below is only used for local `helm template`/`helm install` runs.
+# -----------------------------------------------------------------------------
+image:
+  registry: ghcr.io/kriipke
+  repoPrefix: platformctl-
+  tag: develop
+  pullPolicy: IfNotPresent
+
+# Pull secret for the private GHCR images. The deploy workflow (re)creates a
+# docker-registry secret named `ghcr-pull` in the target namespace each run.
+imagePullSecrets:
+  - name: ghcr-pull
+
+# -----------------------------------------------------------------------------
+# Database secrets — REFERENCED BY NAME, never created/owned by this chart.
+# Create them out-of-band in each namespace (see README "Deployment").
+#   direct : platformctl-credentials       (DO direct connection, :25060)
+#   pool   : platformctl-pool-credentials  (DO PgBouncer pool,   :25061)
+# Both hold a single key `DATABASE_URL`. Only the gateway (which runs golang-
+# migrate advisory-lock migrations on startup) uses the direct connection; every
+# other service uses the pool.
+# -----------------------------------------------------------------------------
+secretNames:
+  direct: platformctl-credentials
+  pool: platformctl-pool-credentials
+
+# -----------------------------------------------------------------------------
+# Non-secret runtime config. Rendered into one ConfigMap and mounted into every
+# service via envFrom. The app consumes DATABASE_URL + RABBITMQ_URL as whole
+# connection strings; the per-field DATABASE_HOST/PORT/... vars are intentionally
+# omitted (the binaries ignore them).
+# -----------------------------------------------------------------------------
+config:
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_PORT: "8081"
+  TRACING_ENABLED: "false"
+  # GitOps integration feature flags
+  ENABLE_VAULT_INTEGRATION: "true"
+  ENABLE_ARGOCD_INTEGRATION: "true"
+  ENABLE_GIT_INTEGRATION: "true"
+  ENABLE_KUBERNETES_INTEGRATION: "true"
+  # Performance tuning
+  MAX_CONCURRENT_REQUESTS: "100"
+  REQUEST_TIMEOUT: "30s"
+  DB_MAX_OPEN_CONNS: "25"
+  DB_MAX_IDLE_CONNS: "5"
+  # Cap on total DB connections — keep LOW on shared managed Postgres instances
+  # (the DO instance has a small connection limit). Override per env.
+  MAX_DB_CONNECTIONS: "5"
+  # Message broker connection string. Points at the in-cluster RabbitMQ Service
+  # below when rabbitmq.enabled=true. Override this if you externalize the broker.
+  RABBITMQ_URL: "amqp://platformctl:platformctl@rabbitmq:5672/"
+
+# -----------------------------------------------------------------------------
+# Bundled in-cluster RabbitMQ (toggleable). Set enabled=false and point
+# config.RABBITMQ_URL at a managed broker to externalize it.
+# -----------------------------------------------------------------------------
+rabbitmq:
+  enabled: true
+  image: rabbitmq:3.12-management-alpine
+  # Credentials for the bundled broker. Must match config.RABBITMQ_URL above.
+  username: platformctl
+  password: platformctl
+  vhost: "/"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: do-block-storage
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# -----------------------------------------------------------------------------
+# RBAC — ServiceAccounts (namespaced) + ClusterRoles for read-only GitOps
+# monitoring. ClusterRole/Binding names are suffixed with the release namespace
+# so stage and prod can coexist on the same cluster.
+# -----------------------------------------------------------------------------
+rbac:
+  create: true
+serviceAccounts:
+  - platformctl-service-account
+  - gitops-aggregator-service-account
+  - kubernetes-integration-service-account
+
+# -----------------------------------------------------------------------------
+# Defaults merged UNDER every entry in `services`. A service's own keys win.
+# -----------------------------------------------------------------------------
+defaults:
+  replicas: 1
+  # Which DB secret feeds DATABASE_URL: "direct" or "pool".
+  dbSecret: pool
+  serviceAccount: platformctl-service-account
+  component: integration-service
+  healthPort: 8081
+  metricsPort: 9090
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# -----------------------------------------------------------------------------
+# The services. Each becomes a Deployment + Service. Keys here override defaults.
+#   httpPort         -> also exposes an HTTP port + a Service :80 (gateway only)
+#   dbSecret         -> "direct" | "pool"
+#   env              -> extra literal env vars for this service
+#   autoscaling      -> {enabled, minReplicas, maxReplicas, targetCPU}
+#   pdb              -> {enabled, minAvailable|maxUnavailable}
+# -----------------------------------------------------------------------------
+services:
+  gateway:
+    component: api-gateway
+    dbSecret: direct
+    httpPort: 8080
+    serviceAccount: platformctl-service-account
+    env:
+      PORT: "8080"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # Public ingress for the gateway API. Off until you set real hosts.
+    ingress:
+      enabled: false
+      className: nginx
+      annotations: {}
+      # tls: []
+      # hosts:
+      #   - host: api.platformctl.com
+      #     path: /
+    autoscaling:
+      enabled: false
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPU: 70
+    pdb:
+      enabled: false
+      minAvailable: 1
+
+  gitops-aggregator:
+    component: aggregator
+    replicas: 1  # single replica — read-model consistency; never autoscaled
+    serviceAccount: gitops-aggregator-service-account
+    env:
+      AGGREGATION_INTERVAL: "30s"
+      BATCH_SIZE: "100"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    pdb:
+      enabled: false
+      maxUnavailable: 0
+
+  app-sync-svc: {}
+
+  environment-validation-svc: {}
+
+  context-correlation-svc: {}
+
+  multi-environment-kube-svc:
+    # Needs cluster-wide read access to monitor GitOps resources.
+    serviceAccount: kubernetes-integration-service-account
+
+  customer-git-branch-svc: {}

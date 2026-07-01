@@ -1,0 +1,19 @@
+platformctl {{ .Chart.AppVersion }} deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Image tag: {{ .Values.image.tag }}   (set at deploy time via --set image.tag)
+
+Services:
+{{- range $name, $svc := .Values.services }}
+  - {{ include "platformctl.fullname" $ }}-{{ $name }}
+{{- end }}
+
+RabbitMQ (in-cluster): {{ if .Values.rabbitmq.enabled }}enabled{{ else }}disabled — expecting external broker at config.RABBITMQ_URL{{ end }}
+
+Reminder — this chart does NOT create the database secrets. They must already exist
+in namespace "{{ .Release.Namespace }}":
+  - {{ .Values.secretNames.direct }}   (key DATABASE_URL, direct connection :25060 — used by gateway)
+  - {{ .Values.secretNames.pool }}      (key DATABASE_URL, PgBouncer pool :25061 — used by all other services)
+
+Check rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "platformctl.fullname" . }}-gateway
+  kubectl -n {{ .Release.Namespace }} get pods
