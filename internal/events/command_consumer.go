@@ -164,10 +164,16 @@ func (c *CommandConsumer) publishResult(result *api.GitOpsResultMessage) error {
 		return fmt.Errorf("failed to marshal result: %w", err)
 	}
 
-	priority := uint8(result.Priority)
-	if priority > 10 {
-		priority = 10
+	// Clamp to the valid AMQP priority range before narrowing to uint8 so the
+	// conversion cannot overflow on an out-of-range (negative or >255) value.
+	p := result.Priority
+	if p < 0 {
+		p = 0
 	}
+	if p > 10 {
+		p = 10
+	}
+	priority := uint8(p)
 
 	return c.messageBus.channel.Publish(
 		"gitops.results",         // exchange
