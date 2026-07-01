@@ -138,11 +138,16 @@ jobs:
       - name: Helm upgrade --install
         run: |
           set -euo pipefail
+          # NOTE: --atomic is intentionally OFF while we debug pod startup. --atomic
+          # uninstalls the release the instant the rollout times out, deleting the
+          # crashed pods and their logs before the diagnostics step can capture them.
+          # Restore `--atomic` once the app boots cleanly. Shorter --timeout so a
+          # crash-looping deploy fails fast instead of burning 10m.
           helm upgrade --install "$RELEASE" "$CHART" \
             --namespace "${{ steps.target.outputs.namespace }}" \
             -f "${{ steps.target.outputs.values }}" \
             --set image.tag="${{ steps.target.outputs.tag }}" \
-            --atomic --timeout 10m
+            --wait --timeout 5m
 
       - name: Wait for rollouts
         run: |
@@ -152,3 +157,28 @@ jobs:
             kubectl rollout status "$dep" -n "$NS" --timeout=5m
           done
           kubectl get pods -n "$NS" -l app.kubernetes.io/part-of=platformctl-platform
+
+      # Runs only when a prior step failed. With --atomic off the release is left
+      # in place, so we can dump pod state + logs (current AND previous/crashed
+      # container) to explain a CrashLoopBackOff. Every command is best-effort.
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          NS="${{ steps.target.outputs.namespace }}"
+          echo "::group::pods"
+          kubectl get pods -n "$NS" -o wide || true
+          echo "::endgroup::"
+          echo "::group::events (last 80)"
+          kubectl get events -n "$NS" --sort-by=.lastTimestamp | tail -80 || true
+          echo "::endgroup::"
+          for p in $(kubectl get pods -n "$NS" -o name); do
+            echo "::group::describe ${p}"
+            kubectl describe -n "$NS" "$p" || true
+            echo "::endgroup::"
+            echo "::group::logs ${p} (current)"
+            kubectl logs -n "$NS" "$p" --all-containers --tail=120 || true
+            echo "::endgroup::"
+            echo "::group::logs ${p} (previous)"
+            kubectl logs -n "$NS" "$p" --all-containers --previous --tail=120 || true
+            echo "::endgroup::"
+          done
