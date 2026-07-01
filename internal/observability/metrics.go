@@ -690,7 +690,14 @@ func StartMetricsServer(metrics *Metrics, config MetricsConfig) error {
 	}
 	
 	mux := http.NewServeMux()
-	mux.Handle(config.Path, metrics.GetHandler())
+	// Guard against an empty path: services construct MetricsConfig as a struct
+	// literal (so the `envDefault:"/metrics"` tag never applies) and don't set
+	// Path, which would make ServeMux.Handle panic with "http: invalid pattern".
+	path := config.Path
+	if path == "" {
+		path = "/metrics"
+	}
+	mux.Handle(path, metrics.GetHandler())
 	
 	// Add health check endpoint for the metrics server itself
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

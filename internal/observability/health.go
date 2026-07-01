@@ -206,7 +206,11 @@ func (hm *HealthManager) GetCachedHealth() SystemHealth {
 // calculateOverallHealth determines overall system health from individual check results
 func (hm *HealthManager) calculateOverallHealth(results map[string]HealthResult) HealthStatus {
 	if len(results) == 0 {
-		return HealthStatusUnknown
+		// No checks registered means nothing is reporting failure, so treat the
+		// component set as healthy. This keeps the readiness probe (/ready) at 200
+		// for services that haven't wired up any checkers yet; otherwise an empty
+		// set would resolve to Unknown and readiness would return 503 forever.
+		return HealthStatusHealthy
 	}
 	
 	healthyCount := 0
