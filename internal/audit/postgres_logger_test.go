@@ -10,14 +10,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/contextops/platformctl/internal/testutil"
+	"github.com/kriipke/platformctl/internal/testutil"
 )
 
 func TestNewPostgresLogger(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	assert.NoError(t, err)
 	assert.NotNil(t, logger)
 
@@ -36,7 +36,7 @@ func TestPostgresLoggerLogEvent(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -156,7 +156,7 @@ func TestPostgresLoggerLogCRUDEvent(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -200,7 +200,7 @@ func TestPostgresLoggerLogAuthEvent(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -237,7 +237,7 @@ func TestPostgresLoggerLogSystemEvent(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -272,7 +272,7 @@ func TestPostgresLoggerQueryEvents(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -418,7 +418,7 @@ func TestPostgresLoggerQueryEventsWithPagination(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -474,7 +474,7 @@ func TestPostgresLoggerQueryEventsError(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -489,7 +489,7 @@ func TestPostgresLoggerConcurrentWrites(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -547,7 +547,7 @@ func TestPostgresLoggerTransactionRollback(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	logger, err := NewPostgresLogger(testDB.DB.DB())
+	logger, err := NewPostgresLogger(testDB.DB.DB)
 	require.NoError(t, err)
 	defer logger.Close()
 

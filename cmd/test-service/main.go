@@ -20,7 +20,7 @@ func main() {
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "ContextOps Test Service")
+		fmt.Fprint(w, "Platformctl Test Service")
 	})
 
 	log.Printf("Test service starting on port %s", port)

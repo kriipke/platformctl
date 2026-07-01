@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // GitOpsStore provides read model access for GitOps status queries

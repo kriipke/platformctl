@@ -3,19 +3,19 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: environment-config
-  namespace: contextops-dev
+  namespace: platformctl-dev
   labels:
     app.kubernetes.io/name: environment-config
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: development
   annotations:
-    contextops.io/environment: development
-    contextops.io/config-version: "1.0.0"
+    platformctl.io/environment: development
+    platformctl.io/config-version: "1.0.0"
 data:
   # Environment identification
   ENVIRONMENT: "development"
   ENVIRONMENT_SHORT: "dev"
-  CLUSTER_NAME: "contextops-dev-cluster"
+  CLUSTER_NAME: "platformctl-dev-cluster"
   
   # Feature flags for development
   ENABLE_DEBUG_LOGGING: "true"
@@ -37,8 +37,8 @@ data:
   
   # Development URLs and endpoints
   FRONTEND_URL: "http://localhost:3000"
-  API_BASE_URL: "https://contextops-dev.example.com/api"
-  WEBHOOKS_BASE_URL: "https://contextops-dev.example.com/webhooks"
+  API_BASE_URL: "https://platformctl-dev.example.com/api"
+  WEBHOOKS_BASE_URL: "https://platformctl-dev.example.com/webhooks"
   
   # Development database settings
   DB_LOG_QUERIES: "true"

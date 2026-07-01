@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# ContextOps Deployment Script
-# Automates deployment of ContextOps GitOps monitoring platform across environments
+# Platformctl Deployment Script
+# Automates deployment of Platformctl GitOps monitoring platform across environments
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,7 +48,7 @@ log_error() {
 # Help function
 show_help() {
     cat << EOF
-ContextOps Deployment Script
+Platformctl Deployment Script
 
 Usage: $0 [OPTIONS]
 
@@ -133,9 +133,9 @@ validate_environment() {
     # Set default namespace if not provided
     if [[ -z "$NAMESPACE" ]]; then
         case $ENVIRONMENT in
-            development) NAMESPACE="contextops-dev" ;;
-            staging) NAMESPACE="contextops-staging" ;;
-            production) NAMESPACE="contextops-prod" ;;
+            development) NAMESPACE="platformctl-dev" ;;
+            staging) NAMESPACE="platformctl-staging" ;;
+            production) NAMESPACE="platformctl-prod" ;;
         esac
     fi
     
@@ -227,7 +227,7 @@ validate_manifests() {
     log_info "Validating Kubernetes manifests..."
     
     # Build manifests with kustomize
-    local manifests_file="/tmp/contextops-manifests-$ENVIRONMENT.yaml"
+    local manifests_file="/tmp/platformctl-manifests-$ENVIRONMENT.yaml"
     kustomize build "$DEPLOYMENTS_DIR/overlays/$ENVIRONMENT" > "$manifests_file"
     
     # Validate with kubectl
@@ -250,7 +250,7 @@ validate_manifests() {
 
 # Deploy to Kubernetes
 deploy_to_kubernetes() {
-    log_info "Deploying ContextOps to $ENVIRONMENT environment..."
+    log_info "Deploying Platformctl to $ENVIRONMENT environment..."
     log_info "Target namespace: $NAMESPACE"
     
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -276,10 +276,10 @@ wait_for_deployment() {
     log_info "Waiting for deployments to be ready..."
     
     # Get all deployments in the namespace
-    local deployments=($(kubectl get deployments -n "$NAMESPACE" -o name | grep "contextops"))
+    local deployments=($(kubectl get deployments -n "$NAMESPACE" -o name | grep "platformctl"))
     
     if [[ ${#deployments[@]} -eq 0 ]]; then
-        log_warn "No ContextOps deployments found in namespace $NAMESPACE"
+        log_warn "No Platformctl deployments found in namespace $NAMESPACE"
         return 0
     fi
     
@@ -302,16 +302,16 @@ post_deployment_checks() {
     log_info "Performing post-deployment checks..."
     
     # Check pod status
-    local failed_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
+    local failed_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep -v "Running" | wc -l)
     
     if [[ $failed_pods -gt 0 ]]; then
         log_warn "$failed_pods pods are not running"
-        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
     fi
     
     # Check service endpoints
     log_info "Checking service endpoints..."
-    kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+    kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
     
     # Health check if possible
     if command -v curl &> /dev/null; then
@@ -345,22 +345,22 @@ show_summary() {
     if [[ "$DRY_RUN" == "false" ]]; then
         log_info ""
         log_info "Deployed resources:"
-        kubectl get all -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform
+        kubectl get all -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform
         
         log_info ""
         log_info "Access URLs:"
         case $ENVIRONMENT in
             development)
-                log_info "- API: https://contextops-dev.example.com/api"
-                log_info "- Metrics: https://metrics-dev.contextops.example.com"
+                log_info "- API: https://platformctl-dev.example.com/api"
+                log_info "- Metrics: https://metrics-dev.platformctl.example.com"
                 ;;
             staging)
-                log_info "- API: https://staging.contextops.com/api"
-                log_info "- Metrics: https://metrics-staging.contextops.com"
+                log_info "- API: https://staging.platformctl.com/api"
+                log_info "- Metrics: https://metrics-staging.platformctl.com"
                 ;;
             production)
-                log_info "- API: https://api.contextops.com"
-                log_info "- Metrics: https://metrics.contextops.com"
+                log_info "- API: https://api.platformctl.com"
+                log_info "- Metrics: https://metrics.platformctl.com"
                 ;;
         esac
     fi
@@ -380,7 +380,7 @@ confirm_production_deployment() {
 
 # Main execution
 main() {
-    log_info "ContextOps Deployment Script"
+    log_info "Platformctl Deployment Script"
     log_info "Environment: $ENVIRONMENT"
     
     if [[ "$DRY_RUN" == "true" ]]; then

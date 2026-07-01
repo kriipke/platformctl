@@ -3,10 +3,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: default-deny-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector: {}
@@ -18,10 +18,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-gateway-ingress
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-gateway-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:
@@ -52,10 +52,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-postgres-access
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-postgres-access
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:
@@ -67,7 +67,7 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: contextops-platform
+          app.kubernetes.io/part-of: platformctl-platform
     ports:
     - protocol: TCP
       port: 5432
@@ -77,10 +77,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-rabbitmq-access
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-rabbitmq-access
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:
@@ -92,7 +92,7 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: contextops-platform
+          app.kubernetes.io/part-of: platformctl-platform
     ports:
     - protocol: TCP
       port: 5672
@@ -110,15 +110,15 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-metrics-scraping
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-metrics-scraping
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/part-of: contextops-platform
+      app.kubernetes.io/part-of: platformctl-platform
   policyTypes:
   - Ingress
   ingress:
@@ -137,15 +137,15 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-dns
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/part-of: contextops-platform
+      app.kubernetes.io/part-of: platformctl-platform
   policyTypes:
   - Egress
   egress:
@@ -161,10 +161,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-external-https
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: allow-external-https
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
 spec:
   podSelector:

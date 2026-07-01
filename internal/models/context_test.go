@@ -18,7 +18,7 @@ func TestContextMarshaling(t *testing.T) {
 		{
 			name: "valid context manifest",
 			context: Context{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "Context",
 				Metadata: ContextMetadata{
 					Name: "web-app-context",
@@ -349,7 +349,7 @@ func TestContextSpecComplexStructure(t *testing.T) {
 func TestContextManifestRelationships(t *testing.T) {
 	// Test that demonstrates relationships between manifests
 	context := Context{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "Context",
 		Metadata: ContextMetadata{
 			Name: "ecommerce-context",

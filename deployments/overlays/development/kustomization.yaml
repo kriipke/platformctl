@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 metadata:
-  name: contextops-development
+  name: platformctl-development
   annotations:
     config.kubernetes.io/local-config: "true"
 
@@ -12,7 +12,7 @@ resources:
   - ingress.yaml
 
 # Development-specific namespace
-namespace: contextops-dev
+namespace: platformctl-dev
 
 # Environment-specific name prefix
 namePrefix: dev-
@@ -20,28 +20,28 @@ namePrefix: dev-
 # Common labels for development environment
 commonLabels:
   app.kubernetes.io/environment: development
-  app.kubernetes.io/instance: contextops-dev
+  app.kubernetes.io/instance: platformctl-dev
 
 # Development-specific annotations
 commonAnnotations:
   deployment.kubernetes.io/environment: development
-  contextops.io/deployment-target: development
+  platformctl.io/deployment-target: development
 
 # Image tags for development (can be different versions)
 images:
-  - name: contextops/gateway
+  - name: ghcr.io/kriipke/platformctl-gateway
     newTag: dev-latest
-  - name: contextops/gitops-aggregator
+  - name: ghcr.io/kriipke/platformctl-gitops-aggregator
     newTag: dev-latest
-  - name: contextops/app-sync-svc
+  - name: ghcr.io/kriipke/platformctl-app-sync-svc
     newTag: dev-latest
-  - name: contextops/environment-validation-svc
+  - name: ghcr.io/kriipke/platformctl-environment-validation-svc
     newTag: dev-latest
-  - name: contextops/context-correlation-svc
+  - name: ghcr.io/kriipke/platformctl-context-correlation-svc
     newTag: dev-latest
-  - name: contextops/multi-environment-kube-svc
+  - name: ghcr.io/kriipke/platformctl-multi-environment-kube-svc
     newTag: dev-latest
-  - name: contextops/customer-git-branch-svc
+  - name: ghcr.io/kriipke/platformctl-customer-git-branch-svc
     newTag: dev-latest
 
 # Configuration patches for development environment
@@ -67,7 +67,7 @@ patches:
   # Enable debug logging in development
   - target:
       kind: ConfigMap
-      name: contextops-config
+      name: platformctl-config
     patch: |-
       - op: replace
         path: /data/LOG_LEVEL
@@ -118,7 +118,7 @@ replicas:
 replacements:
   - source:
       kind: ConfigMap
-      name: contextops-config
+      name: platformctl-config
       fieldPath: data.DATABASE_HOST
     targets:
       - select:

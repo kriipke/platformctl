@@ -6,7 +6,7 @@ import (
 
 // App manifest struct
 type App struct {
-	APIVersion string      `json:"apiVersion" validate:"required,eq=contextops/v1"`
+	APIVersion string      `json:"apiVersion" validate:"required,eq=platformctl/v1"`
 	Kind       string      `json:"kind" validate:"required,eq=App"`
 	Metadata   AppMetadata `json:"metadata" validate:"required"`
 	Spec       AppSpec     `json:"spec" validate:"required"`

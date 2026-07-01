@@ -2,15 +2,13 @@ package correlation
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 
-	"github.com/contextops/platformctl/internal/readmodel"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/readmodel"
 )
 
 // EnvironmentCorrelator provides advanced correlation logic for multi-environment GitOps data
@@ -559,7 +557,7 @@ func (ec *EnvironmentCorrelator) compareResourceVersions(ctx context.Context, cu
 		// Simulate resource version data
 		for _, env := range environments {
 			// Extract resource version from stored resource versions JSON
-			if resourceVersions, ok := env.ResourceCount > 0, true; ok {
+			if env.ResourceCount > 0 {
 				// In real implementation, parse actual resource versions from env.ResourceVersions
 				version := fmt.Sprintf("v%d", time.Now().Unix()%100) // Simulate version
 				comparison.Environments[env.Environment] = version
@@ -625,7 +623,6 @@ func (ec *EnvironmentCorrelator) calculateKeyConsistency(correlation *VaultSecre
 	}
 
 	// Determine consistency for each key
-	totalEnvs := len(correlation.Environments)
 	for key, presentEnvs := range allKeys {
 		missingEnvs := make([]string, 0)
 		for _, env := range correlation.Environments {

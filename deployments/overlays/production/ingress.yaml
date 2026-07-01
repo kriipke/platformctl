@@ -1,11 +1,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-ingress
-  namespace: contextops-prod
+  name: platformctl-ingress
+  namespace: platformctl-prod
   labels:
-    app.kubernetes.io/name: contextops-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-ingress
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -28,31 +28,31 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.contextops.com
-    - contextops.com
-    secretName: contextops-prod-tls
+    - api.platformctl.com
+    - platformctl.com
+    secretName: platformctl-prod-tls
   rules:
   # Main API endpoint
-  - host: api.contextops.com
+  - host: api.platformctl.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-gateway
+            name: prod-platformctl-gateway
             port:
               number: 80
   
   # Main domain redirect to API
-  - host: contextops.com
+  - host: platformctl.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-gateway
+            name: prod-platformctl-gateway
             port:
               number: 80
 ---
@@ -60,75 +60,75 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-metrics-ingress
-  namespace: contextops-prod
+  name: platformctl-metrics-ingress
+  namespace: platformctl-prod
   labels:
-    app.kubernetes.io/name: contextops-metrics-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-metrics-ingress
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: contextops-metrics-auth
-    nginx.ingress.kubernetes.io/auth-realm: "ContextOps Metrics - Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: platformctl-metrics-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Platformctl Metrics - Authentication Required"
     nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - metrics.contextops.com
-    secretName: contextops-metrics-tls
+    - metrics.platformctl.com
+    secretName: platformctl-metrics-tls
   rules:
-  - host: metrics.contextops.com
+  - host: metrics.platformctl.com
     http:
       paths:
       - path: /gateway
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-gateway
+            name: prod-platformctl-gateway
             port:
               number: 9090
       - path: /aggregator
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-gitops-aggregator
+            name: prod-platformctl-gitops-aggregator
             port:
               number: 9090
       - path: /app-sync
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-app-sync-svc
+            name: prod-platformctl-app-sync-svc
             port:
               number: 9090
       - path: /environment-validation
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-environment-validation-svc
+            name: prod-platformctl-environment-validation-svc
             port:
               number: 9090
       - path: /context-correlation
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-context-correlation-svc
+            name: prod-platformctl-context-correlation-svc
             port:
               number: 9090
       - path: /multi-environment-kube
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-multi-environment-kube-svc
+            name: prod-platformctl-multi-environment-kube-svc
             port:
               number: 9090
       - path: /customer-git-branch
         pathType: Prefix
         backend:
           service:
-            name: prod-contextops-customer-git-branch-svc
+            name: prod-platformctl-customer-git-branch-svc
             port:
               number: 9090

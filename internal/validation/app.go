@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 // ValidateApp validates an App manifest
@@ -301,7 +301,7 @@ func isValidDNSName(name string) bool {
 
 func isValidSemver(version string) bool {
 	// Basic semver validation
-	semverRegex := regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(-[a-zA-Z0-9\-]+)?(\+[a-zA-Z0-9\-]+)?$`)
+	semverRegex := regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(-[a-zA-Z0-9\-.]+)?(\+[a-zA-Z0-9\-.]+)?$`)
 	return semverRegex.MatchString(version)
 }
 

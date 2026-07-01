@@ -3,21 +3,21 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: environment-config
-  namespace: contextops-prod
+  namespace: platformctl-prod
   labels:
     app.kubernetes.io/name: environment-config
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: production
   annotations:
-    contextops.io/environment: production
-    contextops.io/config-version: "1.0.0"
-    contextops.io/backup-enabled: "true"
-    contextops.io/monitoring-level: "critical"
+    platformctl.io/environment: production
+    platformctl.io/config-version: "1.0.0"
+    platformctl.io/backup-enabled: "true"
+    platformctl.io/monitoring-level: "critical"
 data:
   # Environment identification
   ENVIRONMENT: "production"
   ENVIRONMENT_SHORT: "prod"
-  CLUSTER_NAME: "contextops-prod-cluster"
+  CLUSTER_NAME: "platformctl-prod-cluster"
   
   # Feature flags for production (security-first)
   ENABLE_DEBUG_LOGGING: "false"
@@ -41,9 +41,9 @@ data:
   CIRCUIT_BREAKER_ENABLED: "true"
   
   # Production URLs and endpoints
-  FRONTEND_URL: "https://contextops.com"
-  API_BASE_URL: "https://api.contextops.com"
-  WEBHOOKS_BASE_URL: "https://api.contextops.com/webhooks"
+  FRONTEND_URL: "https://platformctl.com"
+  API_BASE_URL: "https://api.platformctl.com"
+  WEBHOOKS_BASE_URL: "https://api.platformctl.com/webhooks"
   
   # Production database settings
   DB_LOG_QUERIES: "false"

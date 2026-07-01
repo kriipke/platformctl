@@ -3,10 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: app-sync-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: app-sync-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   replicas: 2
@@ -18,7 +18,7 @@ spec:
       labels:
         app: app-sync-svc
         app.kubernetes.io/name: app-sync-svc
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
         app.kubernetes.io/component: integration-service
     spec:
       containers:
@@ -33,88 +33,91 @@ spec:
         - name: SERVICE_NAME
           value: "app-sync-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: platformctl-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_HOST
         - name: DATABASE_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_PORT
         - name: DATABASE_NAME
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: DATABASE_SSL_MODE
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://contextops:contextops@rabbitmq:5672/"
+          value: "amqp://platformctl:platformctl@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_USERNAME
         - name: RABBITMQ_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_HOST
         - name: RABBITMQ_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_PORT
         - name: RABBITMQ_VHOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_VHOST
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: LOG_FORMAT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_FORMAT
         - name: METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: METRICS_ENABLED
         - name: HEALTH_CHECK_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: HEALTH_CHECK_PORT
         - name: ENABLE_ARGOCD_INTEGRATION
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: ENABLE_ARGOCD_INTEGRATION
         livenessProbe:
           httpGet:
@@ -142,10 +145,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: app-sync-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: app-sync-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   selector:
@@ -162,10 +165,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: environment-validation-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: environment-validation-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   replicas: 2
@@ -177,7 +180,7 @@ spec:
       labels:
         app: environment-validation-svc
         app.kubernetes.io/name: environment-validation-svc
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
         app.kubernetes.io/component: integration-service
     spec:
       containers:
@@ -192,88 +195,91 @@ spec:
         - name: SERVICE_NAME
           value: "environment-validation-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: platformctl-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_HOST
         - name: DATABASE_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_PORT
         - name: DATABASE_NAME
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: DATABASE_SSL_MODE
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://contextops:contextops@rabbitmq:5672/"
+          value: "amqp://platformctl:platformctl@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_USERNAME
         - name: RABBITMQ_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_HOST
         - name: RABBITMQ_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_PORT
         - name: RABBITMQ_VHOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_VHOST
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: LOG_FORMAT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_FORMAT
         - name: METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: METRICS_ENABLED
         - name: HEALTH_CHECK_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: HEALTH_CHECK_PORT
         - name: ENABLE_VAULT_INTEGRATION
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: ENABLE_VAULT_INTEGRATION
         livenessProbe:
           httpGet:
@@ -301,10 +307,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: environment-validation-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: environment-validation-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   selector:
@@ -321,10 +327,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: context-correlation-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: context-correlation-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   replicas: 2
@@ -336,7 +342,7 @@ spec:
       labels:
         app: context-correlation-svc
         app.kubernetes.io/name: context-correlation-svc
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
         app.kubernetes.io/component: integration-service
     spec:
       containers:
@@ -351,83 +357,86 @@ spec:
         - name: SERVICE_NAME
           value: "context-correlation-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: platformctl-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_HOST
         - name: DATABASE_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_PORT
         - name: DATABASE_NAME
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: DATABASE_SSL_MODE
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://contextops:contextops@rabbitmq:5672/"
+          value: "amqp://platformctl:platformctl@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_USERNAME
         - name: RABBITMQ_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_HOST
         - name: RABBITMQ_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_PORT
         - name: RABBITMQ_VHOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_VHOST
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: LOG_FORMAT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_FORMAT
         - name: METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: METRICS_ENABLED
         - name: HEALTH_CHECK_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: HEALTH_CHECK_PORT
         livenessProbe:
           httpGet:
@@ -455,10 +464,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: context-correlation-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: context-correlation-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   selector:
@@ -475,10 +484,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: multi-environment-kube-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: multi-environment-kube-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   replicas: 2
@@ -490,7 +499,7 @@ spec:
       labels:
         app: multi-environment-kube-svc
         app.kubernetes.io/name: multi-environment-kube-svc
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
         app.kubernetes.io/component: integration-service
     spec:
       containers:
@@ -505,88 +514,91 @@ spec:
         - name: SERVICE_NAME
           value: "multi-environment-kube-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: platformctl-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_HOST
         - name: DATABASE_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_PORT
         - name: DATABASE_NAME
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: DATABASE_SSL_MODE
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://contextops:contextops@rabbitmq:5672/"
+          value: "amqp://platformctl:platformctl@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_USERNAME
         - name: RABBITMQ_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_HOST
         - name: RABBITMQ_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_PORT
         - name: RABBITMQ_VHOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_VHOST
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: LOG_FORMAT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_FORMAT
         - name: METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: METRICS_ENABLED
         - name: HEALTH_CHECK_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: HEALTH_CHECK_PORT
         - name: ENABLE_KUBERNETES_INTEGRATION
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: ENABLE_KUBERNETES_INTEGRATION
         livenessProbe:
           httpGet:
@@ -614,10 +626,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: multi-environment-kube-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: multi-environment-kube-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   selector:
@@ -634,10 +646,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: customer-git-branch-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: customer-git-branch-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   replicas: 2
@@ -649,7 +661,7 @@ spec:
       labels:
         app: customer-git-branch-svc
         app.kubernetes.io/name: customer-git-branch-svc
-        app.kubernetes.io/part-of: contextops-platform
+        app.kubernetes.io/part-of: platformctl-platform
         app.kubernetes.io/component: integration-service
     spec:
       containers:
@@ -664,88 +676,91 @@ spec:
         - name: SERVICE_NAME
           value: "customer-git-branch-svc"
         - name: DATABASE_URL
-          value: "postgres://contextops:contextops@postgres:5432/contextops?sslmode=disable"
+          valueFrom:
+            secretKeyRef:
+              name: platformctl-credentials
+              key: DATABASE_URL
         - name: DATABASE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_USERNAME
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: DATABASE_PASSWORD
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_HOST
         - name: DATABASE_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_PORT
         - name: DATABASE_NAME
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_NAME
         - name: DATABASE_SSL_MODE
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: DATABASE_SSL_MODE
         - name: RABBITMQ_URL
-          value: "amqp://contextops:contextops@rabbitmq:5672/"
+          value: "amqp://platformctl:platformctl@rabbitmq:5672/"
         - name: RABBITMQ_USERNAME
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_USERNAME
         - name: RABBITMQ_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: contextops-secrets
+              name: platformctl-secrets
               key: RABBITMQ_PASSWORD
         - name: RABBITMQ_HOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_HOST
         - name: RABBITMQ_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_PORT
         - name: RABBITMQ_VHOST
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: RABBITMQ_VHOST
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_LEVEL
         - name: LOG_FORMAT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: LOG_FORMAT
         - name: METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: METRICS_ENABLED
         - name: HEALTH_CHECK_PORT
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: HEALTH_CHECK_PORT
         - name: ENABLE_GIT_INTEGRATION
           valueFrom:
             configMapKeyRef:
-              name: contextops-config
+              name: platformctl-config
               key: ENABLE_GIT_INTEGRATION
         livenessProbe:
           httpGet:
@@ -773,10 +788,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: customer-git-branch-svc
-  namespace: contextops
+  namespace: platformctl
   labels:
     app.kubernetes.io/name: customer-git-branch-svc
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/component: integration-service
 spec:
   selector:

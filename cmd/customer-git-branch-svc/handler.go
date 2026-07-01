@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contextops/platformctl/internal/clients/git"
-	"github.com/contextops/platformctl/internal/clients/helm"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/clients/git"
+	"github.com/kriipke/platformctl/internal/clients/helm"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/pkg/api"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +24,7 @@ type ValuesCorrelator interface {
 func NewCustomerGitBranchHandler(cfg *config.Config) *CustomerGitBranchHandler {
 	return &CustomerGitBranchHandler{
 		gitClient:        git.NewGitClient(),
-		helmClient:       helm.NewHelmClient(),
+		helmClient:       helm.NewHelmClient(cfg.Helm),
 		valuesCorrelator: &ValuesCorrelatorImpl{},
 	}
 }

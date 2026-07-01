@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the structured result models returned by each integration service in ContextOps. These models ensure consistent data structures for aggregation, caching, and presentation in the read model.
+This document defines the structured result models returned by each integration service in Platformctl. These models ensure consistent data structures for aggregation, caching, and presentation in the read model.
 
 ---
 

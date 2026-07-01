@@ -510,7 +510,7 @@ func (esc *ExternalServiceHealthChecker) CheckHealth(ctx context.Context) Health
 	}
 	
 	// Add headers to identify the health check
-	req.Header.Set("User-Agent", "ContextOps-HealthCheck/1.0")
+	req.Header.Set("User-Agent", "Platformctl-HealthCheck/1.0")
 	req.Header.Set("X-Health-Check", "true")
 	
 	// Make the request

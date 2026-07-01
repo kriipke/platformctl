@@ -12,18 +12,19 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/contextops/platformctl/internal/aggregator"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/database"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/handlers"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/readmodel"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/aggregator"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/database"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/handlers"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/readmodel"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // Phase1DIntegrationTestSuite tests the complete Phase 1D GitOps aggregator and status API integration
@@ -44,7 +45,7 @@ func (suite *Phase1DIntegrationTestSuite) SetupSuite() {
 	cfg := config.Load()
 	cfg.DatabaseURL = os.Getenv("TEST_DATABASE_URL")
 	if cfg.DatabaseURL == "" {
-		cfg.DatabaseURL = "postgres://test:test@localhost:5432/contextops_test?sslmode=disable"
+		cfg.DatabaseURL = "postgres://test:test@localhost:5432/platformctl_test?sslmode=disable"
 	}
 	cfg.RabbitMQURL = os.Getenv("TEST_RABBITMQ_URL")
 	if cfg.RabbitMQURL == "" {
@@ -61,7 +62,7 @@ func (suite *Phase1DIntegrationTestSuite) SetupSuite() {
 	require.NoError(suite.T(), err)
 
 	// Setup test RabbitMQ
-	suite.rabbitmq, err = events.NewGitOpsRabbitMQ(cfg.RabbitMQURL, "phase1d-integration-test")
+	suite.rabbitmq, err = events.NewGitOpsMessageBus(cfg.RabbitMQURL, cfg)
 	require.NoError(suite.T(), err)
 
 	// Initialize components

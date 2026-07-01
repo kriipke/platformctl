@@ -3,19 +3,19 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: environment-config
-  namespace: contextops-staging
+  namespace: platformctl-staging
   labels:
     app.kubernetes.io/name: environment-config
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: staging
   annotations:
-    contextops.io/environment: staging
-    contextops.io/config-version: "1.0.0"
+    platformctl.io/environment: staging
+    platformctl.io/config-version: "1.0.0"
 data:
   # Environment identification
   ENVIRONMENT: "staging"
   ENVIRONMENT_SHORT: "staging"
-  CLUSTER_NAME: "contextops-staging-cluster"
+  CLUSTER_NAME: "platformctl-staging-cluster"
   
   # Feature flags for staging (production-like)
   ENABLE_DEBUG_LOGGING: "false"
@@ -37,9 +37,9 @@ data:
   RATE_LIMIT_RPS: "100"
   
   # Staging URLs and endpoints
-  FRONTEND_URL: "https://staging.contextops.com"
-  API_BASE_URL: "https://staging.contextops.com/api"
-  WEBHOOKS_BASE_URL: "https://staging.contextops.com/webhooks"
+  FRONTEND_URL: "https://staging.platformctl.com"
+  API_BASE_URL: "https://staging.platformctl.com/api"
+  WEBHOOKS_BASE_URL: "https://staging.platformctl.com/webhooks"
   
   # Staging database settings
   DB_LOG_QUERIES: "false"

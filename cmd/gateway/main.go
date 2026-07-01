@@ -13,14 +13,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/database"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/handlers"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/readmodel"
-	"github.com/contextops/platformctl/internal/storage"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/database"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/handlers"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/readmodel"
+	"github.com/kriipke/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 func main() {
@@ -169,6 +169,7 @@ func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environ
 	apiGroup.POST("/contexts/:name/actions/sync-apps", ginHandlerWrapper(actionHandler.HandleSyncApps))
 	apiGroup.POST("/contexts/:name/actions/validate-environments", ginHandlerWrapper(actionHandler.HandleValidateEnvironments))
 	apiGroup.POST("/contexts/:name/actions/correlate-contexts", ginHandlerWrapper(actionHandler.HandleCorrelateContexts))
+	apiGroup.POST("/contexts/:name/actions/correlate-multi-environment", ginHandlerWrapper(actionHandler.HandleCorrelateMultiEnvironment))
 	apiGroup.POST("/contexts/:name/actions/inspect-manifests", ginHandlerWrapper(actionHandler.HandleInspectManifests))
 
 	// GitOps Status routes (Phase 1D)

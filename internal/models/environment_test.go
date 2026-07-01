@@ -18,7 +18,7 @@ func TestEnvironmentMarshaling(t *testing.T) {
 		{
 			name: "valid environment manifest",
 			environment: Environment{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "Environment",
 				Metadata: EnvironmentMetadata{
 					Name: "dev-environment",

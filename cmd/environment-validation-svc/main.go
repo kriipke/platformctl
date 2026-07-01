@@ -5,12 +5,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/storage"
 )
 
 func main() {
@@ -29,7 +28,7 @@ func main() {
 		Enabled:     cfg.Observability.MetricsEnabled,
 		Port:        cfg.Observability.MetricsPort,
 		ServiceName: "environment-validation-service",
-		Namespace:   "contextops",
+		Namespace:   "platformctl",
 	}
 	metrics := observability.NewMetrics(metricsConfig)
 
@@ -65,25 +64,15 @@ func main() {
 		}
 	}()
 
-	// Service setup
-	appStore := storage.NewAppStore(db)
-	environmentStore := storage.NewEnvironmentStore(db)
-	contextStore := storage.NewContextStore(db)
+	// Create the environment validation handler and consume environment commands
+	envHandler := NewEnvironmentValidationHandler(cfg)
 
-	// Create environment validation service with observability
-	// TODO: Implement proper environment validation service
-	_ = db
-	_ = rabbitmq
-	_ = appStore
-	_ = environmentStore
-	_ = contextStore
-	_ = logger
-	_ = metrics
+	consumer := events.NewCommandConsumerWithBindings(rabbitmq, "gitops.environment-validation.q", []string{"cmd.environment.*"})
+	if err := consumer.Start(envHandler); err != nil {
+		logger.NewContextLogger(context.Background()).Fatal().Err(err).Msg("Failed to start command consumer")
+	}
 
-	// Start service - TODO: Implement proper service startup
-	ctx := context.Background()
-
-	logger.NewContextLogger(ctx).Info().Msg("Environment validation service started")
+	logger.NewContextLogger(context.Background()).Info().Msg("Environment validation service started")
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
@@ -91,15 +80,8 @@ func main() {
 	<-sigChan
 
 	logger.NewContextLogger(context.Background()).Info().Msg("Shutting down environment validation service")
-	
-	// Graceful shutdown
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	// TODO: Implement proper shutdown
-	if false { // err := environmentValidationService.Stop(shutdownCtx); err != nil {
-		logger.NewContextLogger(shutdownCtx).Error().Err(err).Msg("Error during service shutdown")
+	if err := consumer.Stop(); err != nil {
+		logger.NewContextLogger(context.Background()).Error().Err(err).Msg("Error stopping command consumer")
 	}
-	
 	logger.NewContextLogger(context.Background()).Info().Msg("Environment validation service stopped")
 }

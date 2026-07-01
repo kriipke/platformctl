@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 var (
@@ -206,6 +206,14 @@ func (j *JWTManager) ValidateToken(tokenString string) (*CustomClaims, error) {
 	// Validate custom claims
 	if err := j.validateCustomClaims(claims); err != nil {
 		return nil, err
+	}
+
+	// Ensure the metadata map is always initialized so callers can safely
+	// read from and write to it without a nil-map check. The "omitempty" tag
+	// means an empty map is dropped during serialization, so a freshly parsed
+	// token always arrives here with a nil map.
+	if claims.Metadata == nil {
+		claims.Metadata = make(map[string]interface{})
 	}
 
 	return claims, nil

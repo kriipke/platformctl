@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contextops/platformctl/internal/clients/vault"
-	"github.com/contextops/platformctl/internal/clients/kubernetes"
-	"github.com/contextops/platformctl/internal/clients/helm"
-	"github.com/contextops/platformctl/internal/clients/git"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/clients/vault"
+	"github.com/kriipke/platformctl/internal/clients/kubernetes"
+	"github.com/kriipke/platformctl/internal/clients/helm"
+	"github.com/kriipke/platformctl/internal/clients/git"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/pkg/api"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +24,7 @@ func NewEnvironmentValidationHandler(cfg *config.Config) *EnvironmentValidationH
 	return &EnvironmentValidationHandler{
 		vaultClient:      vault.NewHashiCorpVaultClient(cfg.Vault),
 		kubernetesClient: kubernetes.NewMultiClusterClient(cfg),
-		helmClient:       helm.NewHelmClient(),
+		helmClient:       helm.NewHelmClient(cfg.Helm),
 		gitClient:        git.NewGitClient(),
 	}
 }

@@ -1,8 +1,8 @@
-# Multi-stage Dockerfile for ContextOps GitOps Monitoring Platform
+# Multi-stage Dockerfile for Platformctl GitOps Monitoring Platform
 # Optimized for production deployment with minimal attack surface
 
 # Stage 1: Build environment
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -51,12 +51,12 @@ ENV CGO_ENABLED=0 \
 RUN go build \
     -ldflags="-w -s" \
     -a -installsuffix cgo \
-    -o /build/bin/contextops \
+    -o /build/bin/platformctl \
     ./cmd/${SERVICE_NAME}/
 
 # Create health check script
 RUN echo '#!/bin/sh' > /build/bin/healthcheck && \
-    echo 'exec /app/contextops healthcheck' >> /build/bin/healthcheck && \
+    echo 'exec /app/platformctl healthcheck' >> /build/bin/healthcheck && \
     chmod +x /build/bin/healthcheck
 
 # Stage 2: Runtime environment
@@ -70,25 +70,25 @@ RUN apk add --no-cache \
     && update-ca-certificates
 
 # Create non-root user for security
-RUN addgroup -g 1000 -S contextops && \
-    adduser -u 1000 -S contextops -G contextops -h /app
+RUN addgroup -g 1000 -S platformctl && \
+    adduser -u 1000 -S platformctl -G platformctl -h /app
 
 # Set working directory
 WORKDIR /app
 
 # Copy binary and health check script from builder
-COPY --from=builder --chown=contextops:contextops /build/bin/contextops /app/contextops
-COPY --from=builder --chown=contextops:contextops /build/bin/healthcheck /app/healthcheck
+COPY --from=builder --chown=platformctl:platformctl /build/bin/platformctl /app/platformctl
+COPY --from=builder --chown=platformctl:platformctl /build/bin/healthcheck /app/healthcheck
 
 # Copy database migrations if they exist
-COPY --from=builder --chown=contextops:contextops /build/migrations ./migrations
+COPY --from=builder --chown=platformctl:platformctl /build/migrations ./migrations
 
 # Create directories for logs and data
 RUN mkdir -p /app/logs /app/data && \
-    chown -R contextops:contextops /app
+    chown -R platformctl:platformctl /app
 
 # Switch to non-root user
-USER contextops:contextops
+USER platformctl:platformctl
 
 # Set environment variables
 ENV PATH="/app:${PATH}" \
@@ -103,17 +103,17 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD ["/app/healthcheck"]
 
 # Default command - will be overridden by Kubernetes deployment
-CMD ["/app/contextops"]
+CMD ["/app/platformctl"]
 
 # Labels for container metadata
 LABEL \
-    org.opencontainers.image.title="ContextOps" \
+    org.opencontainers.image.title="Platformctl" \
     org.opencontainers.image.description="GitOps-optimized application monitoring platform" \
-    org.opencontainers.image.vendor="ContextOps" \
+    org.opencontainers.image.vendor="Platformctl" \
     org.opencontainers.image.version="${VERSION}" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${COMMIT_SHA}" \
-    org.opencontainers.image.source="https://github.com/contextops/platformctl" \
+    org.opencontainers.image.source="https://github.com/kriipke/platformctl" \
     org.opencontainers.image.licenses="MIT"
 
 # Expose common ports (will be overridden by Kubernetes service definitions)

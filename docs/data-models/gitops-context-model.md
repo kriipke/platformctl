@@ -8,7 +8,7 @@
 
 ## Overview
 
-The GitOps Context model is the central data structure in ContextOps, representing an application deployed across multiple environments using GitOps workflows. It integrates deeply with ArgoCD ApplicationSets, Helm umbrella charts, Vault-secrets-operator, and customer branch management. This document defines the complete GitOps Context schema with validation rules and implementation guidance.
+The GitOps Context model is the central data structure in Platformctl, representing an application deployed across multiple environments using GitOps workflows. It integrates deeply with ArgoCD ApplicationSets, Helm umbrella charts, Vault-secrets-operator, and customer branch management. This document defines the complete GitOps Context schema with validation rules and implementation guidance.
 
 ---
 
@@ -18,7 +18,7 @@ The GitOps Context model is the central data structure in ContextOps, representi
 
 ```go
 type Context struct {
-    APIVersion string          `json:"apiVersion" yaml:"apiVersion" validate:"required,eq=contextops/v1"`
+    APIVersion string          `json:"apiVersion" yaml:"apiVersion" validate:"required,eq=platformctl/v1"`
     Kind       string          `json:"kind" yaml:"kind" validate:"required,eq=Context"`
     Metadata   ContextMetadata `json:"metadata" yaml:"metadata" validate:"required"`
     Spec       GitOpsContextSpec `json:"spec" yaml:"spec" validate:"required"`
@@ -547,7 +547,7 @@ type ValidationError struct {
 ## Example GitOps Context
 
 ```yaml
-apiVersion: contextops/v1
+apiVersion: platformctl/v1
 kind: Context
 metadata:
   name: webapp-dev
@@ -619,7 +619,7 @@ spec:
     auth:
       method: "kubernetes"
       kubernetes:
-        role: "contextops-webapp"
+        role: "platformctl-webapp"
         serviceAccount: "webapp-vault-reader"
     
     staticSecrets:

@@ -9,17 +9,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/contextops/platformctl/internal/testutil"
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/testutil"
+	"github.com/kriipke/platformctl/internal/models"
 )
-
-const JWTClaimsKey = "jwt_claims"
 
 func TestNewRBACManager(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.db)
 }
@@ -28,7 +26,7 @@ func TestRBACManagerCheckPermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	// Create test customer and user
 	customerID := uuid.New()
@@ -130,7 +128,7 @@ func TestRBACManagerCheckPermissionWithRoles(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	// Create test customer
 	customerID := uuid.New()
@@ -173,7 +171,7 @@ func TestRBACManagerCheckPermissionWithDenyEffect(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -205,7 +203,7 @@ func TestRBACManagerCheckPermissionWithExpiration(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -231,7 +229,7 @@ func TestRBACManagerCheckPermissionWithConditions(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -261,7 +259,7 @@ func TestRBACManagerGrantPermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -309,7 +307,7 @@ func TestRBACManagerGrantPermissionUpsert(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -338,7 +336,7 @@ func TestRBACManagerRevokePermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	userID := "test-user"
@@ -384,7 +382,7 @@ func TestRBACManagerGetResourcePermissions(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	customerID := uuid.New()
 	resourceID := "app-123"
@@ -436,7 +434,7 @@ func TestRBACManagerMatchesPermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	tests := []struct {
 		name         string
@@ -544,7 +542,7 @@ func TestRBACManagerCheckRolePermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -610,7 +608,7 @@ func TestRBACManagerMatchesRolePermission(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	tests := []struct {
 		name         string
@@ -682,7 +680,7 @@ func TestRBACManagerGetRoleDefinition(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	tests := []struct {
 		name     string
@@ -794,7 +792,7 @@ func TestRBACManagerConditionEvaluation(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	manager := NewRBACManager(testDB.DB.DB())
+	manager := NewRBACManager(testDB.DB.DB)
 
 	// Create test context with customer and claims
 	customerID := uuid.New()
@@ -915,26 +913,3 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-// Mock implementation of RequireAuth for testing
-func RequireAuth(ctx context.Context) (*models.Customer, *CustomClaims, error) {
-	customer, ok := ctx.Value("customer").(*models.Customer)
-	if !ok {
-		return nil, nil, ErrInvalidToken
-	}
-
-	claims, ok := ctx.Value(JWTClaimsKey).(*CustomClaims)
-	if !ok {
-		return customer, nil, nil // Claims are optional
-	}
-
-	return customer, claims, nil
-}
-
-// Mock implementation of RequireClaims for testing
-func RequireClaims(ctx context.Context) (*CustomClaims, error) {
-	claims, ok := ctx.Value(JWTClaimsKey).(*CustomClaims)
-	if !ok {
-		return nil, ErrInvalidToken
-	}
-	return claims, nil
-}
