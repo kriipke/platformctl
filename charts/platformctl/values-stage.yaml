@@ -5,6 +5,12 @@
 #
 # Only deltas from values.yaml belong here.
 
+# Stage deploys the mutable "latest" tag, so nodes must always re-pull to pick up
+# a freshly built image (IfNotPresent would serve a stale cached layer). Prod
+# pins immutable v*.*.* tags and keeps the IfNotPresent default.
+image:
+  pullPolicy: Always
+
 config:
   LOG_LEVEL: "debug"
   # Shared DO managed Postgres has a small connection limit — keep this low.

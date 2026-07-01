@@ -25,6 +25,11 @@ spec:
       annotations:
         # Roll pods when the shared config changes.
         checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        # Force a rollout on every `helm upgrade`, even when the image tag is
+        # unchanged (stage redeploys the mutable "latest" tag). Without this a
+        # no-op upgrade leaves the old pods — and the freshly built image —
+        # running indefinitely.
+        rollme: {{ $root.Release.Revision | quote }}
     spec:
       {{- if $merged.serviceAccount }}
       serviceAccountName: {{ $merged.serviceAccount }}
