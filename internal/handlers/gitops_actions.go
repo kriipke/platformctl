@@ -245,7 +245,9 @@ func (h *GitOpsActionHandler) HandleCorrelateMultiEnvironment(w http.ResponseWri
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	// Response headers are already committed; nothing actionable remains if the
+	// client disconnects mid-encode, so the error is explicitly discarded.
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // Manifest inspection endpoint for detailed analysis

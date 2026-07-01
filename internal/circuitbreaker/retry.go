@@ -200,7 +200,9 @@ func (r *RetryExecutor) calculateDelay(attempt int) time.Duration {
 
 	if r.config.Jitter {
 		// ±50% jitter keeps the delay within [0.5x, 1.5x) of the base value.
-		jitter := delay * 0.5 * (rand.Float64()*2 - 1)
+		// This jitter only spreads out retry timing; it is not security-
+		// sensitive, so math/rand is appropriate here rather than crypto/rand.
+		jitter := delay * 0.5 * (rand.Float64()*2 - 1) // #nosec G404 -- non-cryptographic jitter for retry backoff
 		delay += jitter
 	}
 
