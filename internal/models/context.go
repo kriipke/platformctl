@@ -6,7 +6,7 @@ import (
 
 // Context pairing struct
 type Context struct {
-	APIVersion string          `json:"apiVersion" validate:"required,eq=contextops/v1"`
+	APIVersion string          `json:"apiVersion" validate:"required,eq=platformctl/v1"`
 	Kind       string          `json:"kind" validate:"required,eq=Context"`
 	Metadata   ContextMetadata `json:"metadata" validate:"required"`
 	Spec       ContextSpec     `json:"spec" validate:"required"`

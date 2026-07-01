@@ -2,12 +2,12 @@
 apiVersion: builtin
 kind: ConfigMapGenerator
 metadata:
-  name: contextops-env-config
+  name: platformctl-env-config
   annotations:
     config.kubernetes.io/local-config: "true"
 
 # Environment configuration maps
-configMapName: contextops-env-config
+configMapName: platformctl-env-config
 behavior: replace
 
 # Environment-specific configuration files
@@ -18,7 +18,7 @@ files:
 
 # Common configuration literals
 literals:
-- APPLICATION_NAME=ContextOps
+- APPLICATION_NAME=Platformctl
 - APPLICATION_VERSION=v1.0.0
 - SUPPORTED_ENVIRONMENTS=development,staging,production
 - DEFAULT_TIMEZONE=UTC

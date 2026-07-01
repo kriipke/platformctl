@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps must integrate with multiple external systems (HashiCorp Vault, ArgoCD, New Relic, Kubernetes API, GitHub) to collect operational data and trigger actions. Each integration has different characteristics:
+Platformctl must integrate with multiple external systems (HashiCorp Vault, ArgoCD, New Relic, Kubernetes API, GitHub) to collect operational data and trigger actions. Each integration has different characteristics:
 
 - **Failure-prone:** External services may be temporarily unavailable or rate-limited
 - **Variable latency:** Some integrations (Vault auth) are fast, others (ArgoCD sync) can take minutes
@@ -79,8 +79,8 @@ We will use **RabbitMQ** with an event-driven architecture for integration workf
 ### Architecture Components
 
 #### Message Exchanges
-- `contextops.commands` (topic exchange) - for publishing command events
-- `contextops.results` (topic exchange) - for publishing result events
+- `platformctl.commands` (topic exchange) - for publishing command events
+- `platformctl.results` (topic exchange) - for publishing result events
 
 #### Routing Keys
 - Command routing: `cmd.context.{action}` (e.g., `cmd.context.refresh`, `cmd.context.sync`)

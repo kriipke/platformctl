@@ -7,7 +7,7 @@ import (
 
 	"github.com/caarlos0/env/v9"
 	"github.com/joho/godotenv"
-	"github.com/contextops/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/observability"
 )
 
 type Config struct {
@@ -18,7 +18,7 @@ type Config struct {
 	LogLevel     string        `env:"LOG_LEVEL" envDefault:"info"`
 
 	// Database configuration
-	DatabaseURL      string        `env:"DATABASE_URL" envDefault:"postgres://localhost/contextops?sslmode=disable"`
+	DatabaseURL      string        `env:"DATABASE_URL" envDefault:"postgres://localhost/platformctl?sslmode=disable"`
 	MaxDBConnections int           `env:"MAX_DB_CONNECTIONS" envDefault:"25"`
 	DBTimeout        time.Duration `env:"DB_TIMEOUT" envDefault:"10s"`
 
@@ -55,7 +55,7 @@ type VaultConfig struct {
 	Enabled   bool   `env:"ENABLED" envDefault:"true"`
 	Address   string `env:"ADDRESS" envDefault:"https://vault.example.com"`
 	AuthPath  string `env:"AUTH_PATH" envDefault:"kubernetes"`
-	Role      string `env:"ROLE" envDefault:"contextops"`
+	Role      string `env:"ROLE" envDefault:"platformctl"`
 	Namespace string `env:"NAMESPACE"`
 }
 
@@ -85,7 +85,7 @@ type ObservabilityConfig struct {
 	MetricsEnabled     bool   `env:"METRICS_ENABLED" envDefault:"true"`
 	MetricsPort        string `env:"METRICS_PORT" envDefault:"9090"`
 	MetricsPath        string `env:"METRICS_PATH" envDefault:"/metrics"`
-	MetricsNamespace   string `env:"METRICS_NAMESPACE" envDefault:"contextops"`
+	MetricsNamespace   string `env:"METRICS_NAMESPACE" envDefault:"platformctl"`
 	
 	// Health check configuration
 	HealthCheckPort     string        `env:"HEALTH_CHECK_PORT" envDefault:"8081"`

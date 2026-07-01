@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 type AppStore struct {
@@ -76,7 +76,7 @@ func (s *AppStore) Get(ctx context.Context, name, customerID string) (*models.Ap
 	}
 
 	app := &models.App{
-		APIVersion: "contextops/v1",
+		APIVersion: "platformctl/v1",
 		Kind:       "App",
 		Metadata: models.AppMetadata{
 			Name:      name,
@@ -199,7 +199,7 @@ func (s *AppStore) List(ctx context.Context, customerID string) ([]*models.App, 
 		}
 
 		app := &models.App{
-			APIVersion: "contextops/v1",
+			APIVersion: "platformctl/v1",
 			Kind:       "App",
 			Metadata: models.AppMetadata{
 				Name:      name,

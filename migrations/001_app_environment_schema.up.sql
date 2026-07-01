@@ -1,5 +1,18 @@
 -- App+Environment+Context database schema for multi-tenant GitOps platform
 
+-- Customers table - tenant/customer accounts. Referenced by FKs in later
+-- migrations (002 security/audit schema) and queried by the auth service
+-- (internal/auth/enhanced_middleware.go). Must exist before those FKs.
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL DEFAULT '',
+    salt VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT true
+);
+
 -- Apps table - shareable application manifests
 CREATE TABLE apps (
     name VARCHAR(255) NOT NULL,

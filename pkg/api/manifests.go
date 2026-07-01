@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 // API request/response types for App, Environment, and Context manifests

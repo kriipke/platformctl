@@ -1,12 +1,13 @@
-package storage
+package storage_test
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
-	"github.com/contextops/platformctl/internal/models"
-	"github.com/contextops/platformctl/internal/testutil"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestEnvironmentStore_Create(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -48,7 +49,7 @@ func TestEnvironmentStore_Create(t *testing.T) {
 			name:        "duplicate environment creation should fail",
 			env:         testutil.CreateTestEnvironment("test-env-1"), // Same name as first test
 			expectError: true,
-			errorType:   ErrConflict,
+			errorType:   storage.ErrConflict,
 		},
 	}
 
@@ -79,7 +80,7 @@ func TestEnvironmentStore_Get(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -108,14 +109,14 @@ func TestEnvironmentStore_Get(t *testing.T) {
 			envName:     "non-existent-env",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "get environment with wrong customer ID",
 			envName:     "get-test-env",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -147,7 +148,7 @@ func TestEnvironmentStore_Update(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -210,7 +211,7 @@ func TestEnvironmentStore_Update(t *testing.T) {
 			},
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name: "update environment with wrong customer ID",
@@ -219,7 +220,7 @@ func TestEnvironmentStore_Update(t *testing.T) {
 			},
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -260,7 +261,7 @@ func TestEnvironmentStore_Delete(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-123"
 
@@ -291,21 +292,21 @@ func TestEnvironmentStore_Delete(t *testing.T) {
 			envName:     "non-existent-env",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete environment with wrong customer ID",
 			envName:     "delete-test-env-2",
 			customerID:  "wrong-customer",
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 		{
 			name:        "delete already deleted environment",
 			envName:     "delete-test-env-1",
 			customerID:  customerID,
 			expectError: true,
-			errorType:   ErrNotFound,
+			errorType:   storage.ErrNotFound,
 		},
 	}
 
@@ -322,7 +323,7 @@ func TestEnvironmentStore_Delete(t *testing.T) {
 				
 				// Verify the environment is deleted
 				_, err := store.Get(ctx, tt.envName, tt.customerID)
-				assert.ErrorIs(t, err, ErrNotFound)
+				assert.ErrorIs(t, err, storage.ErrNotFound)
 			}
 		})
 	}
@@ -336,7 +337,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID1 := "test-customer-1"
 	customerID2 := "test-customer-2"
@@ -402,7 +403,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 				for _, env := range envs {
 					assert.NotNil(t, env)
 					assert.NotEmpty(t, env.Metadata.Name)
-					assert.Equal(t, "contextops/v1", env.APIVersion)
+					assert.Equal(t, "platformctl/v1", env.APIVersion)
 					assert.Equal(t, "Environment", env.Kind)
 				}
 				
@@ -427,7 +428,7 @@ func TestEnvironmentStore_ConcurrentOperations(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-concurrent"
 
@@ -502,7 +503,7 @@ func TestEnvironmentStore_ComplexVaultConfiguration(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-vault"
 
@@ -644,7 +645,7 @@ func TestEnvironmentStore_DifferentAuthMethods(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-auth"
 
@@ -704,7 +705,7 @@ func TestEnvironmentStore_ClusterConfiguration(t *testing.T) {
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close(t)
 
-	store := NewEnvironmentStore(testDB.DB)
+	store := storage.NewEnvironmentStore(testDB.DB)
 	ctx := context.Background()
 	customerID := "test-customer-cluster"
 

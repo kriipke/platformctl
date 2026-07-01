@@ -17,8 +17,11 @@ type PostgresLogger struct {
 }
 
 // NewPostgresLogger creates a new PostgreSQL audit logger
-func NewPostgresLogger(db *sql.DB) *PostgresLogger {
-	return &PostgresLogger{db: db}
+func NewPostgresLogger(db *sql.DB) (*PostgresLogger, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection is required")
+	}
+	return &PostgresLogger{db: db}, nil
 }
 
 // LogEvent logs an audit event to the database

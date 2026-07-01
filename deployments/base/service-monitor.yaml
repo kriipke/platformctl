@@ -1,17 +1,17 @@
-# ServiceMonitor for Prometheus to scrape metrics from all ContextOps services
+# ServiceMonitor for Prometheus to scrape metrics from all Platformctl services
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: contextops-services
-  namespace: contextops
+  name: platformctl-services
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-services-monitor
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-services-monitor
+    app.kubernetes.io/part-of: platformctl-platform
     prometheus: kube-prometheus
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/part-of: contextops-platform
+      app.kubernetes.io/part-of: platformctl-platform
   endpoints:
   - port: metrics
     interval: 30s
@@ -21,117 +21,117 @@ spec:
     honorLabels: true
     metricRelabelings:
     - sourceLabels: [__name__]
-      regex: 'contextops_.*'
+      regex: 'platformctl_.*'
       action: keep
     - sourceLabels: [instance]
-      targetLabel: contextops_instance
+      targetLabel: platformctl_instance
     - sourceLabels: [job]
-      targetLabel: contextops_service
+      targetLabel: platformctl_service
   namespaceSelector:
     matchNames:
-    - contextops
-    - contextops-dev
-    - contextops-prod
+    - platformctl
+    - platformctl-dev
+    - platformctl-prod
 ---
-# PrometheusRule for ContextOps alerting
+# PrometheusRule for Platformctl alerting
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: contextops-alerts
-  namespace: contextops
+  name: platformctl-alerts
+  namespace: platformctl
   labels:
-    app.kubernetes.io/name: contextops-alerts
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-alerts
+    app.kubernetes.io/part-of: platformctl-platform
     prometheus: kube-prometheus
     role: alert-rules
 spec:
   groups:
-  - name: contextops.rules
+  - name: platformctl.rules
     interval: 30s
     rules:
     # Service availability alerts
-    - alert: ContextOpsServiceDown
-      expr: up{job=~"contextops.*"} == 0
+    - alert: PlatformctlServiceDown
+      expr: up{job=~"platformctl.*"} == 0
       for: 2m
       labels:
         severity: critical
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps service {{ $labels.job }} is down"
+        summary: "Platformctl service {{ $labels.job }} is down"
         description: "{{ $labels.job }} service has been down for more than 2 minutes."
     
     # High error rate alert
-    - alert: ContextOpsHighErrorRate
-      expr: rate(contextops_http_requests_total{status=~"5.."}[5m]) / rate(contextops_http_requests_total[5m]) > 0.1
+    - alert: PlatformctlHighErrorRate
+      expr: rate(platformctl_http_requests_total{status=~"5.."}[5m]) / rate(platformctl_http_requests_total[5m]) > 0.1
       for: 5m
       labels:
         severity: warning
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "High error rate in ContextOps {{ $labels.service }}"
+        summary: "High error rate in Platformctl {{ $labels.service }}"
         description: "{{ $labels.service }} has error rate above 10% (current: {{ $value | humanizePercentage }})"
     
     # High response time alert
-    - alert: ContextOpsHighLatency
-      expr: histogram_quantile(0.95, rate(contextops_http_request_duration_seconds_bucket[5m])) > 0.5
+    - alert: PlatformctlHighLatency
+      expr: histogram_quantile(0.95, rate(platformctl_http_request_duration_seconds_bucket[5m])) > 0.5
       for: 5m
       labels:
         severity: warning
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "High latency in ContextOps {{ $labels.service }}"
+        summary: "High latency in Platformctl {{ $labels.service }}"
         description: "{{ $labels.service }} 95th percentile latency is {{ $value | humanizeDuration }}"
     
     # Database connection issues
-    - alert: ContextOpsDatabaseConnectionIssues
-      expr: contextops_database_connections_failed_total > 0
+    - alert: PlatformctlDatabaseConnectionIssues
+      expr: platformctl_database_connections_failed_total > 0
       for: 1m
       labels:
         severity: critical
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps database connection failures"
+        summary: "Platformctl database connection failures"
         description: "{{ $labels.service }} is experiencing database connection failures"
     
     # RabbitMQ connection issues
-    - alert: ContextOpsRabbitMQConnectionIssues
-      expr: contextops_rabbitmq_connections_failed_total > 0
+    - alert: PlatformctlRabbitMQConnectionIssues
+      expr: platformctl_rabbitmq_connections_failed_total > 0
       for: 1m
       labels:
         severity: critical
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps RabbitMQ connection failures"
+        summary: "Platformctl RabbitMQ connection failures"
         description: "{{ $labels.service }} is experiencing RabbitMQ connection failures"
     
     # GitOps operation failures
-    - alert: ContextOpsGitOpsOperationFailures
-      expr: increase(contextops_gitops_operations_failed_total[10m]) > 5
+    - alert: PlatformctlGitOpsOperationFailures
+      expr: increase(platformctl_gitops_operations_failed_total[10m]) > 5
       for: 2m
       labels:
         severity: warning
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps GitOps operation failures"
+        summary: "Platformctl GitOps operation failures"
         description: "{{ $labels.service }} has {{ $value }} GitOps operation failures in the last 10 minutes"
     
     # Resource usage alerts
-    - alert: ContextOpsHighMemoryUsage
-      expr: (container_memory_working_set_bytes{pod=~"contextops-.*"} / container_spec_memory_limit_bytes{pod=~"contextops-.*"}) > 0.8
+    - alert: PlatformctlHighMemoryUsage
+      expr: (container_memory_working_set_bytes{pod=~"platformctl-.*"} / container_spec_memory_limit_bytes{pod=~"platformctl-.*"}) > 0.8
       for: 5m
       labels:
         severity: warning
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps high memory usage"
+        summary: "Platformctl high memory usage"
         description: "{{ $labels.pod }} memory usage is above 80% (current: {{ $value | humanizePercentage }})"
     
-    - alert: ContextOpsHighCPUUsage
-      expr: rate(container_cpu_usage_seconds_total{pod=~"contextops-.*"}[5m]) / (container_spec_cpu_quota{pod=~"contextops-.*"} / 100000) > 0.8
+    - alert: PlatformctlHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{pod=~"platformctl-.*"}[5m]) / (container_spec_cpu_quota{pod=~"platformctl-.*"} / 100000) > 0.8
       for: 5m
       labels:
         severity: warning
-        service: contextops
+        service: platformctl
       annotations:
-        summary: "ContextOps high CPU usage"
+        summary: "Platformctl high CPU usage"
         description: "{{ $labels.pod }} CPU usage is above 80% (current: {{ $value | humanizePercentage }})"

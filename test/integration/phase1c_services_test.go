@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/pkg/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ func TestPhase1CServiceIntegration(t *testing.T) {
 	// Setup test configuration
 	cfg := &config.Config{
 		RabbitMQURL: "amqp://localhost:5672/",
-		DatabaseURL: "postgres://localhost/contextops_test?sslmode=disable",
+		DatabaseURL: "postgres://localhost/platformctl_test?sslmode=disable",
 	}
 
 	// Initialize message bus

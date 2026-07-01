@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/storage"
 )
 
 func main() {
@@ -28,17 +28,17 @@ func main() {
 	}
 	defer messageBus.Close()
 
-	// Service setup
-	appStore := storage.NewAppStore(db)
-	environmentStore := storage.NewEnvironmentStore(db)
-	contextStore := storage.NewContextStore(db)
+	// Create the multi-environment kubernetes handler and consume its commands.
+	// NOTE: no publisher currently emits cmd.kubernetes.* — this runner is wired
+	// and ready, but the gateway/publisher must target this routing key (or this
+	// binding be changed) for it to receive work. A distinct key is used so it
+	// does not duplicate the context-correlation service's cmd.context.* stream.
 	kubernetesHandler := NewMultiEnvironmentKubernetesHandler(cfg)
-	// TODO: Implement proper service framework
-	_ = kubernetesHandler
-	_ = messageBus
-	_ = appStore 
-	_ = environmentStore
-	_ = contextStore
+
+	consumer := events.NewCommandConsumerWithBindings(messageBus, "gitops.multi-environment-kubernetes.q", []string{"cmd.kubernetes.*"})
+	if err := consumer.Start(kubernetesHandler); err != nil {
+		log.Fatalf("Failed to start command consumer: %v", err)
+	}
 
 	log.Println("Multi-environment kubernetes service started")
 
@@ -48,5 +48,7 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutting down multi-environment kubernetes service")
-	// TODO: Implement proper service shutdown
+	if err := consumer.Stop(); err != nil {
+		log.Printf("Error stopping command consumer: %v", err)
+	}
 }

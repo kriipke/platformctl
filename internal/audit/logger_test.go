@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 func TestNewAuditEvent(t *testing.T) {
@@ -90,12 +90,12 @@ func TestAuditEventWithValues(t *testing.T) {
 		CustomerID: uuid.New(),
 	}
 
-	oldValues := map[string]interface{}{
+	oldValues := Metadata{
 		"name":    "old-name",
 		"version": "1.0.0",
 	}
 
-	newValues := map[string]interface{}{
+	newValues := Metadata{
 		"name":    "new-name",
 		"version": "1.1.0",
 	}
@@ -571,14 +571,14 @@ func TestMapValueScan(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var m map[string]interface{}
+			var m Metadata
 			err := (&m).Scan(tt.value)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, m)
+				assert.Equal(t, tt.expected, map[string]interface{}(m))
 			}
 		})
 	}
@@ -587,7 +587,7 @@ func TestMapValueScan(t *testing.T) {
 func TestMapValueDriverValue(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    map[string]interface{}
+		input    Metadata
 		expected string
 		wantErr  bool
 	}{

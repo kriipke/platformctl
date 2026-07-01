@@ -9,11 +9,11 @@
 
 ## Context
 
-ContextOps makes frequent calls to external systems and performs expensive computations that could benefit from caching. As the system scales, reducing redundant external API calls and computation overhead becomes critical for performance, cost, and reliability.
+Platformctl makes frequent calls to external systems and performs expensive computations that could benefit from caching. As the system scales, reducing redundant external API calls and computation overhead becomes critical for performance, cost, and reliability.
 
 ### Problem Statement
 
-Without strategic caching, ContextOps experiences:
+Without strategic caching, Platformctl experiences:
 
 1. **High external API usage:** Repeated calls to Vault, ArgoCD, New Relic, GitHub APIs
 2. **Poor response times:** Status queries require real-time external calls
@@ -143,7 +143,7 @@ cache_policies:
 ### Cache Key Strategy
 ```go
 type CacheKey struct {
-    Namespace string // "contextops"
+    Namespace string // "platformctl"
     Service   string // "vault", "argocd", etc.
     Operation string // "status", "file", "secret"
     Context   string // context name

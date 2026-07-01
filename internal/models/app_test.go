@@ -18,7 +18,7 @@ func TestAppMarshaling(t *testing.T) {
 		{
 			name: "valid app manifest",
 			app: App{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "App",
 				Metadata: AppMetadata{
 					Name: "test-app",

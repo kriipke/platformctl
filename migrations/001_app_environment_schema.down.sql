@@ -40,3 +40,4 @@ DROP TABLE IF EXISTS applicationsets;
 DROP TABLE IF EXISTS contexts;
 DROP TABLE IF EXISTS environments;
 DROP TABLE IF EXISTS apps;
+DROP TABLE IF EXISTS customers;

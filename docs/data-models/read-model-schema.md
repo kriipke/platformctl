@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the read model schemas used in ContextOps for optimized query performance and data aggregation. The read model implements a CQRS-lite pattern where write operations go through the command/event system, while read operations are served from denormalized, query-optimized structures.
+This document defines the read model schemas used in Platformctl for optimized query performance and data aggregation. The read model implements a CQRS-lite pattern where write operations go through the command/event system, while read operations are served from denormalized, query-optimized structures.
 
 ---
 

@@ -1,6 +1,6 @@
-# ContextOps GitHub Actions Workflows
+# Platformctl GitHub Actions Workflows
 
-This directory contains comprehensive GitHub Actions workflows for the ContextOps GitOps monitoring platform. The workflows provide complete CI/CD automation including building, testing, security scanning, and deployment.
+This directory contains comprehensive GitHub Actions workflows for the Platformctl GitOps monitoring platform. The workflows provide complete CI/CD automation including building, testing, security scanning, and deployment.
 
 ## 🚀 Workflows Overview
 

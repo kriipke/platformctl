@@ -9,8 +9,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // GitOpsAggregator processes result messages from GitOps integration services
@@ -68,6 +68,16 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 			a.metrics.IncrementCounter("aggregator_processing_errors", map[string]string{"type": "context"})
 			return fmt.Errorf("failed to process context pairing result: %w", err)
 		}
+	case "git":
+		if err := a.processCustomerBranchResult(ctx, tx, result); err != nil {
+			a.metrics.IncrementCounter("aggregator_processing_errors", map[string]string{"type": "git"})
+			return fmt.Errorf("failed to process customer branch result: %w", err)
+		}
+	case "kubernetes":
+		if err := a.processMultiEnvironmentResult(ctx, tx, result); err != nil {
+			a.metrics.IncrementCounter("aggregator_processing_errors", map[string]string{"type": "kubernetes"})
+			return fmt.Errorf("failed to process multi-environment result: %w", err)
+		}
 	default:
 		a.logger.Warn().Str("manifest_type", result.ManifestType).Msg("Unknown manifest type")
 		return fmt.Errorf("unknown manifest type: %s", result.ManifestType)
@@ -79,10 +89,16 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 		return fmt.Errorf("failed to update command run status: %w", err)
 	}
 
-	// Update context pairing status
-	if err := a.updateContextPairingStatus(ctx, tx, result); err != nil {
-		a.metrics.IncrementCounter("aggregator_context_update_errors", nil)
-		return fmt.Errorf("failed to update context pairing status: %w", err)
+	// Update context pairing status for pairing-relevant manifest types only.
+	// git (customer-branch) and kubernetes (multi-environment) results are
+	// materialized into their own tables and do not represent an app+environment
+	// pairing, so they are skipped here.
+	switch result.ManifestType {
+	case "app", "environment", "context":
+		if err := a.updateContextPairingStatus(ctx, tx, result); err != nil {
+			a.metrics.IncrementCounter("aggregator_context_update_errors", nil)
+			return fmt.Errorf("failed to update context pairing status: %w", err)
+		}
 	}
 
 	// Commit transaction
@@ -277,6 +293,121 @@ func (a *GitOpsAggregator) processContextPairingResult(ctx context.Context, tx *
 	)
 
 	return err
+}
+
+// processCustomerBranchResult materializes a customer-git-branch result into the
+// customer_git_branch_correlation read-model table. The customer-git-branch
+// service carries its detail in the result payload (not a typed field), so the
+// core fields are extracted from there.
+func (a *GitOpsAggregator) processCustomerBranchResult(ctx context.Context, tx *sqlx.Tx, result *api.GitOpsResultMessage) error {
+	repoURL, branch, compliance := customerBranchFields(result)
+	performanceMetrics, _ := json.Marshal(result.PerformanceMetrics)
+
+	query := `
+		INSERT INTO customer_git_branch_correlation (
+			customer_id, context_name, repository_url, customer_branch,
+			branch_compliance, last_validated, validation_error, performance_metrics, last_updated
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, NOW()
+		)
+		ON CONFLICT (customer_id, context_name, repository_url, customer_branch)
+		DO UPDATE SET
+			branch_compliance = EXCLUDED.branch_compliance,
+			last_validated = EXCLUDED.last_validated,
+			validation_error = EXCLUDED.validation_error,
+			performance_metrics = EXCLUDED.performance_metrics,
+			last_updated = NOW()
+	`
+
+	_, err := tx.ExecContext(ctx, query,
+		result.CustomerID,
+		result.ContextName,
+		repoURL,
+		branch,
+		compliance,
+		result.CompletedAt,
+		result.ErrorMessage,
+		performanceMetrics,
+	)
+
+	return err
+}
+
+// processMultiEnvironmentResult records a multi-environment Kubernetes
+// correlation as an operation row, stashing the correlation payload in the
+// multi_env_correlation column. Per-app materialization into
+// multi_environment_app_status is left as a follow-up (it requires structured
+// result data the service does not yet emit).
+func (a *GitOpsAggregator) processMultiEnvironmentResult(ctx context.Context, tx *sqlx.Tx, result *api.GitOpsResultMessage) error {
+	multiEnvData, _ := json.Marshal(result.Payload)
+	performanceMetrics, _ := json.Marshal(result.PerformanceMetrics)
+
+	operationStatus := "completed"
+	if result.Status == "error" {
+		operationStatus = "failed"
+	}
+
+	query := `
+		INSERT INTO context_pairing_operations (
+			customer_id, context_name, operation_type, operation_status,
+			multi_env_correlation, error_details, started_at, completed_at,
+			performance_metrics, correlation_id
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+		)
+	`
+
+	_, err := tx.ExecContext(ctx, query,
+		result.CustomerID,
+		result.ContextName,
+		"correlate",
+		operationStatus,
+		multiEnvData,
+		result.ErrorMessage,
+		result.RequestedAt,
+		result.CompletedAt,
+		performanceMetrics,
+		result.CorrelationID,
+	)
+
+	return err
+}
+
+// customerBranchFields extracts the repository URL, customer branch, and
+// compliance status for a customer-git-branch result. The detail lives in the
+// result payload; the branch falls back to the manifest metadata.
+func customerBranchFields(result *api.GitOpsResultMessage) (repoURL, branch, compliance string) {
+	repoURL = stringFromPayload(result.Payload, "repository_url")
+
+	branch = stringFromPayload(result.Payload, "customer_branch")
+	if branch == "" {
+		branch = result.ManifestMetadata.CustomerBranch
+	}
+
+	validationStatus := stringFromPayload(result.Payload, "validation_status")
+	switch {
+	case result.Status == "error":
+		compliance = "non_compliant"
+	case validationStatus == "valid" || result.Status == "healthy":
+		compliance = "compliant"
+	case validationStatus == "":
+		compliance = "unknown"
+	default:
+		compliance = "non_compliant"
+	}
+
+	return repoURL, branch, compliance
+}
+
+// stringFromPayload safely reads a string value from a result payload map.
+func stringFromPayload(payload map[string]interface{}, key string) string {
+	if payload == nil {
+		return ""
+	}
+	if v, ok := payload[key].(string); ok {
+		return v
+	}
+	return ""
 }
 
 // updateCommandRunStatus updates the command run status with the result

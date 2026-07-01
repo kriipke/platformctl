@@ -1,11 +1,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: contextops-ingress
-  namespace: contextops-dev
+  name: platformctl-ingress
+  namespace: platformctl-dev
   labels:
-    app.kubernetes.io/name: contextops-ingress
-    app.kubernetes.io/part-of: contextops-platform
+    app.kubernetes.io/name: platformctl-ingress
+    app.kubernetes.io/part-of: platformctl-platform
     app.kubernetes.io/environment: development
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -19,10 +19,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - contextops-dev.example.com
-    secretName: contextops-dev-tls
+    - platformctl-dev.example.com
+    secretName: platformctl-dev-tls
   rules:
-  - host: contextops-dev.example.com
+  - host: platformctl-dev.example.com
     http:
       paths:
       # API Gateway routes
@@ -30,14 +30,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-gateway
+            name: dev-platformctl-gateway
             port:
               number: 80
       - path: /health
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-gateway
+            name: dev-platformctl-gateway
             port:
               number: 80
       # RabbitMQ Management (development only)
@@ -45,59 +45,59 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-rabbitmq-management
+            name: dev-platformctl-rabbitmq-management
             port:
               number: 15672
   # Metrics endpoints for Prometheus scraping
-  - host: metrics-dev.contextops.example.com
+  - host: metrics-dev.platformctl.example.com
     http:
       paths:
       - path: /gateway/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-gateway
+            name: dev-platformctl-gateway
             port:
               number: 9090
       - path: /aggregator/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-gitops-aggregator
+            name: dev-platformctl-gitops-aggregator
             port:
               number: 9090
       - path: /app-sync/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-app-sync-svc
+            name: dev-platformctl-app-sync-svc
             port:
               number: 9090
       - path: /environment-validation/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-environment-validation-svc
+            name: dev-platformctl-environment-validation-svc
             port:
               number: 9090
       - path: /context-correlation/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-context-correlation-svc
+            name: dev-platformctl-context-correlation-svc
             port:
               number: 9090
       - path: /multi-environment-kube/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-multi-environment-kube-svc
+            name: dev-platformctl-multi-environment-kube-svc
             port:
               number: 9090
       - path: /customer-git-branch/metrics
         pathType: Prefix
         backend:
           service:
-            name: dev-contextops-customer-git-branch-svc
+            name: dev-platformctl-customer-git-branch-svc
             port:
               number: 9090

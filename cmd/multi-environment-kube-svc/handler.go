@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/contextops/platformctl/internal/clients/kubernetes"
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/clients/kubernetes"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/pkg/api"
 	"github.com/google/uuid"
 )
 

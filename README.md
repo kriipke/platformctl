@@ -1,4 +1,4 @@
-# ContextOps: GitOps-Optimized Application Monitoring Platform
+# Platformctl: GitOps-Optimized Application Monitoring Platform
 
 **Status:** Development Complete - All Services Build Successfully  
 **Version:** 1.1  
@@ -7,9 +7,9 @@
 
 ---
 
-## 🎯 What is ContextOps?
+## 🎯 What is Platformctl?
 
-ContextOps is a **production-ready GitOps monitoring platform** that provides unified visibility across your ApplicationSets, Helm deployments, Vault secrets, and Kubernetes workloads. Built specifically for teams using ArgoCD ApplicationSets with customer branch isolation and multi-environment deployments.
+Platformctl is a **production-ready GitOps monitoring platform** that provides unified visibility across your ApplicationSets, Helm deployments, Vault secrets, and Kubernetes workloads. Built specifically for teams using ArgoCD ApplicationSets with customer branch isolation and multi-environment deployments.
 
 ### Key Features
 - **🔄 ApplicationSet Deep Integration**: Monitors Bootstrap Applications → ApplicationSets → Generated Applications
@@ -49,7 +49,7 @@ ContextOps is a **production-ready GitOps monitoring platform** that provides un
 
 ### 1. Clone and Build
 ```bash
-git clone https://github.com/contextops/platformctl
+git clone https://github.com/kriipke/platformctl
 cd platformctl
 
 # Build all services locally (verify everything works)
@@ -64,85 +64,85 @@ make docker-build
 #### Step 1: Create DOKS Cluster (if needed)
 ```bash
 # Create a DOKS cluster
-doctl kubernetes cluster create contextops-cluster \
+doctl kubernetes cluster create platformctl-cluster \
   --region nyc3 \
   --size s-2vcpu-2gb \
   --count 3 \
-  --tag contextops \
+  --tag platformctl \
   --wait
 
 # Get cluster credentials
-doctl kubernetes cluster kubeconfig save contextops-cluster
+doctl kubernetes cluster kubeconfig save platformctl-cluster
 ```
 
 #### Step 2: Configure Container Registry
 ```bash
 # Create DigitalOcean Container Registry (if needed)
-doctl registry create contextops-registry
+doctl registry create platformctl-registry
 
 # Configure Docker authentication
 doctl registry login
 
 # Tag and push images
-docker tag platformctl-gateway:latest registry.digitalocean.com/contextops-registry/platformctl-gateway:latest
-docker tag platformctl-gitops-aggregator:latest registry.digitalocean.com/contextops-registry/platformctl-gitops-aggregator:latest
+docker tag platformctl-gateway:latest registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
+docker tag platformctl-gitops-aggregator:latest registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
 
 # Push all images
-docker push registry.digitalocean.com/contextops-registry/platformctl-gateway:latest
-docker push registry.digitalocean.com/contextops-registry/platformctl-gitops-aggregator:latest
+docker push registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
+docker push registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
 # ... repeat for all services
 ```
 
 #### Step 3: Deploy Infrastructure Dependencies
 ```bash
 # Create namespace
-kubectl create namespace contextops
+kubectl create namespace platformctl
 
 # Deploy PostgreSQL
-kubectl apply -f deployments/base/postgres.yaml -n contextops
+kubectl apply -f deployments/base/postgres.yaml -n platformctl
 
 # Deploy RabbitMQ  
-kubectl apply -f deployments/base/rabbitmq.yaml -n contextops
+kubectl apply -f deployments/base/rabbitmq.yaml -n platformctl
 
 # Wait for dependencies to be ready
-kubectl wait --for=condition=ready pod -l app=postgres -n contextops --timeout=300s
-kubectl wait --for=condition=ready pod -l app=rabbitmq -n contextops --timeout=300s
+kubectl wait --for=condition=ready pod -l app=postgres -n platformctl --timeout=300s
+kubectl wait --for=condition=ready pod -l app=rabbitmq -n platformctl --timeout=300s
 ```
 
 #### Step 4: Configure Secrets
 ```bash
 # Create database secret
 kubectl create secret generic postgres-secret \
-  --from-literal=username=contextops \
+  --from-literal=username=platformctl \
   --from-literal=password=$(openssl rand -base64 32) \
-  --from-literal=database=contextops \
-  -n contextops
+  --from-literal=database=platformctl \
+  -n platformctl
 
 # Create RabbitMQ secret
 kubectl create secret generic rabbitmq-secret \
-  --from-literal=username=contextops \
+  --from-literal=username=platformctl \
   --from-literal=password=$(openssl rand -base64 32) \
-  -n contextops
+  -n platformctl
 
 # Create application config
-kubectl create configmap contextops-config \
+kubectl create configmap platformctl-config \
   --from-file=deployments/base/config.yaml \
-  -n contextops
+  -n platformctl
 ```
 
-#### Step 5: Deploy ContextOps Services
+#### Step 5: Deploy Platformctl Services
 ```bash
 # Update image references in kustomization.yaml
 cd deployments/base
-kustomize edit set image platformctl-gateway=registry.digitalocean.com/contextops-registry/platformctl-gateway:latest
-kustomize edit set image platformctl-gitops-aggregator=registry.digitalocean.com/contextops-registry/platformctl-gitops-aggregator:latest
+kustomize edit set image platformctl-gateway=registry.digitalocean.com/platformctl-registry/platformctl-gateway:latest
+kustomize edit set image platformctl-gitops-aggregator=registry.digitalocean.com/platformctl-registry/platformctl-gitops-aggregator:latest
 
 # Deploy all services
-kubectl apply -k deployments/base -n contextops
+kubectl apply -k deployments/base -n platformctl
 
 # Verify deployment
-kubectl get pods -n contextops
-kubectl get services -n contextops
+kubectl get pods -n platformctl
+kubectl get services -n platformctl
 ```
 
 #### Step 6: Expose Services (DigitalOcean LoadBalancer)
@@ -152,10 +152,10 @@ cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
-  name: contextops-gateway-lb
-  namespace: contextops
+  name: platformctl-gateway-lb
+  namespace: platformctl
   annotations:
-    service.beta.kubernetes.io/do-loadbalancer-name: "contextops-gateway"
+    service.beta.kubernetes.io/do-loadbalancer-name: "platformctl-gateway"
     service.beta.kubernetes.io/do-loadbalancer-protocol: "http"
     service.beta.kubernetes.io/do-loadbalancer-healthcheck-path: "/health"
 spec:
@@ -165,26 +165,26 @@ spec:
     targetPort: 8080
     protocol: TCP
   selector:
-    app: contextops-gateway
+    app: platformctl-gateway
 EOF
 
 # Get LoadBalancer IP
-kubectl get service contextops-gateway-lb -n contextops
+kubectl get service platformctl-gateway-lb -n platformctl
 ```
 
 ### 3. Verify Installation
 ```bash
 # Check all pods are running
-kubectl get pods -n contextops
+kubectl get pods -n platformctl
 
 # Check services
-kubectl get svc -n contextops
+kubectl get svc -n platformctl
 
 # Test API endpoint (replace <LOAD_BALANCER_IP> with actual IP)
 curl http://<LOAD_BALANCER_IP>/health
 
 # View logs
-kubectl logs -l app=contextops-gateway -n contextops
+kubectl logs -l app=platformctl-gateway -n platformctl
 ```
 
 ---
@@ -197,16 +197,16 @@ Create a `config.yaml` file for your environment:
 ```yaml
 # Database Configuration
 database:
-  host: "postgres.contextops.svc.cluster.local"
+  host: "postgres.platformctl.svc.cluster.local"
   port: 5432
-  database: "contextops"
+  database: "platformctl"
   username: "${POSTGRES_USERNAME}"
   password: "${POSTGRES_PASSWORD}"
   ssl_mode: "require"
 
 # RabbitMQ Configuration  
 rabbitmq:
-  url: "amqp://${RABBITMQ_USERNAME}:${RABBITMQ_PASSWORD}@rabbitmq.contextops.svc.cluster.local:5672/"
+  url: "amqp://${RABBITMQ_USERNAME}:${RABBITMQ_PASSWORD}@rabbitmq.platformctl.svc.cluster.local:5672/"
   heartbeat: "10s"
   connection_retries: 5
 
@@ -361,15 +361,15 @@ curl http://<LOAD_BALANCER_IP>/api/v1/contexts/myapp-dev/environments/comparison
 ### Health Checks
 ```bash
 # Check service health
-kubectl get pods -n contextops
-kubectl describe pod <pod-name> -n contextops
+kubectl get pods -n platformctl
+kubectl describe pod <pod-name> -n platformctl
 
 # Check service logs
-kubectl logs -f deployment/contextops-gateway -n contextops
-kubectl logs -f deployment/contextops-aggregator -n contextops
+kubectl logs -f deployment/platformctl-gateway -n platformctl
+kubectl logs -f deployment/platformctl-aggregator -n platformctl
 
 # Check RabbitMQ queues
-kubectl port-forward service/rabbitmq 15672:15672 -n contextops
+kubectl port-forward service/rabbitmq 15672:15672 -n platformctl
 # Visit http://localhost:15672 (guest/guest)
 ```
 
@@ -378,29 +378,29 @@ kubectl port-forward service/rabbitmq 15672:15672 -n contextops
 #### 1. Services Not Starting
 ```bash
 # Check resource constraints
-kubectl top pods -n contextops
+kubectl top pods -n platformctl
 
 # Check events
-kubectl get events -n contextops --sort-by='.lastTimestamp'
+kubectl get events -n platformctl --sort-by='.lastTimestamp'
 
 # Check configuration
-kubectl describe configmap contextops-config -n contextops
+kubectl describe configmap platformctl-config -n platformctl
 ```
 
 #### 2. Database Connection Issues
 ```bash
 # Test database connectivity
 kubectl run postgres-test --rm -i --tty --image postgres:14 -- bash
-# Inside pod: psql -h postgres.contextops.svc.cluster.local -U contextops
+# Inside pod: psql -h postgres.platformctl.svc.cluster.local -U platformctl
 ```
 
 #### 3. RabbitMQ Message Issues
 ```bash
 # Check queue status
-kubectl exec -it deployment/rabbitmq -n contextops -- rabbitmqctl list_queues
+kubectl exec -it deployment/rabbitmq -n platformctl -- rabbitmqctl list_queues
 
 # Check message flow
-kubectl logs -f deployment/contextops-app-sync-svc -n contextops | grep correlation_id
+kubectl logs -f deployment/platformctl-app-sync-svc -n platformctl | grep correlation_id
 ```
 
 ---
@@ -410,16 +410,16 @@ kubectl logs -f deployment/contextops-app-sync-svc -n contextops | grep correlat
 ### RBAC Configuration
 ```bash
 # Create service account
-kubectl create serviceaccount contextops-sa -n contextops
+kubectl create serviceaccount platformctl-sa -n platformctl
 
 # Apply RBAC manifests
-kubectl apply -f deployments/base/rbac.yaml -n contextops
+kubectl apply -f deployments/base/rbac.yaml -n platformctl
 ```
 
 ### Network Policies
 ```bash
 # Apply network policies for micro-segmentation
-kubectl apply -f deployments/base/network-policies.yaml -n contextops
+kubectl apply -f deployments/base/network-policies.yaml -n platformctl
 ```
 
 ### Secret Management
@@ -437,13 +437,13 @@ kubectl apply -f deployments/base/network-policies.yaml -n contextops
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: contextops-gateway-hpa
-  namespace: contextops
+  name: platformctl-gateway-hpa
+  namespace: platformctl
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: contextops-gateway
+    name: platformctl-gateway
   minReplicas: 2
   maxReplicas: 10
   metrics:

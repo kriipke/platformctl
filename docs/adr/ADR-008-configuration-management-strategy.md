@@ -9,7 +9,7 @@
 
 ## Context
 
-ContextOps services require configuration for database connections, RabbitMQ URLs, external service endpoints, logging levels, and various operational parameters. A consistent configuration strategy is needed across all services while maintaining security, flexibility, and operational simplicity.
+Platformctl services require configuration for database connections, RabbitMQ URLs, external service endpoints, logging levels, and various operational parameters. A consistent configuration strategy is needed across all services while maintaining security, flexibility, and operational simplicity.
 
 ### Problem Statement
 

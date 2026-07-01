@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 )
 
 // ValidateEnvironment validates an Environment manifest

@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/pkg/api"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/pkg/api"
 )
 
 // ResultProcessor interface for processing GitOps result messages
@@ -50,13 +50,13 @@ func (c *GitOpsResultConsumer) StartConsuming(ctx context.Context) error {
 		return fmt.Errorf("failed to set QoS: %w", err)
 	}
 
-	// List of result queues to consume from
+	// All service results are published to the gitops.results exchange with
+	// evt.* routing keys, which the topology binds to the single
+	// gitops.aggregator.q queue. Consume from that queue. (The previous
+	// results.* queue names were never declared in the topology, so nothing
+	// was consumed and the read model / command status never updated.)
 	resultQueues := []string{
-		"results.app-sync-service",
-		"results.environment-validator", 
-		"results.context-correlator",
-		"results.multi-environment-kube-svc",
-		"results.customer-git-branch-svc",
+		"gitops.aggregator.q",
 	}
 
 	// Start consuming from each result queue
@@ -238,6 +238,10 @@ func (c *GitOpsResultConsumer) validateResultMessage(result *api.GitOpsResultMes
 		if result.ContextPairingData == nil {
 			return fmt.Errorf("context pairing data is required for context manifest type")
 		}
+	case "git":
+		// customer-git-branch results carry their detail in the payload
+	case "kubernetes":
+		// multi-environment results carry their detail in the payload
 	default:
 		return fmt.Errorf("unknown manifest type: %s", result.ManifestType)
 	}

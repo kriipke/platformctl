@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# ContextOps Cleanup Script
-# Handles cleanup and uninstallation of ContextOps deployments
+# Platformctl Cleanup Script
+# Handles cleanup and uninstallation of Platformctl deployments
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +32,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Help function
 show_help() {
     cat << EOF
-ContextOps Cleanup Script
+Platformctl Cleanup Script
 
 Usage: $0 [OPTIONS]
 
@@ -51,7 +51,7 @@ EXAMPLES:
     $0 -d -e production            # Dry run cleanup for production
 
 WARNING:
-    This script will delete ContextOps deployments and optionally their data.
+    This script will delete Platformctl deployments and optionally their data.
     Use with caution, especially in production environments.
 
 EOF
@@ -95,10 +95,10 @@ done
 # Set namespace if not provided
 if [[ -z "$NAMESPACE" ]]; then
     case $ENVIRONMENT in
-        development) NAMESPACE="contextops-dev" ;;
-        staging) NAMESPACE="contextops-staging" ;;
-        production) NAMESPACE="contextops-prod" ;;
-        *) NAMESPACE="contextops" ;;
+        development) NAMESPACE="platformctl-dev" ;;
+        staging) NAMESPACE="platformctl-staging" ;;
+        production) NAMESPACE="platformctl-prod" ;;
+        *) NAMESPACE="platformctl" ;;
     esac
 fi
 
@@ -125,7 +125,7 @@ confirm_cleanup() {
         return 0
     fi
     
-    log_warn "You are about to clean up ContextOps in $ENVIRONMENT environment!"
+    log_warn "You are about to clean up Platformctl in $ENVIRONMENT environment!"
     log_warn "Namespace: $NAMESPACE"
     log_warn "Keep data: $KEEP_DATA"
     
@@ -156,24 +156,24 @@ show_cleanup_plan() {
     fi
     
     # Show deployments
-    local deployments=$(kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+    local deployments=$(kubectl get deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
     log_info "- Deployments to delete: $deployments"
     
     # Show services
-    local services=$(kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+    local services=$(kubectl get services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
     log_info "- Services to delete: $services"
     
     # Show configmaps
-    local configmaps=$(kubectl get configmaps -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+    local configmaps=$(kubectl get configmaps -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
     log_info "- ConfigMaps to delete: $configmaps"
     
     # Show secrets
-    local secrets=$(kubectl get secrets -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+    local secrets=$(kubectl get secrets -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
     log_info "- Secrets to delete: $secrets"
     
     if [[ "$KEEP_DATA" == "false" ]]; then
         # Show PVCs
-        local pvcs=$(kubectl get pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+        local pvcs=$(kubectl get pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
         log_info "- PersistentVolumeClaims to delete: $pvcs"
         log_warn "  This will DELETE ALL PERSISTENT DATA!"
     else
@@ -181,16 +181,16 @@ show_cleanup_plan() {
     fi
 }
 
-# Delete ContextOps resources
-delete_contextops_resources() {
-    log_info "Deleting ContextOps resources..."
+# Delete Platformctl resources
+delete_platformctl_resources() {
+    log_info "Deleting Platformctl resources..."
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would delete the following resources:"
         
         if kubectl get namespace "$NAMESPACE" &> /dev/null; then
             # Show what would be deleted
-            kubectl get all,cm,secrets,pvc,ingress,networkpolicies -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform 2>/dev/null || true
+            kubectl get all,cm,secrets,pvc,ingress,networkpolicies -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform 2>/dev/null || true
             
             if [[ "$KEEP_DATA" == "false" ]]; then
                 log_info "Would also delete PersistentVolumeClaims"
@@ -206,28 +206,28 @@ delete_contextops_resources() {
     
     # Delete applications first (graceful shutdown)
     log_info "Deleting deployments..."
-    kubectl delete deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --wait=true --timeout=300s || log_warn "Some deployments failed to delete gracefully"
+    kubectl delete deployments -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --wait=true --timeout=300s || log_warn "Some deployments failed to delete gracefully"
     
     # Delete other resources
     log_info "Deleting services..."
-    kubectl delete services -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete services -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     
     log_info "Deleting ingresses..."
-    kubectl delete ingress -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete ingress -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     
     log_info "Deleting network policies..."
-    kubectl delete networkpolicies -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete networkpolicies -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     
     log_info "Deleting configmaps..."
-    kubectl delete configmaps -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete configmaps -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     
     log_info "Deleting secrets..."
-    kubectl delete secrets -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete secrets -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     
     # Delete PVCs if requested
     if [[ "$KEEP_DATA" == "false" ]]; then
         log_warn "Deleting persistent data..."
-        kubectl delete pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform || true
+        kubectl delete pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform || true
     fi
     
     log_success "Resource deletion completed"
@@ -243,10 +243,10 @@ cleanup_cluster_resources() {
     log_info "Cleaning up cluster-wide resources..."
     
     # Remove ClusterRoleBindings
-    kubectl delete clusterrolebinding -l app.kubernetes.io/part-of=contextops-platform || true
+    kubectl delete clusterrolebinding -l app.kubernetes.io/part-of=platformctl-platform || true
     
     # Remove ClusterRoles (be careful not to delete system roles)
-    kubectl delete clusterrole contextops-kubernetes-reader contextops-aggregator || true
+    kubectl delete clusterrole platformctl-kubernetes-reader platformctl-aggregator || true
     
     log_info "Cluster-wide cleanup completed"
 }
@@ -283,14 +283,14 @@ show_summary() {
     log_info "- Data deleted: $([ "$KEEP_DATA" == "false" ] && echo "YES" || echo "NO")"
     
     if [[ "$DRY_RUN" == "false" ]]; then
-        # Check if any ContextOps resources remain
+        # Check if any Platformctl resources remain
         if kubectl get namespace "$NAMESPACE" &> /dev/null; then
-            local remaining=$(kubectl get all,cm,secrets,pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform --no-headers 2>/dev/null | wc -l)
+            local remaining=$(kubectl get all,cm,secrets,pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform --no-headers 2>/dev/null | wc -l)
             if [[ $remaining -gt 0 ]]; then
-                log_warn "$remaining ContextOps resources still exist"
-                kubectl get all,cm,secrets,pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=contextops-platform 2>/dev/null || true
+                log_warn "$remaining Platformctl resources still exist"
+                kubectl get all,cm,secrets,pvc -n "$NAMESPACE" -l app.kubernetes.io/part-of=platformctl-platform 2>/dev/null || true
             else
-                log_success "All ContextOps resources have been cleaned up"
+                log_success "All Platformctl resources have been cleaned up"
             fi
         else
             log_success "Namespace $NAMESPACE has been completely removed"
@@ -300,7 +300,7 @@ show_summary() {
 
 # Main execution
 main() {
-    log_info "ContextOps Cleanup Script"
+    log_info "Platformctl Cleanup Script"
     log_info "Environment: $ENVIRONMENT"
     
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -310,7 +310,7 @@ main() {
     check_prerequisites
     show_cleanup_plan
     confirm_cleanup
-    delete_contextops_resources
+    delete_platformctl_resources
     cleanup_cluster_resources
     cleanup_namespace
     show_summary

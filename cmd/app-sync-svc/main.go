@@ -5,12 +5,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/contextops/platformctl/internal/config"
-	"github.com/contextops/platformctl/internal/events"
-	"github.com/contextops/platformctl/internal/observability"
-	"github.com/contextops/platformctl/internal/storage"
+	"github.com/kriipke/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/events"
+	"github.com/kriipke/platformctl/internal/observability"
+	"github.com/kriipke/platformctl/internal/storage"
 )
 
 func main() {
@@ -29,7 +28,7 @@ func main() {
 		Enabled:     cfg.Observability.MetricsEnabled,
 		Port:        cfg.Observability.MetricsPort,
 		ServiceName: "app-sync-service",
-		Namespace:   "contextops",
+		Namespace:   "platformctl",
 	}
 	metrics := observability.NewMetrics(metricsConfig)
 
@@ -72,18 +71,15 @@ func main() {
 		}
 	}()
 
-	// Service setup - TODO: Use these stores in proper service implementation
-	_ = storage.NewAppStore(db)
-	_ = storage.NewEnvironmentStore(db) 
-	_ = storage.NewContextStore(db)
-
-	// Create app sync handler
+	// Create app sync handler and consume app manifest commands
 	appSyncHandler := NewAppSyncHandler(cfg)
 
-	// Start service - TODO: Implement proper service runner
-	ctx := context.Background()
-	_ = appSyncHandler // Use the handler
-	logger.NewContextLogger(ctx).Info().Msg("App sync service started")
+	consumer := events.NewCommandConsumerWithBindings(rabbitmq, "gitops.app-sync.q", []string{"cmd.app.*"})
+	if err := consumer.Start(appSyncHandler); err != nil {
+		logger.NewContextLogger(context.Background()).Fatal().Err(err).Msg("Failed to start command consumer")
+	}
+
+	logger.NewContextLogger(context.Background()).Info().Msg("App sync service started")
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
@@ -91,15 +87,8 @@ func main() {
 	<-sigChan
 
 	logger.NewContextLogger(context.Background()).Info().Msg("Shutting down app sync service")
-	
-	// Graceful shutdown
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	// TODO: Implement proper shutdown for handler
-	if false { // err := appSyncHandler.Stop(shutdownCtx); err != nil {
-		logger.NewContextLogger(shutdownCtx).Error().Err(err).Msg("Error during service shutdown")
+	if err := consumer.Stop(); err != nil {
+		logger.NewContextLogger(context.Background()).Error().Err(err).Msg("Error stopping command consumer")
 	}
-	
 	logger.NewContextLogger(context.Background()).Info().Msg("App sync service stopped")
 }

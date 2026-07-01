@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/contextops/platformctl/internal/config"
+	"github.com/kriipke/platformctl/internal/config"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -162,6 +162,8 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		{"gitops.aggregator.q", "gitops.results", "evt.environment.*"},
 		{"gitops.aggregator.q", "gitops.results", "evt.context.*"},
 		{"gitops.aggregator.q", "gitops.results", "evt.correlation.*"},
+		{"gitops.aggregator.q", "gitops.results", "evt.git.*"},
+		{"gitops.aggregator.q", "gitops.results", "evt.kubernetes.*"},
 	}
 
 	for _, binding := range bindings {

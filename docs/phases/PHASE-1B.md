@@ -1078,7 +1078,7 @@ func setupRouter(contextHandler *handlers.ContextHandler, actionHandler *handler
 ```go
 type Config struct {
     Port         string `env:"PORT" envDefault:":8080"`
-    DatabaseURL  string `env:"DATABASE_URL" envDefault:"postgres://localhost/contextops?sslmode=disable"`
+    DatabaseURL  string `env:"DATABASE_URL" envDefault:"postgres://localhost/platformctl?sslmode=disable"`
     RabbitMQURL  string `env:"RABBITMQ_URL" envDefault:"amqp://localhost:5672/"`
     LogLevel     string `env:"LOG_LEVEL" envDefault:"info"`
 }

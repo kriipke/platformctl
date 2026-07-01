@@ -3,7 +3,7 @@ package validation
 import (
 	"testing"
 
-	"github.com/contextops/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestValidateContext(t *testing.T) {
 		{
 			name: "valid context manifest",
 			context: models.Context{
-				APIVersion: "contextops/v1",
+				APIVersion: "platformctl/v1",
 				Kind:       "Context",
 				Metadata: models.ContextMetadata{
 					Name: "valid-context",
