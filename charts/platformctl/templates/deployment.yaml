@@ -1,0 +1,93 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $merged := merge (deepCopy ($svc | default dict)) $root.Values.defaults }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platformctl.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "platformctl.labels" $root | nindent 4 }}
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/component: {{ $merged.component }}
+spec:
+  replicas: {{ $merged.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/component: {{ $merged.component }}
+        {{- include "platformctl.labels" $root | nindent 8 }}
+      annotations:
+        # Roll pods when the shared config changes.
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+    spec:
+      {{- if $merged.serviceAccount }}
+      serviceAccountName: {{ $merged.serviceAccount }}
+      {{- end }}
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: {{ $name }}
+        image: "{{ $root.Values.image.registry }}/{{ $root.Values.image.repoPrefix }}{{ $name }}:{{ $root.Values.image.tag }}"
+        imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop: ["ALL"]
+        ports:
+        {{- if $merged.httpPort }}
+        - containerPort: {{ $merged.httpPort }}
+          name: http
+        {{- end }}
+        - containerPort: {{ $merged.healthPort }}
+          name: health
+        - containerPort: {{ $merged.metricsPort }}
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: {{ include "platformctl.fullname" $root }}-config
+        env:
+        - name: SERVICE_NAME
+          value: {{ $name | quote }}
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "platformctl.dbSecretName" (dict "root" $root "svc" $merged) }}
+              key: DATABASE_URL
+        {{- range $k, $v := $merged.env }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ $merged.healthPort }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ $merged.healthPort }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          {{- toYaml $merged.resources | nindent 10 }}
+{{- end }}

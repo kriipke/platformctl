@@ -1,0 +1,24 @@
+# Stage overlay — deployed to namespace platformctl-stage.
+#   helm upgrade --install platformctl charts/platformctl \
+#     -n platformctl-stage -f charts/platformctl/values-stage.yaml \
+#     --set image.tag=<tag>
+#
+# Only deltas from values.yaml belong here.
+
+config:
+  LOG_LEVEL: "debug"
+  # Shared DO managed Postgres has a small connection limit — keep this low.
+  MAX_DB_CONNECTIONS: "2"
+
+# Bundled broker is fine for stage.
+rabbitmq:
+  enabled: true
+
+services:
+  gateway:
+    ingress:
+      enabled: false
+      # When ready, set a stage host, e.g.:
+      # hosts:
+      #   - host: stage.platformctl.com
+      #     path: /

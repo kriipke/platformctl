@@ -1,0 +1,126 @@
+{{- if .Values.rbac.create }}
+# ClusterRole/ClusterRoleBinding names are suffixed with the release namespace so
+# that stage and prod installs on the same cluster do not collide on these
+# cluster-scoped objects.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platformctl-kubernetes-reader-{{ .Release.Namespace }}
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+rules:
+# ApplicationSet and ArgoCD Application monitoring
+- apiGroups: ["argoproj.io"]
+  resources: ["applications", "applicationsets", "appprojects"]
+  verbs: ["get", "list", "watch"]
+# Kubernetes native resources for GitOps monitoring
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets", "persistentvolumeclaims", "persistentvolumes", "nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list", "watch"]
+# External-secrets operator resources
+- apiGroups: ["external-secrets.io"]
+  resources: ["externalsecrets", "secretstores", "clustersecretstores"]
+  verbs: ["get", "list", "watch"]
+# VaultStaticSecret monitoring (Vault operator)
+- apiGroups: ["secrets.hashicorp.com"]
+  resources: ["vaultstaticsecrets", "vaultconnections"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platformctl-aggregator-{{ .Release.Namespace }}
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["applications", "applicationsets", "appprojects"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets", "persistentvolumeclaims", "persistentvolumes", "nodes", "namespaces", "events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platformctl-kubernetes-integration-{{ .Release.Namespace }}
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: platformctl-kubernetes-reader-{{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-integration-service-account
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platformctl-aggregator-{{ .Release.Namespace }}
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: platformctl-aggregator-{{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: gitops-aggregator-service-account
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platformctl-service-role
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "endpoints", "services", "pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: platformctl-service-binding
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: platformctl-service-role
+subjects:
+- kind: ServiceAccount
+  name: platformctl-service-account
+  namespace: {{ .Release.Namespace }}
+- kind: ServiceAccount
+  name: gitops-aggregator-service-account
+  namespace: {{ .Release.Namespace }}
+{{- end }}

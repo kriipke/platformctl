@@ -63,21 +63,21 @@ jobs:
           flags: unittests
           name: go-coverage
 
-  # Kubernetes manifest validation
-  k8s-validation:
-    name: Kubernetes Validation
+  # Helm chart validation
+  helm-validation:
+    name: Helm Validation
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [development, staging, production]
+        environment: [stage, prod]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
 
       - name: Install kubectl
         run: |
@@ -85,24 +85,22 @@ jobs:
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
-      - name: Validate Kustomize build
-        run: |
-          echo "Validating ${{ matrix.environment }} overlay..."
-          kustomize build deployments/overlays/${{ matrix.environment }} > /tmp/manifests-${{ matrix.environment }}.yaml
+      - name: Helm lint
+        run: helm lint charts/platformctl -f charts/platformctl/values-${{ matrix.environment }}.yaml
 
-      - name: Validate Kubernetes manifests
+      - name: Render chart
         run: |
-          echo "Validating Kubernetes manifests for ${{ matrix.environment }}..."
+          echo "Rendering ${{ matrix.environment }} manifests..."
+          helm template platformctl charts/platformctl \
+            --namespace platformctl-${{ matrix.environment }} \
+            -f charts/platformctl/values-${{ matrix.environment }}.yaml \
+            --set image.tag=ci > /tmp/manifests-${{ matrix.environment }}.yaml
+
+      - name: Validate rendered manifests
+        run: |
           # Client-side only: no cluster/API server in CI, so skip schema
           # validation (which would try to download the openapi spec).
           kubectl apply --dry-run=client --validate=false -f /tmp/manifests-${{ matrix.environment }}.yaml
-
-      - name: Check resource limits
-        run: |
-          echo "Checking resource limits..."
-          if ! grep -q "resources:" /tmp/manifests-${{ matrix.environment }}.yaml; then
-            echo "Warning: No resource limits found in manifests"
-          fi
 
       - name: Validate security contexts
         run: |
@@ -110,13 +108,6 @@ jobs:
           if ! grep -q "runAsNonRoot: true" /tmp/manifests-${{ matrix.environment }}.yaml; then
             echo "Error: runAsNonRoot not set"
             exit 1
-          fi
-
-      - name: Check for secrets
-        run: |
-          echo "Checking for hardcoded secrets..."
-          if grep -i "password\|secret\|key" /tmp/manifests-${{ matrix.environment }}.yaml | grep -v "secretKeyRef\|configMapKeyRef"; then
-            echo "Warning: Potential hardcoded secrets found"
           fi
 
   # Security scanning
@@ -216,10 +207,10 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Set up Kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.8.0
@@ -229,19 +220,11 @@ jobs:
           # config is a path to a file, not inline YAML
           config: .github/kind-config.yaml
 
-      - name: Install NGINX Ingress
-        run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
-            --timeout=120s
-
       - name: Build Docker images for kind
         run: |
-          # Build images locally and load into kind
+          # Build images locally (from current source) and load into kind.
           SERVICES=("gateway" "gitops-aggregator" "app-sync-svc" "environment-validation-svc" "context-correlation-svc" "multi-environment-kube-svc" "customer-git-branch-svc")
-          
+
           for service in "${SERVICES[@]}"; do
             echo "Building $service for kind..."
             docker build \
@@ -250,38 +233,39 @@ jobs:
               --build-arg COMMIT_SHA=${{ github.sha }} \
               --build-arg BUILD_DATE=${{ github.run_id }} \
               -t ghcr.io/kriipke/platformctl-$service:test .
-            
-            # Load image into kind cluster
             kind load docker-image ghcr.io/kriipke/platformctl-$service:test --name platformctl-test
           done
 
-      - name: Deploy Platformctl to kind
+      - name: Provision namespace, throwaway Postgres, and DB secrets
         run: |
-          # Update image tags for local testing
-          cd deployments/overlays/development
-          kustomize edit set image ghcr.io/kriipke/platformctl-gateway:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-gitops-aggregator:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-app-sync-svc:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-environment-validation-svc:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-context-correlation-svc:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-multi-environment-kube-svc:test
-          kustomize edit set image ghcr.io/kriipke/platformctl-customer-git-branch-svc:test
-          
-          # Deploy to cluster
-          kustomize build . | kubectl apply -f -
+          NS=platformctl-ci
+          kubectl create namespace "$NS"
+          # Throwaway in-cluster Postgres for the smoke test (the chart itself
+          # never deploys Postgres — it consumes DATABASE_URL from these secrets).
+          kubectl create deployment postgres --image=postgres:14-alpine -n "$NS"
+          kubectl set env deployment/postgres -n "$NS" \
+            POSTGRES_USER=platformctl POSTGRES_PASSWORD=platformctl POSTGRES_DB=platformctl
+          kubectl expose deployment postgres -n "$NS" --port=5432 --target-port=5432
+          kubectl rollout status deployment/postgres -n "$NS" --timeout=180s
+          # In CI both direct + pool secrets point at the same throwaway DB.
+          URL='postgres://platformctl:platformctl@postgres:5432/platformctl?sslmode=disable'
+          kubectl create secret generic platformctl-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
+          kubectl create secret generic platformctl-pool-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
 
-      - name: Wait for deployment
+      - name: Helm install
         run: |
-          kubectl wait --for=condition=available --timeout=300s deployment --all -n platformctl-dev
+          helm upgrade --install platformctl charts/platformctl \
+            --namespace platformctl-ci \
+            --set image.tag=test \
+            --set rabbitmq.persistence.enabled=false \
+            --set-json 'imagePullSecrets=[]' \
+            --wait --timeout 6m
 
-      - name: Run integration tests
+      - name: Smoke test gateway health
         run: |
-          # Port forward to test connectivity
-          kubectl port-forward service/dev-platformctl-gateway 8080:80 -n platformctl-dev &
+          kubectl port-forward service/platformctl-gateway 8080:80 -n platformctl-ci &
           sleep 10
-          
-          # Test health endpoint
-          if curl -f http://localhost:8080/health; then
+          if curl -fsS http://localhost:8080/health; then
             echo "Health check passed"
           else
             echo "Health check failed"
@@ -291,10 +275,11 @@ jobs:
       - name: Show cluster status on failure
         if: failure()
         run: |
+          NS=platformctl-ci
           echo "=== Cluster Status ==="
-          kubectl get all -n platformctl-dev
+          kubectl get all -n "$NS"
           echo "=== Pod Logs ==="
-          kubectl logs -l app.kubernetes.io/part-of=platformctl-platform -n platformctl-dev --tail=50
+          kubectl logs -l app.kubernetes.io/part-of=platformctl-platform -n "$NS" --tail=80 || true
 
   # Deployment scripts validation
   scripts-validation:
@@ -314,20 +299,12 @@ jobs:
       - name: Test script help messages
         run: |
           chmod +x scripts/*.sh
-          
+
           # Test help messages
           for script in scripts/*.sh; do
             echo "Testing $script --help"
             $script --help || echo "Help not available for $script"
           done
-
-      - name: Test dry-run modes
-        run: |
-          # Test deploy script dry-run
-          ./scripts/deploy.sh --dry-run -e development || echo "Deploy dry-run test failed"
-          
-          # Test monitor script
-          timeout 5 ./scripts/monitor.sh -e development || echo "Monitor script test completed"
 
   # Documentation validation
   docs-validation:

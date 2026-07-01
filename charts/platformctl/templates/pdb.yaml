@@ -1,0 +1,24 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $merged := merge (deepCopy ($svc | default dict)) $root.Values.defaults }}
+{{- $pdb := $merged.pdb | default dict }}
+{{- if $pdb.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "platformctl.fullname" $root }}-{{ $name }}
+  labels:
+    {{- include "platformctl.labels" $root | nindent 4 }}
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  {{- if hasKey $pdb "maxUnavailable" }}
+  maxUnavailable: {{ $pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ $pdb.minAvailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+{{- end }}
+{{- end }}

@@ -265,7 +265,7 @@ act workflow_dispatch      # Test manual workflow
    kubectl cluster-info
    
    # Validate manifests
-   kustomize build deployments/overlays/development | kubectl apply --dry-run=client -f -
+   helm template platformctl charts/platformctl -f charts/platformctl/values-stage.yaml | kubectl apply --dry-run=client -f -
    ```
 
 3. **Image Pull Failures:**
@@ -287,7 +287,7 @@ act workflow_dispatch      # Test manual workflow
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [Kustomize Documentation](https://kustomize.io/)
+- [Helm Documentation](https://helm.sh/docs/)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
 - [Kubernetes Deployment Strategies](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 
