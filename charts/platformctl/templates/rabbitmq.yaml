@@ -1,0 +1,103 @@
+{{- if .Values.rabbitmq.enabled }}
+{{- $rmq := .Values.rabbitmq }}
+{{- if $rmq.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+    app.kubernetes.io/name: rabbitmq
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ $rmq.persistence.size }}
+  {{- if $rmq.persistence.storageClass }}
+  storageClassName: {{ $rmq.persistence.storageClass }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+    app.kubernetes.io/name: rabbitmq
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+        app.kubernetes.io/name: rabbitmq
+        {{- include "platformctl.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: rabbitmq
+        image: {{ $rmq.image }}
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: {{ $rmq.username | quote }}
+        - name: RABBITMQ_DEFAULT_PASS
+          value: {{ $rmq.password | quote }}
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: {{ $rmq.vhost | quote }}
+        {{- if $rmq.persistence.enabled }}
+        volumeMounts:
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
+        {{- end }}
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "ping"]
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "check_port_connectivity"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          {{- toYaml $rmq.resources | nindent 10 }}
+      {{- if $rmq.persistence.enabled }}
+      volumes:
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    {{- include "platformctl.labels" . | nindent 4 }}
+    app.kubernetes.io/name: rabbitmq
+spec:
+  type: ClusterIP
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    protocol: TCP
+    port: 5672
+    targetPort: 5672
+  - name: management
+    protocol: TCP
+    port: 15672
+    targetPort: 15672
+{{- end }}
