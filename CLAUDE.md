@@ -1,6 +1,6 @@
 # Platformctl Development Guide for Claude
 
-**Last Updated:** 2026-01-21  
+**Last Updated:** 2026-07-02  
 **Status:** Ready for Implementation  
 
 ---
@@ -40,21 +40,33 @@ CLI/Web UI → API Gateway → RabbitMQ → GitOps Integration Services → GitO
 
 ```
 platformctl/
-├── cmd/                          # CLI and service entry points
-│   ├── platformctl/             # Main CLI application
-│   ├── gateway/                 # API Gateway service
-│   ├── aggregator/             # Read model aggregator
-│   └── services/               # Integration services
-├── internal/                    # Private application code
-│   ├── context/                # Context domain logic
-│   ├── messaging/              # RabbitMQ abstractions  
-│   ├── services/               # Service integrations
-│   └── readmodel/              # Read model implementation
-├── pkg/                        # Public packages
-├── docs/                       # All documentation
-├── charts/platformctl/         # Helm chart (deployment) + per-env values files
-├── scripts/                    # Build scripts
-└── tests/                      # Test suites
+├── cmd/                              # Service entry points (one directory per service)
+│   ├── gateway/                     # API Gateway (context CRUD + GitOps actions)
+│   ├── gitops-aggregator/           # Multi-environment read model aggregator
+│   ├── app-sync-svc/                # ApplicationSet monitoring and sync orchestration
+│   ├── context-correlation-svc/     # Context pairing and relationship management
+│   ├── customer-git-branch-svc/     # Customer branch tracking and values correlation
+│   ├── environment-validation-svc/  # Cross-environment validation and compliance
+│   ├── multi-environment-kube-svc/  # Multi-cluster Kubernetes monitoring
+│   └── test-service/                # Test harness service
+├── internal/                        # Private application code
+│   ├── config/                     # Environment-variable configuration
+│   ├── models/                     # Context/app/environment/customer domain models
+│   ├── validation/                 # Domain model validation
+│   ├── storage/                    # PostgreSQL stores (contexts, apps, environments)
+│   ├── handlers/                   # Gateway HTTP handlers (CRUD, GitOps actions/status)
+│   ├── events/                     # RabbitMQ publishers/consumers and queue topology
+│   ├── clients/                    # External service clients (vault, kubernetes, git, argocd, helm)
+│   ├── aggregator/                 # GitOps aggregation logic
+│   ├── readmodel/                  # GitOps read model store
+│   ├── observability/              # Logging, metrics, health checks, correlation middleware
+│   └── ...                         # audit, auth, security, circuitbreaker, correlation, database, gitops, integration, services, testutil
+├── pkg/api/                         # Shared message envelope and integration types
+├── migrations/                      # SQL migrations (numbered up/down pairs)
+├── docs/                            # All documentation
+├── charts/platformctl/              # Helm chart (deployment) + per-env values files
+├── scripts/                         # Build scripts
+└── test/                            # Test runner + integration tests (test/integration/)
 ```
 
 ---
@@ -67,24 +79,24 @@ platformctl/
 - Context data models and validation
 - PostgreSQL database setup with migrations  
 - API Gateway with basic routing
-- **Key Files:** `internal/context/`, database migrations
+- **Key Files:** `internal/models/`, `internal/validation/`, `internal/storage/`, `migrations/`
 
 ### Phase 1B: APIs and Messaging Infrastructure  
 - RabbitMQ integration with message envelopes
 - Command/Result message patterns
 - Action endpoints in API Gateway
-- **Key Files:** `internal/messaging/`, gateway route handlers
+- **Key Files:** `internal/events/`, `internal/handlers/`, `pkg/api/`
 
 ### Phase 1C: Integration Services
 - **Priority Order:** Vault → Kubernetes → Git → ArgoCD → New Relic
 - Each service implements health checking and result reporting
-- **Key Files:** `internal/services/vault/`, `internal/services/kubernetes/`, etc.
+- **Key Files:** `internal/clients/vault/`, `internal/clients/kubernetes/`, etc., plus the `cmd/*-svc/` entry points
 
 ### Phase 1D: Aggregator Service
 - Read model database schema
 - Result aggregation and health calculation  
 - Context status materialization
-- **Key Files:** `cmd/aggregator/`, `internal/readmodel/`
+- **Key Files:** `cmd/gitops-aggregator/`, `internal/aggregator/`, `internal/readmodel/`
 
 ### Phase 1E: Basic Observability
 - Structured logging with zerolog
