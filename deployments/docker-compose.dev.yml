@@ -1,0 +1,46 @@
+# Local development dependencies for platformctl.
+# Managed via `make dev-up` / `make dev-down` / `make dev-logs`.
+#
+# Matches internal/config expectations:
+#   DATABASE_URL=postgres://platformctl:platformctl@localhost:5432/platformctl?sslmode=disable
+#   RABBITMQ_URL=amqp://localhost:5672/   (config default; guest/guest works from localhost)
+#
+# Host ports can be overridden if another project already holds them, e.g.:
+#   POSTGRES_HOST_PORT=55432 make dev-up
+# (adjust DATABASE_URL / RABBITMQ_URL accordingly)
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: platformctl-postgres
+    environment:
+      POSTGRES_USER: platformctl
+      POSTGRES_PASSWORD: platformctl
+      POSTGRES_DB: platformctl
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platformctl -d platformctl"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: platformctl-rabbitmq
+    ports:
+      - "${RABBITMQ_HOST_PORT:-5672}:5672"        # AMQP
+      - "${RABBITMQ_MGMT_HOST_PORT:-15672}:15672" # management UI (guest/guest)
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  postgres-data:
+  rabbitmq-data:

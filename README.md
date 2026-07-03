@@ -1,524 +1,221 @@
-# Platformctl: GitOps-Optimized Application Monitoring Platform
+# Platformctl
 
-**Status:** Development Complete - All Services Build Successfully  
-**Version:** 1.1  
-**Date:** 2026-01-23  
-**Target Platform:** DigitalOcean Kubernetes  
+GitOps monitoring platform for applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-backed secrets. It watches the whole delivery chain — ApplicationSet → generated Applications → Helm releases → VaultStaticSecrets → pod environment variables — and materializes a per-context, per-environment health read model behind a REST API.
 
----
-
-## 🎯 What is Platformctl?
-
-Platformctl is a **production-ready GitOps monitoring platform** that provides unified visibility across your ApplicationSets, Helm deployments, Vault secrets, and Kubernetes workloads. Built specifically for teams using ArgoCD ApplicationSets with customer branch isolation and multi-environment deployments.
-
-### Key Features
-- **🔄 ApplicationSet Deep Integration**: Monitors Bootstrap Applications → ApplicationSets → Generated Applications
-- **🌍 Multi-Environment Correlation**: Unified dashboards across dev/qa/uat/prod environments  
-- **🔐 Vault-Kubernetes Secret Bridge**: Real-time secret sync validation and pod environment correlation
-- **🏢 Customer Branch Isolation**: Separate configurations and resource tracking per customer
-- **📊 Application-Centric Dashboards**: Per-app views with environment tabs and cross-environment comparison
-- **⚡ Event-Driven Architecture**: RabbitMQ-coordinated microservices with GitOps-aware messaging
+**Status (2026-07-02):** stage deploys are green — all 7 services build in CI, deploy via Helm, and pass their Kubernetes probes on the DigitalOcean cluster. Prod has not been deployed yet. There is no `platformctl` CLI binary yet; the REST API is the only interface. Sections below marked *(planned)* are aspirational.
 
 ---
 
-## 🏗️ Current Architecture Status
+## Architecture
 
-### ✅ **Completed Services** (All Building Successfully)
-- **platformctl-gateway** - API Gateway with Context CRUD and GitOps actions
-- **platformctl-gitops-aggregator** - Multi-environment state aggregation and read model  
-- **platformctl-app-sync-svc** - ApplicationSet monitoring and sync orchestration
-- **platformctl-environment-validation-svc** - Cross-environment validation and compliance
-- **platformctl-context-correlation-svc** - Context pairing and relationship management
-- **platformctl-multi-environment-kube-svc** - Multi-cluster Kubernetes monitoring
-- **platformctl-customer-git-branch-svc** - Customer branch tracking and values correlation
+Event-driven Go microservices. The gateway accepts HTTP requests and publishes command messages to RabbitMQ; worker services consume commands, inspect external systems (Kubernetes, Git, ArgoCD, Vault), and publish results; the aggregator folds results into a Postgres read model that the gateway serves back out.
 
-### 🔧 **Core Infrastructure**
-- **PostgreSQL** - Context storage, read model, and audit logs
-- **RabbitMQ** - GitOps command orchestration and result correlation  
-- **Redis** - Application cache and cross-cluster data (optional)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- DigitalOcean Kubernetes Cluster (DOKS)
-- `doctl` CLI configured
-- `kubectl` configured for your DOKS cluster
-
-### 1. Clone and Build
-```bash
-git clone https://github.com/kriipke/platformctl
-cd platformctl
-
-# Build all services locally (verify everything works)
-make build
-
-# Build Docker images
-make docker-build
+```
+HTTP client ──▶ gateway ──▶ RabbitMQ ──▶ worker services ──▶ RabbitMQ ──▶ gitops-aggregator
+                  │                       (app-sync, kube,                      │
+                  │                        git-branch, validation,              ▼
+                  └──────────── read ◀─── correlation)                  PostgreSQL read model
 ```
 
-### 2. Deploy with Helm
+### Services (`cmd/`)
 
-Platformctl deploys as a single Helm chart (`charts/platformctl`) with one values
-file per environment. Everything runs on one DigitalOcean cluster, isolated by
-namespace:
+| Service | Role |
+|---|---|
+| `gateway` | HTTP API (Gin). CRUD for contexts/apps/environments, status queries, and action endpoints that publish commands. Runs schema migrations on startup — the only service that uses the **direct** DB connection. |
+| `gitops-aggregator` | Consumes result events and materializes the multi-environment read model in Postgres. |
+| `app-sync-svc` | ApplicationSet and generated-application sync monitoring. |
+| `multi-environment-kube-svc` | Collects Kubernetes state across environments/namespaces (consumer-only). |
+| `customer-git-branch-svc` | Tracks customer branches and correlates per-env Helm values files (consumer-only). |
+| `environment-validation-svc` | Cross-environment validation and compliance checks. |
+| `context-correlation-svc` | Pairs contexts and maintains relationships between them (consumer-only). |
+| `test-service` | Dev harness, not deployed. |
 
-| Environment | Namespace           | Values file                            |
-|-------------|---------------------|----------------------------------------|
-| stage       | `platformctl-stage` | `charts/platformctl/values-stage.yaml` |
-| prod        | `platformctl-prod`  | `charts/platformctl/values-prod.yaml`  |
+Every service serves liveness/readiness on the health port (`/health`, `/ready`, default `:8081`) and Prometheus metrics on the metrics port (default `:9090`). The three consumer-only services run the same health server even though they take no other HTTP traffic — the kubelet kills them otherwise.
 
-Postgres is **external** (DigitalOcean managed); RabbitMQ is bundled in-cluster by
-the chart (toggle with `rabbitmq.enabled`). The chart **references** two database
-secrets per namespace but never creates them — set those up once (below).
+### Infrastructure
 
-#### One-time setup per environment
+- **PostgreSQL** — external (DigitalOcean managed). Contexts, audit log, read model. Migrations in [migrations/](migrations/).
+- **RabbitMQ** — in-cluster, deployed by the Helm chart (`rabbitmq.enabled`). Command and result queues.
+- **Redis** *(planned)* — caching layer, not used yet.
 
-**a) Database roles and databases** — run on the managed Postgres as an admin:
+### API surface
+
+Mounted under `/api/v1`:
+
+- CRUD: `contexts`, `apps`, `environments`
+- Actions (publish commands): `POST /contexts/:name/actions/{sync-apps, validate-environments, correlate-contexts, correlate-multi-environment, inspect-manifests}`
+- Status (read model, under the `/api/v1/gitops` prefix): `GET /gitops/contexts/:name/status`, per-app and per-environment status, `GET /gitops/contexts/:name/environments/:env/vault/status`, `GET /gitops/health/overview`
+
+Routes are registered in `cmd/gateway/main.go`.
+
+---
+
+## Repo layout
+
+```
+cmd/                  # one main.go per service (see table above)
+internal/             # private packages: config, events (RabbitMQ), storage,
+                      #   handlers, readmodel, observability, validation, ...
+pkg/api/              # shared API message and type definitions
+migrations/           # SQL migrations (run by gateway on startup, or make db-migrate)
+charts/platformctl/   # Helm chart + values-stage.yaml / values-prod.yaml
+.github/workflows/    # build-and-push, deploy, test, cleanup
+docs/                 # phases/, adr/, data-models/
+scripts/              # build-images.sh, cleanup.sh
+test/                 # integration tests
+```
+
+---
+
+## Development
+
+Prereqs: Go 1.24+, Docker, `make`. A reachable PostgreSQL and RabbitMQ for anything beyond compiling.
+
+```bash
+make build              # build all service binaries
+make test               # go test -race -cover ./...
+make lint               # golangci-lint
+make db-migrate         # requires DATABASE_URL and the golang-migrate CLI
+                        #   (004 has no down migration; db-migrate-down stops at 003)
+make docker-build       # build container images
+make help               # everything else
+```
+
+Local dependencies come from [deployments/docker-compose.dev.yml](deployments/docker-compose.dev.yml):
+
+```bash
+make dev-up             # start Postgres 14 + RabbitMQ (management UI on :15672)
+make dev-logs           # tail their logs
+make dev-down           # stop them
+
+export DATABASE_URL='postgres://platformctl:platformctl@localhost:5432/platformctl?sslmode=disable'
+# RABBITMQ_URL can be left unset — the config default amqp://localhost:5672/ works as-is
+```
+
+If another project already holds a port, override it, e.g. `POSTGRES_HOST_PORT=55432 make dev-up` (and adjust `DATABASE_URL` to match).
+
+Key environment variables (parsed in `internal/config`): `DATABASE_URL`, `RABBITMQ_URL`, `PORT`, `HEALTH_CHECK_PORT`, `LOG_LEVEL`, `ENABLE_METRICS`. See [docs/adr/](docs/adr/) for configuration decisions.
+
+---
+
+## Deployment
+
+One Helm chart ([charts/platformctl](charts/platformctl/)), one values file per environment, everything on a single DigitalOcean Kubernetes cluster isolated by namespace:
+
+| Environment | Namespace | Values file |
+|---|---|---|
+| stage | `platformctl-stage` | `charts/platformctl/values-stage.yaml` |
+| prod | `platformctl-prod` | `charts/platformctl/values-prod.yaml` |
+
+Postgres is external (DO managed); RabbitMQ is bundled in-cluster. The chart **references** two database secrets per namespace but never creates them.
+
+### One-time setup per environment
+
+**Database roles** — on the managed Postgres as admin:
 
 ```sql
 CREATE ROLE platformctl_stage LOGIN PASSWORD '<PASSWORD>';
 CREATE DATABASE platformctl_stage OWNER platformctl_stage;
-
-CREATE ROLE platformctl_prod LOGIN PASSWORD '<PASSWORD>';
-CREATE DATABASE platformctl_prod OWNER platformctl_prod;
+-- repeat for platformctl_prod
 ```
 
-DigitalOcean exposes two ports: `25060` (direct) and `25061` (PgBouncer pool). The
-gateway runs schema migrations on startup and must use the **direct** connection;
-every other service uses the **pool**.
+DigitalOcean exposes port `25060` (direct) and `25061` (PgBouncer pool). The gateway runs migrations on startup and must use the **direct** connection; every other service uses the **pool**. Create the pool in the DO console or with `doctl databases pool create` — the `_pool` suffix is a PgBouncer pool name, not a separate database.
 
-**b) Database secrets** — create both secrets in each namespace. Fill in
-`data.DATABASE_URL` with a base64-encoded connection string matching the commented
-format, then `kubectl apply -f secrets.yaml`:
+**Secrets** — two per namespace, each holding a base64 `DATABASE_URL`:
 
-```yaml
----
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: platformctl-credentials
-  namespace: platformctl-prod
-data:
-  # postgresql://platformctl_prod:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25060/platformctl_prod?sslmode=require
-  DATABASE_URL: ''
----
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: platformctl-pool-credentials
-  namespace: platformctl-prod
-data:
-  # postgresql://platformctl_prod:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_prod_pool?sslmode=require
-  DATABASE_URL: ''
----
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: platformctl-credentials
-  namespace: platformctl-stage
-data:
-  # postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25060/platformctl_stage?sslmode=require
-  DATABASE_URL: ''
----
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: platformctl-pool-credentials
-  namespace: platformctl-stage
-data:
-  # postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_stage_pool?sslmode=require
-  DATABASE_URL: ''
-```
-
-> `platformctl-credentials` (direct :25060) is read only by the gateway;
-> `platformctl-pool-credentials` (pool :25061) is read by every other service.
-> The `_pool` names are DigitalOcean PgBouncer **pool names**, not separate
-> databases — create the pool in the DO console (or `doctl databases pool create`)
-> targeting the base database; you do not create them with SQL.
-
-#### Deploy via CI/CD (GitHub Actions)
-
-The `Deploy` workflow (`.github/workflows/deploy.yml`) runs `helm upgrade --install`:
-
-| Trigger                   | Deploys to                              |
-|---------------------------|-----------------------------------------|
-| push to `main`            | **stage** (image tag `latest`)          |
-| push tag `v*.*.*`         | **prod** (image tag = the git tag)      |
-| **Run workflow** (manual) | choose `stage`/`prod` + optional tag    |
-
-Images are built by the `Build and Push Container Images` workflow on the same
-event; the deploy job waits for the gateway image before proceeding.
-
-Required repository **Secrets**:
-
-| Secret           | Purpose                                                                 |
-|------------------|-------------------------------------------------------------------------|
-| `KUBECONFIG_B64` | base64 kubeconfig (`doctl kubernetes cluster kubeconfig save <cluster>` then `base64 -w0 ~/.kube/config`) |
-| `GHCR_PULL_PAT`  | PAT with `read:packages`; used to create the in-namespace `ghcr-pull` pull secret |
-
-#### Deploy manually / from a laptop
+| Secret | Connection | Read by |
+|---|---|---|
+| `platformctl-credentials` | direct `:25060` | gateway only |
+| `platformctl-pool-credentials` | pool `:25061` | all other services |
 
 ```bash
-# Point kubectl at the cluster
+kubectl -n platformctl-stage create secret generic platformctl-credentials \
+  --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25060/platformctl_stage?sslmode=require'
+
+kubectl -n platformctl-stage create secret generic platformctl-pool-credentials \
+  --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_stage_pool?sslmode=require'
+```
+
+For manual deploys the `ghcr-pull` image-pull secret must also exist in the namespace — CI creates it from `GHCR_PULL_PAT`, so it's only missing on a namespace CI has never touched.
+
+### CI/CD (GitHub Actions)
+
+`deploy.yml` runs `helm upgrade --install --atomic`; deploys are serialized per environment:
+
+| Trigger | Deploys to |
+|---|---|
+| push to `main` | stage (image tag `latest`) |
+| push tag `v*.*.*` | prod (image tag = the git tag) |
+| Run workflow (manual) | choose `stage`/`prod` + optional tag |
+
+Images come from the `Build and Push Container Images` workflow on the same event; the deploy job waits for the gateway image before proceeding, then waits for all rollouts after the Helm release lands.
+
+Required repository secrets:
+
+| Secret | Purpose |
+|---|---|
+| `DIGITALOCEAN_ACCESS_TOKEN` | used by `doctl` to fetch the cluster kubeconfig in CI |
+| `GHCR_PULL_PAT` | PAT with `read:packages`; creates the in-namespace `ghcr-pull` pull secret |
+
+### Manual deploy / local render
+
+```bash
 doctl kubernetes cluster kubeconfig save <cluster>
 
-# Prod (immutable tag-style image)
 helm upgrade --install platformctl charts/platformctl \
-  --namespace platformctl-prod \
-  -f charts/platformctl/values-prod.yaml \
-  --set image.tag=v1.2.3 \
+  --namespace platformctl-stage \
+  -f charts/platformctl/values-stage.yaml \
   --atomic --timeout 10m
 
-# Render locally without touching the cluster
+# render without touching the cluster
 helm template platformctl charts/platformctl \
-  -n platformctl-prod -f charts/platformctl/values-prod.yaml --set image.tag=v1.2.3
+  -n platformctl-stage -f charts/platformctl/values-stage.yaml
 ```
 
-### 3. Verify Installation
+RBAC (ServiceAccounts + read-only ClusterRoles) ships with the chart and is created on install; ClusterRole names are namespace-suffixed so stage and prod coexist on one cluster. Toggle with `rbac.create`.
+
+---
+
+## Verify & troubleshoot
+
 ```bash
-# Check all pods are running
-kubectl get pods -n platformctl-prod
+NS=platformctl-stage
 
-# Check services
-kubectl get svc -n platformctl-prod
-
-# Gateway health (via port-forward)
-kubectl port-forward svc/platformctl-gateway 8080:80 -n platformctl-prod
+kubectl get pods -n $NS                          # expect 7/7 Ready (+ RabbitMQ)
+kubectl port-forward svc/platformctl-gateway 8080:80 -n $NS
 curl http://localhost:8080/health
 
-# View gateway logs
-kubectl logs -l app=gateway -n platformctl-prod
+kubectl logs -l app=gateway -n $NS
+kubectl get events -n $NS --sort-by='.lastTimestamp'
+
+# RabbitMQ management UI
+kubectl port-forward svc/rabbitmq 15672:15672 -n $NS
+
+# follow a request end-to-end
+kubectl logs -f deploy/platformctl-app-sync-svc -n $NS | grep correlation_id
 ```
+
+Common failure modes: a consumer pod crash-looping usually means its health server isn't binding (probe failure), a bad `DATABASE_URL` secret, or RabbitMQ not up yet; the gateway failing at startup is usually the direct-vs-pool connection mixup (migrations can't run through PgBouncer).
 
 ---
 
-## 📋 Configuration
+## Roadmap *(planned)*
 
-### Environment Variables
-Create a `config.yaml` file for your environment:
+- `platformctl` CLI (`context create/list/status`, `run <action>`) — designed, not built
+- First prod deploy (tag-triggered pipeline is in place and untested against prod)
+- Deeper Vault secret-sync validation — a Vault status endpoint exists today, but the dedicated Vault integration service from the phase plan (real-time VaultStaticSecret ↔ pod env correlation) isn't built
+- New Relic integration service
+- Redis caching, JWT auth, RBAC/tenant isolation
 
-```yaml
-# Database Configuration
-database:
-  host: "postgres.platformctl.svc.cluster.local"
-  port: 5432
-  database: "platformctl"
-  username: "${POSTGRES_USERNAME}"
-  password: "${POSTGRES_PASSWORD}"
-  ssl_mode: "require"
-
-# RabbitMQ Configuration  
-rabbitmq:
-  url: "amqp://${RABBITMQ_USERNAME}:${RABBITMQ_PASSWORD}@rabbitmq.platformctl.svc.cluster.local:5672/"
-  heartbeat: "10s"
-  connection_retries: 5
-
-# Observability
-observability:
-  log_level: "info"
-  log_format: "json" 
-  enable_console_log: false
-  metrics_enabled: true
-  metrics_port: "9090"
-  health_check_port: "8081"
-
-# GitOps Integration
-argocd:
-  enabled: true
-  address: "https://argocd.yourdomain.com"
-  
-vault:
-  enabled: true
-  address: "https://vault.yourdomain.com"
-  
-# External Services
-github:
-  api_url: "https://api.github.com"
-  
-newrelic:
-  api_url: "https://api.newrelic.com"
-```
-
-### Kubernetes Resources
-
-#### Resource Requirements
-```yaml
-# Example resource requests/limits
-resources:
-  gateway:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "500m" 
-      memory: "512Mi"
-  
-  aggregator:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "500m"
-      memory: "1Gi"
-      
-  integration-services:
-    requests:
-      cpu: "50m"
-      memory: "64Mi"
-    limits:
-      cpu: "200m"
-      memory: "256Mi"
-```
+See [ROADMAP.md](ROADMAP.md) for the full plan and [docs/phases/](docs/phases/) for the phase-by-phase design docs.
 
 ---
 
-## 🔧 Development
+## Further reading
 
-### Local Development Setup
-```bash
-# Start dependencies with Docker Compose
-docker-compose up -d postgres rabbitmq
+- [CLAUDE.md](CLAUDE.md) — development guide (phases, schema, message envelope, conventions). Its project-layout section predates the current structure — trust this README for what's actually in `cmd/` and `internal/`.
+- [docs/adr/](docs/adr/) — architectural decision records
+- [docs/data-models/](docs/data-models/) — context YAML, API schemas, database schema
+- [TEST_SUITE.md](TEST_SUITE.md) — test suite documentation
 
-# Install dependencies
-go mod download
-
-# Run database migrations
-make db-migrate
-
-# Start services locally
-make run-gateway &
-make run-aggregator &
-make run-app-sync-svc &
-```
-
-### Build Commands
-```bash
-# Build all services
-make build
-
-# Run tests
-make test
-
-# Build Docker images
-make docker-build
-
-# Run integration tests
-make test-integration
-```
-
-### Service Architecture
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   API Gateway   │───▶│    RabbitMQ      │───▶│ Integration Services│
-│   (Port 8080)   │    │  (Port 5672)     │    │  - app-sync-svc     │
-└─────────────────┘    └──────────────────┘    │  - env-validation   │
-         │                       │              │  - kube-svc         │
-         ▼                       ▼              │  - git-branch-svc   │
-┌─────────────────┐    ┌──────────────────┐    └─────────────────────┘
-│   PostgreSQL    │◀───│ GitOps Aggregator│
-│   (Port 5432)   │    │   (Port 8080)    │
-└─────────────────┘    └──────────────────┘
-```
-
----
-
-## 📚 Usage
-
-### CLI Commands (Future)
-```bash
-# Context Management
-platformctl context create -f myapp-context.yaml
-platformctl context list
-platformctl context status myapp-dev
-platformctl context delete myapp-dev
-
-# GitOps Operations
-platformctl refresh myapp-dev
-platformctl validate myapp-dev
-platformctl sync myapp-dev --environment prod
-
-# Multi-Environment Views
-platformctl status myapp-dev --all-environments
-platformctl diff myapp-dev --from dev --to prod
-```
-
-### REST API Examples
-```bash
-# List contexts
-curl http://<LOAD_BALANCER_IP>/api/v1/contexts
-
-# Get context status
-curl http://<LOAD_BALANCER_IP>/api/v1/contexts/myapp-dev/status
-
-# Refresh context across all environments
-curl -X POST http://<LOAD_BALANCER_IP>/api/v1/contexts/myapp-dev/actions/refresh
-
-# Get multi-environment comparison
-curl http://<LOAD_BALANCER_IP>/api/v1/contexts/myapp-dev/environments/comparison
-```
-
----
-
-## 🔍 Monitoring & Troubleshooting
-
-### Health Checks
-```bash
-# Check service health
-kubectl get pods -n platformctl
-kubectl describe pod <pod-name> -n platformctl
-
-# Check service logs
-kubectl logs -f deployment/platformctl-gateway -n platformctl
-kubectl logs -f deployment/platformctl-aggregator -n platformctl
-
-# Check RabbitMQ queues
-kubectl port-forward service/rabbitmq 15672:15672 -n platformctl
-# Visit http://localhost:15672 (guest/guest)
-```
-
-### Common Issues
-
-#### 1. Services Not Starting
-```bash
-# Check resource constraints
-kubectl top pods -n platformctl
-
-# Check events
-kubectl get events -n platformctl --sort-by='.lastTimestamp'
-
-# Check configuration
-kubectl describe configmap platformctl-config -n platformctl
-```
-
-#### 2. Database Connection Issues
-```bash
-# Test database connectivity
-kubectl run postgres-test --rm -i --tty --image postgres:14 -- bash
-# Inside pod: psql -h postgres.platformctl.svc.cluster.local -U platformctl
-```
-
-#### 3. RabbitMQ Message Issues
-```bash
-# Check queue status
-kubectl exec -it deployment/rabbitmq -n platformctl -- rabbitmqctl list_queues
-
-# Check message flow
-kubectl logs -f deployment/platformctl-app-sync-svc -n platformctl | grep correlation_id
-```
-
----
-
-## 🔒 Security
-
-### RBAC Configuration
-ServiceAccounts and the read-only GitOps-monitoring ClusterRoles ship with the
-Helm chart (`charts/platformctl/templates/{serviceaccount,rbac}.yaml`) and are
-created automatically on `helm upgrade --install`. ClusterRole/Binding names are
-suffixed with the release namespace so stage and prod can coexist on one cluster.
-Toggle with `rbac.create` in values. To inspect what will be applied:
-```bash
-helm template platformctl charts/platformctl \
-  -n platformctl-prod -f charts/platformctl/values-prod.yaml \
-  --show-only templates/rbac.yaml
-```
-
-### Secret Management
-- All sensitive configuration stored in Kubernetes Secrets
-- Integration with HashiCorp Vault for external secrets
-- No secret values logged or exposed in APIs
-- mTLS between services (future enhancement)
-
----
-
-## 📈 Scaling
-
-### Horizontal Pod Autoscaling
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: platformctl-gateway-hpa
-  namespace: platformctl
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: platformctl-gateway
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-```
-
-### Database Scaling
-- Use DigitalOcean Managed PostgreSQL for production
-- Configure connection pooling (PgBouncer)
-- Implement read replicas for aggregator queries
-
----
-
-## 🚀 Production Deployment Checklist
-
-### Pre-Deployment
-- [ ] DOKS cluster configured with appropriate node sizes
-- [ ] DigitalOcean Container Registry set up
-- [ ] DNS configured for LoadBalancer endpoints  
-- [ ] SSL/TLS certificates provisioned
-- [ ] Monitoring and alerting configured
-- [ ] Backup strategy implemented
-
-### Post-Deployment
-- [ ] Health checks passing for all services
-- [ ] RabbitMQ queues processing messages
-- [ ] Database connections stable
-- [ ] External integrations (ArgoCD, Vault) working
-- [ ] Load testing completed
-- [ ] Disaster recovery procedures tested
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-- All services must build successfully (verified in CI)
-- Follow Go coding standards and best practices
-- Add tests for new functionality
-- Update documentation for API changes
-- Ensure security best practices are followed
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🆘 Support
-
-- **Documentation**: See `docs/` directory for detailed guides
-- **Issues**: Report bugs and feature requests via GitHub Issues  
-- **Architecture**: See `CLAUDE.md` for comprehensive development guide
-- **Roadmap**: See `ROADMAP.md` for planned features and timeline
-
----
-
-**Built with ❤️ for DevOps teams using GitOps workflows**
+Licensed under the [MIT License](LICENSE).
