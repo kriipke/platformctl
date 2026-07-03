@@ -78,6 +78,10 @@ spec:
         {{- if $merged.argocdToken }}
         # Optional so the pod still starts before the token secret is created;
         # ArgoCD calls then fail at request time behind the circuit breaker.
+        # NOTE: env vars from a secretKeyRef are resolved only at pod start, so
+        # creating or rotating platformctl-argocd-token AFTER these pods are
+        # running does not update the live env — restart the deployment
+        # (kubectl rollout restart) to pick up a new/changed token.
         - name: ARGOCD_AUTH_TOKEN
           valueFrom:
             secretKeyRef:
