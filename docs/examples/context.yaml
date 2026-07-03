@@ -1,0 +1,32 @@
+# Example Platformctl Context manifest.
+#
+#   platformctl context create docs/examples/context.yaml
+#
+# Field reference: docs/data-models/context-model.md
+# Validation: internal/validation/context.go
+apiVersion: platformctl/v1
+kind: Context
+metadata:
+  name: web-app-prod
+  labels:
+    team: platform
+    tier: frontend
+spec:
+  # appRef references an App manifest managed by the platform.
+  appRef: web-app
+  # At least one deployment is required, and at least one must be active.
+  deployments:
+    - environment: prod          # one of: dev, qa, uat, prod, staging, production, development, testing
+      appRef: web-app
+      environmentRef: web-app-prod-env
+      active: true
+  gitops:
+    customerBranch:
+      # When enabled, branch must match the pattern customer/{customer-name}.
+      enabled: false
+      branch: ""
+    monitoring:
+      applicationSets: true
+      vaultSecrets: true
+      helmValues: true
+      crossEnvironmentDrift: true

@@ -2,7 +2,7 @@
 
 GitOps monitoring platform for applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-backed secrets. It watches the whole delivery chain — ApplicationSet → generated Applications → Helm releases → VaultStaticSecrets → pod environment variables — and materializes a per-context, per-environment health read model behind a REST API.
 
-**Status (2026-07-02):** stage deploys are green — all 7 services build in CI, deploy via Helm, and pass their Kubernetes probes on the DigitalOcean cluster. Prod has not been deployed yet. There is no `platformctl` CLI binary yet; the REST API is the only interface. Sections below marked *(planned)* are aspirational.
+**Status (2026-07-02):** stage deploys are green — all 7 services build in CI, deploy via Helm, and pass their Kubernetes probes on the DigitalOcean cluster. Prod has not been deployed yet. A `platformctl` CLI now wraps the REST API (`make cli`; see [CLI](#cli) below). Sections below marked *(planned)* are aspirational.
 
 ---
 
@@ -95,6 +95,39 @@ export DATABASE_URL='postgres://platformctl:platformctl@localhost:5432/platformc
 If another project already holds a port, override it, e.g. `POSTGRES_HOST_PORT=55432 make dev-up` (and adjust `DATABASE_URL` to match).
 
 Key environment variables (parsed in `internal/config`): `DATABASE_URL`, `RABBITMQ_URL`, `PORT`, `HEALTH_CHECK_PORT`, `LOG_LEVEL`, `ENABLE_METRICS`. See [docs/adr/](docs/adr/) for configuration decisions.
+
+---
+
+## CLI
+
+`platformctl` is a thin, scriptable client for the gateway's REST API (`cmd/cli`, `internal/cli`).
+
+```bash
+make cli                # build ./bin/platformctl (honours GOOS/GOARCH; omit them for a native build)
+go build -o bin/platformctl ./cmd/cli   # native build for local use
+```
+
+```bash
+platformctl context create docs/examples/context.yaml   # create from a YAML/JSON manifest (also -f / stdin '-')
+platformctl context list                                # NAME / APP / ENVIRONMENTS / BRANCH / CREATED
+platformctl context get web-app-prod
+platformctl context status web-app-prod                 # aggregated GitOps read-model status (--watch to poll)
+platformctl context run web-app-prod sync-apps          # trigger an action (aliases: sync, validate, inspect, ...)
+platformctl context run web-app-prod inspect-manifests --type app
+platformctl context delete web-app-prod                 # --force to skip the prompt
+platformctl completion zsh                              # bash | zsh | fish | powershell
+```
+
+Every command accepts `-o table|json|yaml`. Configuration resolves flags → env (`PLATFORMCTL_SERVER`,
+`PLATFORMCTL_OUTPUT`, `PLATFORMCTL_USERNAME`, `PLATFORMCTL_PASSWORD`, `PLATFORMCTL_CUSTOMER_ID`,
+`PLATFORMCTL_TOKEN`, `PLATFORMCTL_INSECURE`) → config file (`$HOME/.platformctl.yaml` or `--config`) →
+defaults (`--server http://localhost:8080`, basic auth `admin`/`admin`). Manifests are validated
+client-side before they are sent. See [docs/cli.md](docs/cli.md) for the full reference.
+
+> The gateway authenticates every `/api/v1` route with HTTP basic auth but does not yet populate the
+> tenant/customer context its handlers require, so authenticated calls currently return `401`/`unauthorized`
+> until that middleware is wired up. The CLI already sends basic auth plus `X-Customer-ID`/`X-User-ID`
+> (via `--customer-id`) and a `--token` bearer, so it is ready once the server side lands.
 
 ---
 
@@ -201,7 +234,7 @@ Common failure modes: a consumer pod crash-looping usually means its health serv
 
 ## Roadmap *(planned)*
 
-- `platformctl` CLI (`context create/list/status`, `run <action>`) — designed, not built
+- Wire the gateway's customer/tenant auth middleware so the CLI (and any API client) can get past `401`
 - First prod deploy (tag-triggered pipeline is in place and untested against prod)
 - Deeper Vault secret-sync validation — a Vault status endpoint exists today, but the dedicated Vault integration service from the phase plan (real-time VaultStaticSecret ↔ pod env correlation) isn't built
 - New Relic integration service
@@ -213,6 +246,7 @@ See [ROADMAP.md](ROADMAP.md) for the full plan and [docs/phases/](docs/phases/) 
 
 ## Further reading
 
+- [docs/cli.md](docs/cli.md) — `platformctl` CLI reference
 - [CLAUDE.md](CLAUDE.md) — development guide (phases, schema, message envelope, conventions). Its project-layout section predates the current structure — trust this README for what's actually in `cmd/` and `internal/`.
 - [docs/adr/](docs/adr/) — architectural decision records
 - [docs/data-models/](docs/data-models/) — context YAML, API schemas, database schema
