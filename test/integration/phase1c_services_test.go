@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -190,11 +188,11 @@ func TestServiceMessageFlow(t *testing.T) {
 
 	// Create a result consumer to capture results
 	consumer := events.NewResultConsumer(messageBus)
-	
+
 	resultsChan := make(chan *api.GitOpsResultMessage, 10)
 	testHandler := &TestResultHandler{resultsChan: resultsChan}
 	consumer.RegisterHandler("test", testHandler)
-	
+
 	err = consumer.Start()
 	require.NoError(t, err)
 	defer consumer.Stop()
@@ -304,33 +302,33 @@ func (h *TestResultHandler) HandleResult(result *api.GitOpsResultMessage) error 
 func TestManifestSpecificValidation(t *testing.T) {
 	// Test manifest-specific validation logic
 	testCases := []struct {
-		name         string
-		manifestType string
-		action       string
+		name          string
+		manifestType  string
+		action        string
 		expectedValid bool
 	}{
 		{
-			name:         "Valid App Sync",
-			manifestType: "app",
-			action:       "sync-app",
+			name:          "Valid App Sync",
+			manifestType:  "app",
+			action:        "sync-app",
 			expectedValid: true,
 		},
 		{
-			name:         "Valid Environment Validation",
-			manifestType: "environment",
-			action:       "validate-environment",
+			name:          "Valid Environment Validation",
+			manifestType:  "environment",
+			action:        "validate-environment",
 			expectedValid: true,
 		},
 		{
-			name:         "Valid Context Correlation",
-			manifestType: "context",
-			action:       "correlate-context",
+			name:          "Valid Context Correlation",
+			manifestType:  "context",
+			action:        "correlate-context",
 			expectedValid: true,
 		},
 		{
-			name:         "Invalid Action for App",
-			manifestType: "app",
-			action:       "validate-environment",
+			name:          "Invalid Action for App",
+			manifestType:  "app",
+			action:        "validate-environment",
 			expectedValid: false,
 		},
 	}
@@ -348,7 +346,7 @@ func TestManifestSpecificValidation(t *testing.T) {
 			// Basic validation
 			assert.Equal(t, tc.manifestType, cmd.ManifestType)
 			assert.Equal(t, tc.action, cmd.Action)
-			
+
 			// In a real test, we would validate against service handlers
 			// For now, we just ensure the message structure is correct
 			assert.NotEmpty(t, cmd.MessageID)
