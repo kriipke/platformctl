@@ -48,8 +48,10 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/rs/zerolog v1.34.0
+	github.com/spf13/cobra v1.8.1
 	helm.sh/helm/v3 v3.16.3
 	k8s.io/cli-runtime v0.31.2
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -205,7 +207,6 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
@@ -264,5 +265,4 @@ require (
 	sigs.k8s.io/kustomize/api v0.17.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.4-0.20241211184406-7bf59b3d70ee // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )

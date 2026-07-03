@@ -67,11 +67,22 @@ test-integration: ## Run integration tests
 build: $(SERVICES) ## Build all services
 
 .PHONY: build-local
-build-local: ## Build all services for local architecture
+build-local: ## Build all services and the CLI for local architecture
 	@for service in $(SERVICES); do \
 		echo "Building $$service locally..."; \
 		go build -ldflags="$(LDFLAGS)" -o bin/$$service ./cmd/$$service/; \
 	done
+	@echo "Building platformctl CLI locally..."
+	@go build -ldflags="$(LDFLAGS)" -o bin/platformctl ./cmd/cli/
+
+.PHONY: build-all
+build-all: build cli ## Build all services and the CLI
+
+.PHONY: cli
+cli: ## Build the platformctl CLI
+	@echo "Building platformctl CLI..."
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		go build -ldflags="$(LDFLAGS)" -o bin/platformctl ./cmd/cli/
 
 .PHONY: $(SERVICES)
 $(SERVICES): ## Build individual service (e.g., make gateway)

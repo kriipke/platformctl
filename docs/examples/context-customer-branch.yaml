@@ -1,0 +1,30 @@
+# Example Context using a customer branch (customer/{customer-name} pattern).
+#
+#   platformctl context create docs/examples/context-customer-branch.yaml
+apiVersion: platformctl/v1
+kind: Context
+metadata:
+  name: web-app-acme-uat
+  labels:
+    team: platform
+    customer: acme
+spec:
+  appRef: web-app
+  deployments:
+    - environment: uat
+      appRef: web-app
+      environmentRef: web-app-acme-uat-env
+      active: true
+    - environment: prod
+      appRef: web-app
+      environmentRef: web-app-acme-prod-env
+      active: false
+  gitops:
+    customerBranch:
+      enabled: true
+      branch: customer/acme
+    monitoring:
+      applicationSets: true
+      vaultSecrets: true
+      helmValues: true
+      crossEnvironmentDrift: false
