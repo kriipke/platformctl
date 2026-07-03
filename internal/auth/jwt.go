@@ -32,16 +32,16 @@ const (
 
 // CustomClaims extends jwt.RegisteredClaims with application-specific claims
 type CustomClaims struct {
-	UserID         string                 `json:"user_id"`
-	CustomerID     uuid.UUID              `json:"customer_id"`
-	SessionID      string                 `json:"session_id"`
-	TokenType      TokenType              `json:"token_type"`
-	Permissions    []string               `json:"permissions,omitempty"`
-	Roles          []string               `json:"roles,omitempty"`
-	MFAVerified    bool                   `json:"mfa_verified"`
-	IsPrivileged   bool                   `json:"is_privileged"`
-	Scopes         []string               `json:"scopes,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	UserID       string                 `json:"user_id"`
+	CustomerID   uuid.UUID              `json:"customer_id"`
+	SessionID    string                 `json:"session_id"`
+	TokenType    TokenType              `json:"token_type"`
+	Permissions  []string               `json:"permissions,omitempty"`
+	Roles        []string               `json:"roles,omitempty"`
+	MFAVerified  bool                   `json:"mfa_verified"`
+	IsPrivileged bool                   `json:"is_privileged"`
+	Scopes       []string               `json:"scopes,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -97,18 +97,18 @@ func NewJWTManager(config *JWTConfig) (*JWTManager, error) {
 // GenerateTokenPair generates both access and refresh tokens for a user
 func (j *JWTManager) GenerateTokenPair(user *models.Customer, sessionID string, permissions []string, roles []string) (*TokenPair, error) {
 	now := time.Now()
-	
+
 	// Create access token
 	accessClaims := &CustomClaims{
-		UserID:      user.Username, // Using username as userID
-		CustomerID:  user.ID,
-		SessionID:   sessionID,
-		TokenType:   TokenTypeAccess,
-		Permissions: permissions,
-		Roles:       roles,
-		MFAVerified: false, // Will be updated when MFA is verified
+		UserID:       user.Username, // Using username as userID
+		CustomerID:   user.ID,
+		SessionID:    sessionID,
+		TokenType:    TokenTypeAccess,
+		Permissions:  permissions,
+		Roles:        roles,
+		MFAVerified:  false, // Will be updated when MFA is verified
 		IsPrivileged: containsPrivilegedRole(roles),
-		Scopes:      []string{"read", "write"},
+		Scopes:       []string{"read", "write"},
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.New().String(),
 			Issuer:    j.config.Issuer,
@@ -158,7 +158,7 @@ func (j *JWTManager) GenerateTokenPair(user *models.Customer, sessionID string, 
 // GenerateMFAToken generates a short-lived MFA verification token
 func (j *JWTManager) GenerateMFAToken(userID string, customerID uuid.UUID, sessionID string) (string, error) {
 	now := time.Now()
-	
+
 	claims := &CustomClaims{
 		UserID:     userID,
 		CustomerID: customerID,
@@ -253,7 +253,7 @@ func (j *JWTManager) UpdateMFAStatus(accessTokenString string, mfaVerified bool)
 	// Update MFA status
 	claims.MFAVerified = mfaVerified
 	claims.IssuedAt = jwt.NewNumericDate(time.Now())
-	
+
 	// Generate new token ID
 	claims.ID = uuid.New().String()
 
@@ -278,10 +278,10 @@ func (j *JWTManager) ExtractClaims(tokenString string) (*CustomClaims, error) {
 // createToken creates and signs a JWT token with the given claims
 func (j *JWTManager) createToken(claims *CustomClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	
+
 	// Add key ID to header for key rotation support
 	token.Header["kid"] = "1" // Key identifier
-	
+
 	tokenString, err := token.SignedString(j.config.PrivateKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign token: %w", err)
@@ -296,7 +296,7 @@ func (j *JWTManager) validateCustomClaims(claims *CustomClaims) error {
 	if claims.UserID == "" {
 		return fmt.Errorf("%w: user_id is required", ErrMissingClaims)
 	}
-	
+
 	if claims.CustomerID == uuid.Nil {
 		return fmt.Errorf("%w: customer_id is required", ErrMissingClaims)
 	}
@@ -327,7 +327,7 @@ func (j *JWTManager) validateCustomClaims(claims *CustomClaims) error {
 	if len(claims.Audience) == 0 {
 		return ErrInvalidAudience
 	}
-	
+
 	validAudience := false
 	for _, tokenAud := range claims.Audience {
 		for _, allowedAud := range j.config.AllowedAudiences {
@@ -363,7 +363,7 @@ type TokenPair struct {
 // containsPrivilegedRole checks if the roles contain any privileged roles
 func containsPrivilegedRole(roles []string) bool {
 	privilegedRoles := []string{"admin", "operator", "deployer"}
-	
+
 	for _, role := range roles {
 		for _, privilegedRole := range privilegedRoles {
 			if role == privilegedRole {
@@ -371,7 +371,7 @@ func containsPrivilegedRole(roles []string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 

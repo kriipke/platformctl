@@ -138,7 +138,7 @@ func MockCustomerAuth(customerID string) func(http.Handler) http.Handler {
 			}{
 				CustomerID: customerID,
 			})
-			
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -193,14 +193,14 @@ func RunAPITestCases(t *testing.T, htc *HTTPTestContext, testCases []APITestCase
 				var actualBody interface{}
 				err = json.Unmarshal(body, &actualBody)
 				require.NoError(t, err)
-				
+
 				expectedJSON, err := json.Marshal(tc.ExpectedBody)
 				require.NoError(t, err)
-				
+
 				var expectedBody interface{}
 				err = json.Unmarshal(expectedJSON, &expectedBody)
 				require.NoError(t, err)
-				
+
 				require.Equal(t, expectedBody, actualBody)
 			}
 		})
@@ -278,14 +278,14 @@ func MockRequestWithCustomer(method, url, customerID string, body io.Reader) *ht
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	
+
 	// Add customer context
 	ctx := context.WithValue(req.Context(), "customer", struct {
 		CustomerID string
 	}{
 		CustomerID: customerID,
 	})
-	
+
 	return req.WithContext(ctx)
 }
 

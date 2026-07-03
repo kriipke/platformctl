@@ -20,7 +20,7 @@ type TestSuite struct {
 func main() {
 	fmt.Println("🚀 PlatformCTL Test Suite Runner")
 	fmt.Println("================================")
-	
+
 	// Define test suites
 	testSuites := []TestSuite{
 		{
@@ -127,11 +127,11 @@ func runTestSuite(suite TestSuite, verbose, short bool) TestResult {
 
 	// Build test command
 	args := []string{"test"}
-	
+
 	if verbose {
 		args = append(args, "-v")
 	}
-	
+
 	if short {
 		args = append(args, "-short")
 	}
@@ -151,7 +151,7 @@ func runTestSuite(suite TestSuite, verbose, short bool) TestResult {
 	args = append(args, suite.Path)
 
 	cmd := exec.Command("go", args...)
-	
+
 	// Set environment variables
 	cmd.Env = append(os.Environ(),
 		"TEST_DATABASE_URL=postgres://postgres:password@localhost:5432/platformctl_test?sslmode=disable",
@@ -203,9 +203,9 @@ func printSummary(results []TestResult, totalDuration time.Duration) {
 			passed++
 		}
 
-		fmt.Printf("%s %-40s (%v)\n", 
-			status, 
-			result.Suite.Name, 
+		fmt.Printf("%s %-40s (%v)\n",
+			status,
+			result.Suite.Name,
 			result.Duration.Round(time.Millisecond))
 
 		if !result.Success {

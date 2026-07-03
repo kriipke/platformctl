@@ -232,9 +232,9 @@ func (s *AppStore) createHelmSource(ctx context.Context, appName, customerID str
 // createApplicationSet creates an ApplicationSet entry
 func (s *AppStore) createApplicationSet(ctx context.Context, appName, customerID string, appSet models.ApplicationSetConfig) error {
 	generatorConfigJSON, err := json.Marshal(map[string]interface{}{
-		"type": appSet.Generator.Type,
-		"git":  appSet.Generator.Git,
-		"list": appSet.Generator.List,
+		"type":     appSet.Generator.Type,
+		"git":      appSet.Generator.Git,
+		"list":     appSet.Generator.List,
 		"clusters": appSet.Generator.Clusters,
 	})
 	if err != nil {

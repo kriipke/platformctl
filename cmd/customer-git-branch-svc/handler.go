@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kriipke/platformctl/internal/clients/git"
 	"github.com/kriipke/platformctl/internal/clients/helm"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
-	"github.com/google/uuid"
 )
 
 type CustomerGitBranchHandler struct {
@@ -76,7 +76,7 @@ func (cgbh *CustomerGitBranchHandler) handleCustomerBranchSync(cmd *api.GitOpsCo
 		if err != nil {
 			return cgbh.errorResult(cmd, "values correlation failed", err, startTime)
 		}
-		
+
 		// Store correlations in payload
 		cmd.Payload["values_correlations"] = valuesCorrelations
 	}
@@ -84,17 +84,17 @@ func (cgbh *CustomerGitBranchHandler) handleCustomerBranchSync(cmd *api.GitOpsCo
 	// Create result
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "git",
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "git",
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "customer-git-branch",
@@ -130,17 +130,17 @@ func (cgbh *CustomerGitBranchHandler) handleCustomerBranchInspection(cmd *api.Gi
 	// Basic customer git branch inspection
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "git",
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "git",
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "customer-git-branch",
@@ -164,17 +164,17 @@ func (cgbh *CustomerGitBranchHandler) handleCustomerBranchInspection(cmd *api.Gi
 func (cgbh *CustomerGitBranchHandler) errorResult(cmd *api.GitOpsCommandMessage, message string, err error, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName:  "customer-git-branch",

@@ -71,7 +71,7 @@ func (l *PostgresLogger) LogEvent(ctx context.Context, event *AuditEvent) error 
 // LogCRUDEvent logs a CRUD operation audit event
 func (l *PostgresLogger) LogCRUDEvent(ctx context.Context, eventType EventType, resourceType ResourceType, resourceID, resourceName string, oldValues, newValues map[string]interface{}) error {
 	auditCtx := ExtractAuditContext(ctx, nil)
-	
+
 	event := NewAuditEvent(auditCtx, eventType, resourceType, string(eventType), OutcomeSuccess)
 	event.WithResource(resourceID, resourceName)
 	event.WithValues(oldValues, newValues)
@@ -87,9 +87,9 @@ func (l *PostgresLogger) LogCRUDEvent(ctx context.Context, eventType EventType, 
 // LogAuthEvent logs an authentication-related audit event
 func (l *PostgresLogger) LogAuthEvent(ctx context.Context, action string, outcome Outcome, metadata map[string]interface{}) error {
 	auditCtx := ExtractAuditContext(ctx, nil)
-	
+
 	event := NewAuditEvent(auditCtx, EventTypeAuth, ResourceTypeUser, action, outcome)
-	
+
 	// Add metadata
 	for key, value := range metadata {
 		event.WithMetadata(key, value)
@@ -104,9 +104,9 @@ func (l *PostgresLogger) LogAuthEvent(ctx context.Context, action string, outcom
 // LogSystemEvent logs a system-related audit event
 func (l *PostgresLogger) LogSystemEvent(ctx context.Context, action string, outcome Outcome, metadata map[string]interface{}) error {
 	auditCtx := ExtractAuditContext(ctx, nil)
-	
+
 	event := NewAuditEvent(auditCtx, EventTypeSystem, ResourceTypeSystem, action, outcome)
-	
+
 	// Add metadata
 	for key, value := range metadata {
 		event.WithMetadata(key, value)
@@ -118,7 +118,7 @@ func (l *PostgresLogger) LogSystemEvent(ctx context.Context, action string, outc
 // QueryEvents queries audit events based on filter criteria
 func (l *PostgresLogger) QueryEvents(ctx context.Context, filter *EventFilter) ([]*AuditEvent, error) {
 	query, args := l.buildQueryWithFilter(filter)
-	
+
 	rows, err := l.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit events: %w", err)

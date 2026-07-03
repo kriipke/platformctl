@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -72,7 +72,7 @@ func setupE2ESecuritySuite(t *testing.T) *E2ESecurityTestSuite {
 	}
 
 	// Generate tokens
-	tokenPair, err := jwtManager.GenerateTokenPair(testUser, "test-session", 
+	tokenPair, err := jwtManager.GenerateTokenPair(testUser, "test-session",
 		[]string{"app:read", "app:create"}, []string{"customer-viewer"})
 	require.NoError(t, err)
 
@@ -141,39 +141,39 @@ func testAuthenticationFlow(t *testing.T, suite *E2ESecurityTestSuite) {
 	router := createSecureTestRouter(suite)
 
 	tests := []struct {
-		name           string
-		token          string
-		expectedStatus int
+		name            string
+		token           string
+		expectedStatus  int
 		expectedInAudit string
 	}{
 		{
-			name:           "valid token access",
-			token:          suite.AccessToken,
-			expectedStatus: http.StatusOK,
+			name:            "valid token access",
+			token:           suite.AccessToken,
+			expectedStatus:  http.StatusOK,
 			expectedInAudit: "success",
 		},
 		{
-			name:           "no token provided",
-			token:          "",
-			expectedStatus: http.StatusUnauthorized,
+			name:            "no token provided",
+			token:           "",
+			expectedStatus:  http.StatusUnauthorized,
 			expectedInAudit: "missing authorization header",
 		},
 		{
-			name:           "invalid token format",
-			token:          "invalid-token",
-			expectedStatus: http.StatusUnauthorized,
+			name:            "invalid token format",
+			token:           "invalid-token",
+			expectedStatus:  http.StatusUnauthorized,
 			expectedInAudit: "invalid token",
 		},
 		{
-			name:           "malformed bearer token",
-			token:          "Bearer",
-			expectedStatus: http.StatusUnauthorized,
+			name:            "malformed bearer token",
+			token:           "Bearer",
+			expectedStatus:  http.StatusUnauthorized,
 			expectedInAudit: "invalid authorization format",
 		},
 		{
-			name:           "expired token simulation",
-			token:          "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDk0NTkyMDB9.expired",
-			expectedStatus: http.StatusUnauthorized,
+			name:            "expired token simulation",
+			token:           "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDk0NTkyMDB9.expired",
+			expectedStatus:  http.StatusUnauthorized,
 			expectedInAudit: "token expired or invalid",
 		},
 	}
@@ -215,8 +215,8 @@ func testAuthenticationFlow(t *testing.T, suite *E2ESecurityTestSuite) {
 				// Should have failed auth event
 				found := false
 				for _, event := range events {
-					if event.Outcome == audit.OutcomeFailure && 
-					   event.EventType == audit.EventTypeAuth {
+					if event.Outcome == audit.OutcomeFailure &&
+						event.EventType == audit.EventTypeAuth {
 						found = true
 						break
 					}
@@ -256,7 +256,7 @@ func testAuthorizationFlow(t *testing.T, suite *E2ESecurityTestSuite) {
 		},
 		{
 			name:           "allowed specific resource update",
-			method:         "PUT", 
+			method:         "PUT",
 			path:           "/secure/apps/app-123",
 			expectedStatus: http.StatusOK,
 			description:    "Should allow update of specific app",
@@ -316,7 +316,7 @@ func testAuthorizationFlow(t *testing.T, suite *E2ESecurityTestSuite) {
 func testMFAProtectedOperations(t *testing.T, suite *E2ESecurityTestSuite) {
 	// Create privileged token that requires MFA
 	privilegedTokenPair, err := suite.JWTManager.GenerateTokenPair(
-		suite.TestUser, "privileged-session", 
+		suite.TestUser, "privileged-session",
 		[]string{"*:*"}, []string{"customer-admin"})
 	require.NoError(t, err)
 
@@ -458,8 +458,8 @@ func testSecurityIncidentResponse(t *testing.T, suite *E2ESecurityTestSuite) {
 
 	// Simulate security incidents
 	incidents := []struct {
-		name        string
-		request     func() *http.Request
+		name         string
+		request      func() *http.Request
 		expectedCode int
 		incidentType string
 	}{
@@ -528,10 +528,10 @@ func testSecurityIncidentResponse(t *testing.T, suite *E2ESecurityTestSuite) {
 
 			found := false
 			for _, event := range events {
-				if event.ErrorMessage != nil && 
-				   (strings.Contains(strings.ToLower(*event.ErrorMessage), "injection") ||
-				    strings.Contains(strings.ToLower(*event.ErrorMessage), "xss") ||
-				    strings.Contains(strings.ToLower(*event.ErrorMessage), "traversal")) {
+				if event.ErrorMessage != nil &&
+					(strings.Contains(strings.ToLower(*event.ErrorMessage), "injection") ||
+						strings.Contains(strings.ToLower(*event.ErrorMessage), "xss") ||
+						strings.Contains(strings.ToLower(*event.ErrorMessage), "traversal")) {
 					found = true
 					assert.Equal(t, "192.168.1.200", event.IPAddress.String())
 					assert.Equal(t, "AttackBot/1.0", *event.UserAgent)
@@ -547,8 +547,8 @@ func testSessionManagement(t *testing.T, suite *E2ESecurityTestSuite) {
 	// Test token refresh
 	t.Run("token_refresh", func(t *testing.T) {
 		newTokenPair, err := suite.JWTManager.RefreshTokens(
-			suite.RefreshToken, 
-			[]string{"app:read", "app:write"}, 
+			suite.RefreshToken,
+			[]string{"app:read", "app:write"},
 			[]string{"customer-operator"})
 		require.NoError(t, err)
 
@@ -614,7 +614,7 @@ func testRateLimitingWorkflow(t *testing.T, suite *E2ESecurityTestSuite) {
 	testRateLimiter := NewRateLimiter(3, time.Second)
 
 	router := mux.NewRouter()
-	
+
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("success"))
@@ -683,7 +683,7 @@ func testSecurityHeadersAndValidation(t *testing.T, suite *E2ESecurityTestSuite)
 	require.NoError(t, err)
 
 	router := mux.NewRouter()
-	
+
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -719,7 +719,7 @@ func testSecurityHeadersAndValidation(t *testing.T, suite *E2ESecurityTestSuite)
 	assert.Empty(t, headers.Get("X-Powered-By"))
 
 	// Test input validation
-	req = httptest.NewRequest("POST", "/secure", 
+	req = httptest.NewRequest("POST", "/secure",
 		bytes.NewBufferString(`{"data": "clean input"}`))
 	req.Header.Set("User-Agent", "test-client")
 	req.Header.Set("Content-Type", "application/json")
@@ -730,7 +730,7 @@ func testSecurityHeadersAndValidation(t *testing.T, suite *E2ESecurityTestSuite)
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
 	// Test malicious input rejection
-	req = httptest.NewRequest("POST", "/secure", 
+	req = httptest.NewRequest("POST", "/secure",
 		bytes.NewBufferString(`{"data": "<script>alert('xss')</script>"}`))
 	req.Header.Set("User-Agent", "test-client")
 	req.Header.Set("Content-Type", "application/json")
@@ -814,8 +814,8 @@ func handleCreateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityT
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
-		"id": "app-789", 
-		"name": "new-app",
+		"id":     "app-789",
+		"name":   "new-app",
 		"status": "created",
 	})
 }
@@ -824,8 +824,8 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityT
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"id": "app-123",
-		"name": "updated-app", 
+		"id":     "app-123",
+		"name":   "updated-app",
 		"status": "updated",
 	})
 }
@@ -834,7 +834,7 @@ func handleDeleteApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityT
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"id": "app-123",
+		"id":     "app-123",
 		"status": "deleted",
 	})
 }

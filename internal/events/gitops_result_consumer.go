@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/zerolog"
 
 	"github.com/kriipke/platformctl/internal/observability"
 	"github.com/kriipke/platformctl/pkg/api"
@@ -63,7 +63,7 @@ func (c *GitOpsResultConsumer) StartConsuming(ctx context.Context) error {
 	for _, queueName := range resultQueues {
 		go func(queue string) {
 			c.logger.Info().Str("queue", queue).Msg("Starting to consume from result queue")
-			
+
 			if err := c.consumeFromQueue(ctx, channel, queue); err != nil {
 				c.logger.Error().Err(err).Str("queue", queue).Msg("Error consuming from queue")
 			}
@@ -140,7 +140,7 @@ func (c *GitOpsResultConsumer) consumeFromQueue(ctx context.Context, channel *am
 // processMessage processes a single result message
 func (c *GitOpsResultConsumer) processMessage(ctx context.Context, msg amqp.Delivery, queueName string) error {
 	start := time.Now()
-	
+
 	c.logger.Debug().
 		Str("queue", queueName).
 		Str("message_id", msg.MessageId).

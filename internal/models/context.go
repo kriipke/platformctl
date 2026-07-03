@@ -44,8 +44,8 @@ type CustomerBranchConfig struct {
 }
 
 type MonitoringConfig struct {
-	ApplicationSets         bool `json:"applicationSets"`
-	VaultSecrets           bool `json:"vaultSecrets"`
-	HelmValues             bool `json:"helmValues"`
-	CrossEnvironmentDrift  bool `json:"crossEnvironmentDrift"`
+	ApplicationSets       bool `json:"applicationSets"`
+	VaultSecrets          bool `json:"vaultSecrets"`
+	HelmValues            bool `json:"helmValues"`
+	CrossEnvironmentDrift bool `json:"crossEnvironmentDrift"`
 }

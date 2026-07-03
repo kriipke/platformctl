@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/models"
+	"github.com/kriipke/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/kriipke/platformctl/internal/testutil"
-	"github.com/kriipke/platformctl/internal/models"
 )
 
 func TestNewRBACManager(t *testing.T) {
@@ -31,8 +31,8 @@ func TestRBACManagerCheckPermission(t *testing.T) {
 	// Create test customer and user
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestRBACManagerCheckPermission(t *testing.T) {
 				tt.resourceID,
 				tt.action,
 			)
-			
+
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, hasPermission)
 		})
@@ -133,8 +133,8 @@ func TestRBACManagerCheckPermissionWithRoles(t *testing.T) {
 	// Create test customer
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -145,11 +145,11 @@ func TestRBACManagerCheckPermissionWithRoles(t *testing.T) {
 		CustomerID: customerID,
 		Roles:      []string{"customer-viewer"},
 	}
-	
+
 	customer := &models.Customer{
 		ID: customerID,
 	}
-	
+
 	ctx := context.WithValue(context.Background(), "customer", customer)
 	ctx = context.WithValue(ctx, JWTClaimsKey, claims)
 
@@ -162,7 +162,7 @@ func TestRBACManagerCheckPermissionWithRoles(t *testing.T) {
 		nil,
 		"read",
 	)
-	
+
 	assert.NoError(t, err)
 	assert.True(t, hasPermission) // customer-viewer role allows app:read
 }
@@ -175,8 +175,8 @@ func TestRBACManagerCheckPermissionWithDenyEffect(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestRBACManagerCheckPermissionWithDenyEffect(t *testing.T) {
 
 	ctx := context.Background()
 	hasPermission, err := manager.CheckPermission(ctx, userID, customerID, "app", nil, "read")
-	
+
 	assert.NoError(t, err)
 	assert.False(t, hasPermission) // Deny should override allow
 }
@@ -207,8 +207,8 @@ func TestRBACManagerCheckPermissionWithExpiration(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestRBACManagerCheckPermissionWithExpiration(t *testing.T) {
 
 	ctx := context.Background()
 	hasPermission, err := manager.CheckPermission(ctx, userID, customerID, "app", nil, "read")
-	
+
 	assert.NoError(t, err)
 	assert.False(t, hasPermission) // Expired permission should not be valid
 }
@@ -233,8 +233,8 @@ func TestRBACManagerCheckPermissionWithConditions(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -263,8 +263,8 @@ func TestRBACManagerGrantPermission(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -311,8 +311,8 @@ func TestRBACManagerGrantPermissionUpsert(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -340,8 +340,8 @@ func TestRBACManagerRevokePermission(t *testing.T) {
 
 	customerID := uuid.New()
 	userID := "test-user"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -349,7 +349,7 @@ func TestRBACManagerRevokePermission(t *testing.T) {
 	// Grant permissions
 	err = manager.GrantPermission(customerID, userID, "app", nil, "read", "admin", nil, nil)
 	require.NoError(t, err)
-	
+
 	err = manager.GrantPermission(customerID, userID, "app", stringPtr("app-123"), "update", "admin", nil, nil)
 	require.NoError(t, err)
 
@@ -386,8 +386,8 @@ func TestRBACManagerGetResourcePermissions(t *testing.T) {
 
 	customerID := uuid.New()
 	resourceID := "app-123"
-	
-	_, err := testDB.ExecContext(context.Background(), 
+
+	_, err := testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -413,11 +413,11 @@ func TestRBACManagerGetResourcePermissions(t *testing.T) {
 	// Verify all permissions are related to the resource
 	specificPermissions := 0
 	generalPermissions := 0
-	
+
 	for _, perm := range permissions {
 		assert.Equal(t, customerID, perm.CustomerID)
 		assert.Equal(t, "app", perm.ResourceType)
-		
+
 		if perm.ResourceID != nil {
 			assert.Equal(t, resourceID, *perm.ResourceID)
 			specificPermissions++
@@ -737,7 +737,7 @@ func TestRBACManagerGetRoleDefinition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			role := manager.getRoleDefinition(tt.roleName)
-			
+
 			if tt.expected == nil {
 				assert.Nil(t, role)
 			} else {
@@ -746,7 +746,7 @@ func TestRBACManagerGetRoleDefinition(t *testing.T) {
 				assert.Equal(t, tt.expected.Description, role.Description)
 				assert.Equal(t, tt.expected.Permissions, role.Permissions)
 				assert.Equal(t, tt.expected.IsPrivileged, role.IsPrivileged)
-				
+
 				if tt.expected.IsPrivileged {
 					assert.True(t, len(role.Conditions) > 0, "Privileged roles should have conditions")
 					assert.Equal(t, "mfa", role.Conditions[0].Type)
@@ -861,8 +861,8 @@ func TestRBACManagerConditionEvaluation(t *testing.T) {
 		{
 			name: "multiple conditions - all pass",
 			conditions: map[string]interface{}{
-				"customer_id":   customerID.String(),
-				"mfa_required":  true,
+				"customer_id":  customerID.String(),
+				"mfa_required": true,
 			},
 			expected: true,
 		},
@@ -912,4 +912,3 @@ func TestRBACManagerJSONSerialization(t *testing.T) {
 func stringPtr(s string) *string {
 	return &s
 }
-

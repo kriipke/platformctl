@@ -68,7 +68,7 @@ func TestAppStore_Create(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify timestamps are set
 				assert.NotNil(t, tt.app.Metadata.CreatedAt)
 				assert.NotNil(t, tt.app.Metadata.UpdatedAt)
@@ -95,12 +95,12 @@ func TestAppStore_Get(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name         string
-		appName      string
-		customerID   string
-		expectError  bool
-		expectedApp  *models.App
-		errorType    error
+		name        string
+		appName     string
+		customerID  string
+		expectError bool
+		expectedApp *models.App
+		errorType   error
 	}{
 		{
 			name:        "get existing app",
@@ -137,7 +137,7 @@ func TestAppStore_Get(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				require.NotNil(t, app)
-				
+
 				// Compare apps (ignoring timestamps)
 				testutil.AssertAppEqual(t, *tt.expectedApp, *app)
 			}
@@ -219,7 +219,7 @@ func TestAppStore_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := tt.setupFunc()
 			originalUpdateTime := app.Metadata.UpdatedAt
-			
+
 			err := store.Update(ctx, &app, tt.customerID)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -228,13 +228,13 @@ func TestAppStore_Update(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify UpdatedAt timestamp is updated
 				assert.NotNil(t, app.Metadata.UpdatedAt)
 				if originalUpdateTime != nil {
 					assert.True(t, app.Metadata.UpdatedAt.After(*originalUpdateTime))
 				}
-				
+
 				// Verify the update by fetching the app
 				updatedApp, err := store.Get(ctx, app.Metadata.Name, tt.customerID)
 				assert.NoError(t, err)
@@ -259,7 +259,7 @@ func TestAppStore_Delete(t *testing.T) {
 	// Create test apps
 	app1 := testutil.CreateTestApp("delete-test-app-1")
 	app2 := testutil.CreateTestApp("delete-test-app-2")
-	
+
 	err := store.Create(ctx, &app1, customerID)
 	require.NoError(t, err)
 	err = store.Create(ctx, &app2, customerID)
@@ -311,7 +311,7 @@ func TestAppStore_Delete(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify the app is deleted
 				_, err := store.Get(ctx, tt.appName, tt.customerID)
 				assert.ErrorIs(t, err, storage.ErrNotFound)
@@ -339,7 +339,7 @@ func TestAppStore_List(t *testing.T) {
 		testutil.CreateTestApp("customer1-app-2"),
 		testutil.CreateTestAppWithGitSource("customer1-app-3"),
 	}
-	
+
 	for _, app := range customer1Apps {
 		err := store.Create(ctx, &app, customerID1)
 		require.NoError(t, err)
@@ -349,35 +349,35 @@ func TestAppStore_List(t *testing.T) {
 	customer2Apps := []models.App{
 		testutil.CreateTestApp("customer2-app-1"),
 	}
-	
+
 	for _, app := range customer2Apps {
 		err := store.Create(ctx, &app, customerID2)
 		require.NoError(t, err)
 	}
 
 	tests := []struct {
-		name         string
-		customerID   string
+		name          string
+		customerID    string
 		expectedCount int
-		expectError  bool
+		expectError   bool
 	}{
 		{
-			name:         "list apps for customer 1",
-			customerID:   customerID1,
+			name:          "list apps for customer 1",
+			customerID:    customerID1,
 			expectedCount: 3,
-			expectError:  false,
+			expectError:   false,
 		},
 		{
-			name:         "list apps for customer 2",
-			customerID:   customerID2,
+			name:          "list apps for customer 2",
+			customerID:    customerID2,
 			expectedCount: 1,
-			expectError:  false,
+			expectError:   false,
 		},
 		{
-			name:         "list apps for non-existent customer",
-			customerID:   "non-existent-customer",
+			name:          "list apps for non-existent customer",
+			customerID:    "non-existent-customer",
 			expectedCount: 0,
-			expectError:  false,
+			expectError:   false,
 		},
 	}
 
@@ -389,7 +389,7 @@ func TestAppStore_List(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, apps, tt.expectedCount)
-				
+
 				// Verify all apps belong to the correct customer
 				for _, app := range apps {
 					assert.NotNil(t, app)
@@ -397,7 +397,7 @@ func TestAppStore_List(t *testing.T) {
 					assert.Equal(t, "platformctl/v1", app.APIVersion)
 					assert.Equal(t, "App", app.Kind)
 				}
-				
+
 				// Verify apps are sorted by name
 				if len(apps) > 1 {
 					for i := 1; i < len(apps); i++ {
@@ -502,10 +502,10 @@ func TestAppStore_ComplexHelmSources(t *testing.T) {
 	app := testutil.CreateTestApp("complex-helm-app")
 	app.Spec.Helm.Sources = []models.HelmSource{
 		{
-			Type:       "helm-registry",
-			Registry:   "registry.example.com",
-			Chart:      "primary-chart",
-			Version:    "1.0.0",
+			Type:     "helm-registry",
+			Registry: "registry.example.com",
+			Chart:    "primary-chart",
+			Version:  "1.0.0",
 		},
 		{
 			Type:       "git",

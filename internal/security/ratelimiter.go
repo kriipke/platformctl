@@ -55,7 +55,7 @@ func (rl *RateLimiter) Allow(clientIP string) bool {
 	defer bucket.mutex.Unlock()
 
 	now := time.Now()
-	
+
 	// Refill tokens based on time elapsed
 	timeSinceRefill := now.Sub(bucket.lastRefill)
 	if timeSinceRefill >= rl.refillRate {
@@ -82,7 +82,7 @@ func (rl *RateLimiter) cleanup() {
 	for range ticker.C {
 		rl.mutex.Lock()
 		now := time.Now()
-		
+
 		for clientIP, bucket := range rl.clients {
 			bucket.mutex.Lock()
 			// Remove clients that haven't been active for 2 hours
@@ -91,7 +91,7 @@ func (rl *RateLimiter) cleanup() {
 			}
 			bucket.mutex.Unlock()
 		}
-		
+
 		rl.mutex.Unlock()
 	}
 }
@@ -108,7 +108,7 @@ func (rl *RateLimiter) GetTokenCount(clientIP string) int {
 
 	bucket.mutex.Lock()
 	defer bucket.mutex.Unlock()
-	
+
 	return bucket.tokens
 }
 

@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/kriipke/platformctl/internal/aggregator"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/internal/events"
 	"github.com/kriipke/platformctl/internal/observability"
 	"github.com/kriipke/platformctl/internal/storage"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	// Initialize configuration
 	cfg := config.Load()
-	
+
 	// Initialize observability
 	loggerConfig := observability.LoggerConfig{
 		Level:         cfg.Observability.LogLevel,
@@ -39,14 +39,14 @@ func main() {
 
 	healthConfig := cfg.GetHealthCheckConfig()
 	healthManager := observability.NewHealthManager(healthConfig, "gitops-aggregator", "1.0.0")
-	
+
 	// Initialize database connection
 	dbConn, err := storage.NewDB(cfg.DatabaseURL)
 	if err != nil {
 		logger.NewContextLogger(context.Background()).Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer dbConn.Close()
-	
+
 	// Convert to sqlx for aggregator compatibility
 	db := sqlx.NewDb(dbConn.DB, "postgres")
 
@@ -101,7 +101,7 @@ func main() {
 	defer shutdownCancel()
 
 	cancel() // Stop the consumer
-	
+
 	// Use shutdown context for any cleanup operations
 	select {
 	case <-shutdownCtx.Done():

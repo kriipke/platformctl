@@ -372,7 +372,7 @@ func TestManagerStateChangeCallbacks(t *testing.T) {
 
 func TestManagerHealthCheck(t *testing.T) {
 	manager := NewManager()
-	
+
 	// Register services with different states
 	configs := []struct {
 		name   string
@@ -497,4 +497,3 @@ func TestManagerResetAll(t *testing.T) {
 		assert.Equal(t, uint32(0), stats.TotalRequests, "Service %s should be reset", service)
 	}
 }
-

@@ -57,7 +57,7 @@ func TestNewRetryExecutor(t *testing.T) {
 			if tt.valid {
 				assert.NoError(t, err)
 				assert.NotNil(t, executor)
-				
+
 				// Check defaults were applied
 				if tt.config.MaxRetries == 0 {
 					assert.Equal(t, 3, executor.config.MaxRetries)
@@ -121,7 +121,7 @@ func TestRetryExecutorExecuteWithRetries(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "success after retries", result)
 	assert.Equal(t, 3, attemptCount)
-	
+
 	// Should have waited at least for initial delay + backoff delay
 	// 10ms (first retry) + 20ms (second retry) = 30ms minimum
 	assert.True(t, duration >= 30*time.Millisecond)
@@ -152,7 +152,7 @@ func TestRetryExecutorExecuteMaxRetriesExceeded(t *testing.T) {
 func TestRetryExecutorExecuteNonRetryableError(t *testing.T) {
 	nonRetryableError := errors.New("non-retryable")
 	retryableError := errors.New("retryable")
-	
+
 	executor, err := NewRetryExecutor(RetryConfig{
 		MaxRetries:      3,
 		InitialDelay:    10 * time.Millisecond,
@@ -282,13 +282,13 @@ func TestRetryExecutorJitter(t *testing.T) {
 	require.NoError(t, err)
 
 	baseDelay := 100 * time.Millisecond
-	
+
 	// Test jitter multiple times to ensure variation
 	delays := make(map[time.Duration]int)
 	for i := 0; i < 100; i++ {
 		delay := executor.calculateDelay(0)
 		delays[delay]++
-		
+
 		// Jittered delay should be between 0.5 * base and 1.5 * base
 		assert.True(t, delay >= baseDelay/2, "Delay %v should be >= %v", delay, baseDelay/2)
 		assert.True(t, delay <= baseDelay*3/2, "Delay %v should be <= %v", delay, baseDelay*3/2)
@@ -402,8 +402,8 @@ func TestRetryExecutorWithCircuitBreaker(t *testing.T) {
 	})
 
 	executor, err := NewRetryExecutor(RetryConfig{
-		MaxRetries:   3,
-		InitialDelay: 10 * time.Millisecond,
+		MaxRetries:     3,
+		InitialDelay:   10 * time.Millisecond,
 		CircuitBreaker: cb,
 	})
 	require.NoError(t, err)
@@ -442,7 +442,7 @@ func TestRetryExecutorStats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Execute some operations with different outcomes
-	
+
 	// Successful operation
 	_, err = executor.Execute(func() (interface{}, error) {
 		return "success", nil

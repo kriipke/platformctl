@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
@@ -106,16 +106,16 @@ func (mc *MultiClusterClient) GetWorkloadStatus(customerID, environmentName, nam
 	if err == nil {
 		for _, deployment := range deployments.Items {
 			app := api.EnvironmentApplication{
-				Name:            deployment.Name,
-				Environment:     environmentName,
-				PodCount:        int32(*deployment.Spec.Replicas),
-				ReadyPodCount:   int32(deployment.Status.ReadyReplicas),
-				OverallStatus:   "healthy",
-				Deployments:     []api.DeploymentStatus{},
-				Services:        []api.ServiceStatus{},
-				Ingresses:       []api.IngressStatus{},
-				ConfigMaps:      []api.ConfigMapStatus{},
-				Secrets:         []api.SecretStatus{},
+				Name:          deployment.Name,
+				Environment:   environmentName,
+				PodCount:      int32(*deployment.Spec.Replicas),
+				ReadyPodCount: int32(deployment.Status.ReadyReplicas),
+				OverallStatus: "healthy",
+				Deployments:   []api.DeploymentStatus{},
+				Services:      []api.ServiceStatus{},
+				Ingresses:     []api.IngressStatus{},
+				ConfigMaps:    []api.ConfigMapStatus{},
+				Secrets:       []api.SecretStatus{},
 			}
 
 			if deployment.Status.ReadyReplicas != *deployment.Spec.Replicas {
@@ -221,11 +221,11 @@ func (mc *MultiClusterClient) simulateWorkloadStatus(customerID, environmentName
 		CustomerID:  customerID,
 		Applications: []api.EnvironmentApplication{
 			{
-				Name:            fmt.Sprintf("app-%s", environmentName),
-				Environment:     environmentName,
-				PodCount:        3,
-				ReadyPodCount:   3,
-				OverallStatus:   "healthy",
+				Name:          fmt.Sprintf("app-%s", environmentName),
+				Environment:   environmentName,
+				PodCount:      3,
+				ReadyPodCount: 3,
+				OverallStatus: "healthy",
 			},
 		},
 		LastUpdated: time.Now().UTC(),

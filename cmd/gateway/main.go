@@ -11,9 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/kriipke/platformctl/internal/auth"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/internal/database"
@@ -24,6 +22,8 @@ import (
 	"github.com/kriipke/platformctl/internal/readmodel"
 	"github.com/kriipke/platformctl/internal/storage"
 	"github.com/kriipke/platformctl/pkg/api"
+	_ "github.com/lib/pq"
+	"github.com/rs/zerolog"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 		EnableConsole: cfg.Observability.EnableConsoleLog,
 	}
 	logger := observability.NewLogger(loggerConfig)
-	
+
 	metricsConfig := observability.MetricsConfig{
 		Enabled:   cfg.Observability.MetricsEnabled,
 		Port:      cfg.Observability.MetricsPort,
@@ -97,7 +97,7 @@ func main() {
 	// Setup Gin router with observability middleware
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	
+
 	// Apply observability middleware stack
 	middlewareStack := observability.NewObservabilityMiddlewareStack(logger, metrics, "X-Correlation-ID")
 	middlewareStack.ApplyToGin(router)
@@ -125,7 +125,7 @@ func main() {
 	// Graceful shutdown handling
 	go func() {
 		log.Printf("Starting GitOps API Gateway on port %s (health: %s)", cfg.Port, cfg.Observability.HealthCheckPort)
-		
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
@@ -190,20 +190,20 @@ func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environ
 
 	// GitOps Status routes (Phase 1D)
 	gitopsGroup := apiGroup.Group("/gitops")
-	
+
 	// Context status routes
 	gitopsGroup.GET("/contexts/status", statusHandler.ListContextStatuses)
 	gitopsGroup.GET("/contexts/:contextName/status", statusHandler.GetContextStatus)
 	gitopsGroup.GET("/contexts/:contextName/health", statusHandler.GetContextHealth)
-	
+
 	// App manifest status routes
 	gitopsGroup.GET("/contexts/:contextName/apps/:appName/status", statusHandler.GetAppManifestStatus)
 	gitopsGroup.GET("/contexts/:contextName/apps/:appName/environments/status", statusHandler.GetMultiEnvironmentAppStatus)
-	
+
 	// Environment manifest status routes
 	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/status", statusHandler.GetEnvironmentManifestStatus)
 	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/vault/status", statusHandler.GetVaultValidationDetails)
-	
+
 	// System health overview
 	gitopsGroup.GET("/health/overview", statusHandler.GetSystemHealthOverview)
 
