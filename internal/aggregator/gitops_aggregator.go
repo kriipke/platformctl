@@ -43,6 +43,23 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 		Str("status", result.Status).
 		Msg("Processing GitOps result message")
 
+	// An error result carries no manifest data; the type-specific processors below
+	// all require it. Record it as handled (metric + log) and stop, so it is acked
+	// rather than looping. The read model simply keeps its prior status.
+	if result.Status == "error" {
+		a.metrics.IncrementCounter("aggregator_error_results", map[string]string{
+			"service": result.ServiceName,
+			"type":    result.ManifestType,
+		})
+		a.logger.Warn().
+			Str("correlation_id", result.CorrelationID).
+			Str("service_name", result.ServiceName).
+			Str("context_name", result.ContextName).
+			Str("error_message", result.ErrorMessage).
+			Msg("Received error result; recording without manifest data")
+		return nil
+	}
+
 	// Start database transaction
 	tx, err := a.db.BeginTxx(ctx, nil)
 	if err != nil {

@@ -51,19 +51,26 @@ func (ash *AppSyncHandler) GetSupportedActions() []string {
 }
 
 func (ash *AppSyncHandler) handleAppSync(cmd *api.GitOpsCommandMessage, startTime time.Time) (*api.GitOpsResultMessage, error) {
-	// Validate Helm sources
+	// Helm/Git source validation is auxiliary telemetry that depends on optional
+	// external configuration (a Helm registry URL, a reachable Git repo). It must
+	// NOT abort ApplicationSet monitoring — the primary purpose of this action —
+	// so treat it as best-effort and record any failure as a warning instead of
+	// returning early.
+	var sourceWarnings []string
+
 	helmValidations, err := ash.helmClient.ValidateHelmSources(cmd.CustomerID, cmd.AppName)
 	if err != nil {
-		return ash.errorResult(cmd, "helm source validation failed", err, startTime)
+		sourceWarnings = append(sourceWarnings, fmt.Sprintf("helm source validation: %v", err))
+		helmValidations = nil
 	}
 
-	// Validate Git sources
 	gitValidations, err := ash.gitClient.ValidateGitSources(cmd.CustomerID, cmd.AppName)
 	if err != nil {
-		return ash.errorResult(cmd, "git source validation failed", err, startTime)
+		sourceWarnings = append(sourceWarnings, fmt.Sprintf("git source validation: %v", err))
+		gitValidations = nil
 	}
 
-	// Get ApplicationSet statuses
+	// Get ApplicationSet statuses — the primary signal; a failure here is fatal.
 	appSetStatuses, err := ash.argoCDClient.GetApplicationSetsForApp(cmd.CustomerID, cmd.AppName)
 	if err != nil {
 		return ash.errorResult(cmd, "applicationset status failed", err, startTime)
@@ -147,6 +154,12 @@ func (ash *AppSyncHandler) handleAppSync(cmd *api.GitOpsCommandMessage, startTim
 	// Add sync results if any
 	if len(syncResults) > 0 {
 		result.Payload["sync_results"] = syncResults
+	}
+
+	// Surface any best-effort source-validation warnings without failing the run.
+	if len(sourceWarnings) > 0 {
+		result.Payload["source_validation_warnings"] = sourceWarnings
+		result.Status = "degraded"
 	}
 
 	return result, nil

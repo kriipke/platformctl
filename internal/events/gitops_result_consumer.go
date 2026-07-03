@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -224,6 +225,14 @@ func (c *GitOpsResultConsumer) validateResultMessage(result *api.GitOpsResultMes
 		return fmt.Errorf("manifest type is required")
 	}
 
+	// An error result legitimately carries no manifest data (the service failed
+	// before producing any), so skip the data requirement for it. Requiring data
+	// here rejected every error result and, combined with the requeue bug, spun
+	// it in an infinite poison loop.
+	if result.Status == "error" {
+		return nil
+	}
+
 	// Validate manifest type specific data
 	switch result.ManifestType {
 	case "app":
@@ -262,12 +271,12 @@ func (c *GitOpsResultConsumer) shouldRequeue(err error) bool {
 
 	errStr := err.Error()
 	for _, transient := range transientErrors {
-		if fmt.Sprintf("%s", errStr) != "" && fmt.Sprintf("%s", transient) != "" {
-			// Simple substring check - in production, you'd use more sophisticated error matching
+		if strings.Contains(errStr, transient) {
 			return true
 		}
 	}
 
-	// Don't requeue validation errors or parsing errors
+	// Don't requeue validation errors or parsing errors (permanent failures);
+	// requeuing them produces an infinite poison-message loop.
 	return false
 }

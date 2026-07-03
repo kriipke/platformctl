@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/kriipke/platformctl/internal/auth"
 	"github.com/kriipke/platformctl/internal/config"
@@ -298,8 +299,23 @@ func ginCustomerContextMiddleware() gin.HandlerFunc {
 }
 
 // Wrapper to convert http.HandlerFunc to gin.HandlerFunc
+// ginHandlerWrapper adapts a net/http handler to gin. The wrapped handlers read
+// path parameters via gorilla/mux (mux.Vars), but under gin the params live on
+// gin.Context, so we copy them into the request as mux URL vars. Without this,
+// every :name route (context/app/environment GET/PUT/DELETE and the GitOps
+// actions) sees an empty name and returns 404.
 func ginHandlerWrapper(handler func(http.ResponseWriter, *http.Request)) gin.HandlerFunc {
-	return gin.WrapF(handler)
+	return func(c *gin.Context) {
+		r := c.Request
+		if len(c.Params) > 0 {
+			vars := make(map[string]string, len(c.Params))
+			for _, p := range c.Params {
+				vars[p.Key] = p.Value
+			}
+			r = mux.SetURLVars(r, vars)
+		}
+		handler(c.Writer, r)
+	}
 }
 
 func getEnv(key, defaultValue string) string {
