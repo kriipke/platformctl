@@ -200,8 +200,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Use single platform for faster builds on develop branch
-          platforms: ${{ github.ref == 'refs/heads/develop' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # amd64-only: stemx/DO nodes are amd64, so skip the slow QEMU-emulated
+          # arm64 build (it also produced a broken image because the Dockerfile
+          # pins GOARCH=amd64). Add arm64 back here + fix the Dockerfile if arm64
+          # images are ever needed (e.g. local pulls on Apple Silicon).
+          platforms: linux/amd64
           driver-opts: |
             network=host
 
@@ -230,7 +233,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: ${{ github.ref == 'refs/heads/develop' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          platforms: linux/amd64
           push: ${{ needs.setup.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
