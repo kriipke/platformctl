@@ -56,8 +56,21 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 			Str("service_name", result.ServiceName).
 			Str("context_name", result.ContextName).
 			Str("error_message", result.ErrorMessage).
-			Msg("Received error result; recording without manifest data")
-		return nil
+			Msg("Received error result; marking command run failed without manifest data")
+
+		// Still transition the command run to failed — just skip the
+		// manifest-specific processing, which needs data an error result lacks.
+		// Otherwise the command_runs row stays pending forever.
+		tx, err := a.db.BeginTxx(ctx, nil)
+		if err != nil {
+			a.metrics.IncrementCounter("aggregator_transaction_errors", map[string]string{"error": "begin"})
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+		defer tx.Rollback()
+		if err := a.updateCommandRunStatus(ctx, tx, result); err != nil {
+			return fmt.Errorf("failed to update command run status for error result: %w", err)
+		}
+		return tx.Commit()
 	}
 
 	// Start database transaction
