@@ -32,6 +32,10 @@ imagePullSecrets:
 secretNames:
   direct: platformctl-credentials
   pool: platformctl-pool-credentials
+  # ArgoCD API token for the services that talk to ArgoCD (key ARGOCD_AUTH_TOKEN).
+  # Generate with an `apiKey`-capable ArgoCD local account, e.g.:
+  #   argocd account generate-token --account platformctl
+  argocdToken: platformctl-argocd-token
 
 # -----------------------------------------------------------------------------
 # Non-secret runtime config. Rendered into one ConfigMap and mounted into every
@@ -50,6 +54,15 @@ config:
   ENABLE_ARGOCD_INTEGRATION: "true"
   ENABLE_GIT_INTEGRATION: "true"
   ENABLE_KUBERNETES_INTEGRATION: "true"
+  # ArgoCD connection (internal/config ArgoCDConfig, envPrefix ARGOCD_).
+  # Points at the in-cluster ArgoCD on stemx; the gRPC-web client strips the
+  # scheme, so this is host[:port]. INSECURE=true because argocd-server serves
+  # a self-signed cert in-cluster. The API token is NOT here — it comes from
+  # the secret named by secretNames.argocdToken, wired per-service below.
+  ARGOCD_ENABLED: "true"
+  ARGOCD_SERVER_URL: "argocd-server.argocd.svc.cluster.local"
+  ARGOCD_NAMESPACE: "argocd"
+  ARGOCD_INSECURE: "true"
   # Performance tuning
   MAX_CONCURRENT_REQUESTS: "100"
   REQUEST_TIMEOUT: "30s"
@@ -121,6 +134,7 @@ defaults:
 #   httpPort         -> also exposes an HTTP port + a Service :80 (gateway only)
 #   dbSecret         -> "direct" | "pool"
 #   env              -> extra literal env vars for this service
+#   argocdToken      -> mount ARGOCD_AUTH_TOKEN from secretNames.argocdToken
 #   autoscaling      -> {enabled, minReplicas, maxReplicas, targetCPU}
 #   pdb              -> {enabled, minAvailable|maxUnavailable}
 # -----------------------------------------------------------------------------
@@ -175,11 +189,14 @@ services:
       enabled: false
       maxUnavailable: 0
 
-  app-sync-svc: {}
+  # The two services that construct the ArgoCD client get the API token.
+  app-sync-svc:
+    argocdToken: true
 
   environment-validation-svc: {}
 
-  context-correlation-svc: {}
+  context-correlation-svc:
+    argocdToken: true
 
   multi-environment-kube-svc:
     # Needs cluster-wide read access to monitor GitOps resources.

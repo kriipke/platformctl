@@ -75,6 +75,16 @@ spec:
             secretKeyRef:
               name: {{ include "platformctl.dbSecretName" (dict "root" $root "svc" $merged) }}
               key: DATABASE_URL
+        {{- if $merged.argocdToken }}
+        # Optional so the pod still starts before the token secret is created;
+        # ArgoCD calls then fail at request time behind the circuit breaker.
+        - name: ARGOCD_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ $root.Values.secretNames.argocdToken }}
+              key: ARGOCD_AUTH_TOKEN
+              optional: true
+        {{- end }}
         {{- range $k, $v := $merged.env }}
         - name: {{ $k }}
           value: {{ $v | quote }}
