@@ -10,13 +10,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/kriipke/platformctl/internal/auth"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/internal/database"
 	"github.com/kriipke/platformctl/internal/events"
 	"github.com/kriipke/platformctl/internal/handlers"
+	"github.com/kriipke/platformctl/internal/models"
 	"github.com/kriipke/platformctl/internal/observability"
 	"github.com/kriipke/platformctl/internal/readmodel"
 	"github.com/kriipke/platformctl/internal/storage"
@@ -151,6 +154,11 @@ func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environ
 	// API routes with authentication
 	apiGroup := router.Group("/api/v1")
 	apiGroup.Use(ginBasicAuthMiddleware())
+	// Populate the per-request customer/tenant context that the downstream
+	// handlers read. Without this, every /api/v1 route returns 401 even after
+	// basic auth succeeds. Must run after ginBasicAuthMiddleware so the
+	// authenticated identity is available.
+	apiGroup.Use(ginCustomerContextMiddleware())
 
 	// App routes
 	apiGroup.POST("/apps", ginHandlerWrapper(appHandler.CreateApp))
@@ -224,6 +232,69 @@ func ginBasicAuthMiddleware() gin.HandlerFunc {
 	return gin.BasicAuth(gin.Accounts{
 		"admin": "admin", // TODO: Use proper authentication
 	})
+}
+
+// customerNamespaceUUID is a fixed namespace used to derive a stable, deterministic
+// customer UUID from a customer identifier string. It lets the string customer id
+// used by the CRUD handlers (auth.Customer.CustomerID) and the uuid used by the
+// status handlers (models.Customer.ID) resolve to the same value for a given tenant,
+// so a tenant's writes and reads address the same customer_id.
+var customerNamespaceUUID = uuid.MustParse("a3c9f1e2-7b4d-4e6a-9c1f-2d3e4f5a6b7c")
+
+// deriveCustomerUUID maps a customer identifier to a stable UUID. If the identifier
+// is already a UUID it is used verbatim; otherwise a deterministic v5 UUID is derived
+// from it so the same identifier always yields the same customer id.
+func deriveCustomerUUID(customerKey string) uuid.UUID {
+	if id, err := uuid.Parse(customerKey); err == nil {
+		return id
+	}
+	return uuid.NewSHA1(customerNamespaceUUID, []byte(customerKey))
+}
+
+// ginCustomerContextMiddleware derives the authenticated tenant and publishes it in
+// BOTH shapes the downstream handlers expect:
+//
+//   - c.Set("customer", *models.Customer) for the native-gin status handlers
+//     (internal/handlers/gitops_status.go), which read c.Get("customer").
+//   - auth.CustomerContextKey in the request context for the wrapped
+//     http.HandlerFunc handlers (context/app/environment CRUD and gitops_actions.go),
+//     which read auth.GetCustomerFromContext / auth.RequireCustomer.
+//
+// The string customer id exposed to the CRUD path is exactly the string form of the
+// uuid exposed to the status path, so a tenant's writes and reads line up. The tenant
+// is taken from the basic-auth identity, optionally overridden by the X-Customer-ID /
+// X-User-ID headers so API clients (e.g. the platformctl CLI) can select a tenant.
+// Must run after ginBasicAuthMiddleware so the authenticated username is available.
+func ginCustomerContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.GetString(gin.AuthUserKey)
+
+		customerKey := c.GetHeader("X-Customer-ID")
+		if customerKey == "" {
+			customerKey = username
+		}
+		if hdrUser := c.GetHeader("X-User-ID"); hdrUser != "" {
+			username = hdrUser
+		}
+
+		customerUUID := deriveCustomerUUID(customerKey)
+
+		// For native-gin handlers that read c.Get("customer").
+		c.Set("customer", &models.Customer{
+			ID:       customerUUID,
+			Username: username,
+		})
+
+		// For wrapped http.HandlerFunc handlers that read auth.GetCustomerFromContext.
+		ctx := context.WithValue(c.Request.Context(), auth.CustomerContextKey, &auth.Customer{
+			CustomerID: customerUUID.String(),
+			Username:   username,
+			Roles:      []string{"user"},
+		})
+		c.Request = c.Request.WithContext(ctx)
+
+		c.Next()
+	}
 }
 
 // Wrapper to convert http.HandlerFunc to gin.HandlerFunc
