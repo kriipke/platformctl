@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/kriipke/platformctl/internal/auth"
 	"github.com/kriipke/platformctl/internal/events"
 	"github.com/kriipke/platformctl/internal/models"
 	"github.com/kriipke/platformctl/internal/storage"
 	"github.com/kriipke/platformctl/pkg/api"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ManifestBaseService struct {

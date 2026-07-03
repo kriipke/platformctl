@@ -45,11 +45,11 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 	// GitOps Commands Exchange
 	if err := gmb.channel.ExchangeDeclare(
 		"gitops.commands", // name
-		"topic",          // type
-		true,             // durable
-		false,            // auto-deleted
-		false,            // internal
-		false,            // no-wait
+		"topic",           // type
+		true,              // durable
+		false,             // auto-deleted
+		false,             // internal
+		false,             // no-wait
 		amqp.Table{
 			"description": "GitOps commands for ApplicationSet monitoring, Vault validation, and environment correlation",
 		},
@@ -60,11 +60,11 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 	// GitOps Results Exchange
 	if err := gmb.channel.ExchangeDeclare(
 		"gitops.results", // name
-		"topic",         // type
-		true,            // durable
-		false,           // auto-deleted
-		false,           // internal
-		false,           // no-wait
+		"topic",          // type
+		true,             // durable
+		false,            // auto-deleted
+		false,            // internal
+		false,            // no-wait
 		amqp.Table{
 			"description": "GitOps results from ApplicationSet monitoring, Vault validation, and environment correlation",
 		},
@@ -80,9 +80,9 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		false,                             // exclusive
 		false,                             // no-wait
 		amqp.Table{
-			"x-message-ttl":            300000, // 5 minutes TTL
-			"x-max-priority":           10,
-			"description":              "ApplicationSet monitoring commands",
+			"x-message-ttl":  300000, // 5 minutes TTL
+			"x-max-priority": 10,
+			"description":    "ApplicationSet monitoring commands",
 		},
 	)
 	if err != nil {
@@ -97,9 +97,9 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		false,                       // exclusive
 		false,                       // no-wait
 		amqp.Table{
-			"x-message-ttl":   600000, // 10 minutes TTL
-			"x-max-priority":  10,
-			"description":     "Vault secret validation commands",
+			"x-message-ttl":  600000, // 10 minutes TTL
+			"x-max-priority": 10,
+			"description":    "Vault secret validation commands",
 		},
 	)
 	if err != nil {
@@ -114,9 +114,9 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		false,                              // exclusive
 		false,                              // no-wait
 		amqp.Table{
-			"x-message-ttl":   180000, // 3 minutes TTL
-			"x-max-priority":  5,
-			"description":     "Multi-environment status correlation commands",
+			"x-message-ttl":  180000, // 3 minutes TTL
+			"x-max-priority": 5,
+			"description":    "Multi-environment status correlation commands",
 		},
 	)
 	if err != nil {
@@ -131,8 +131,8 @@ func (gmb *GitOpsMessageBus) setupGitOpsTopology() error {
 		false,                 // exclusive
 		false,                 // no-wait
 		amqp.Table{
-			"x-message-ttl":   900000, // 15 minutes TTL
-			"description":     "GitOps results aggregation queue",
+			"x-message-ttl": 900000, // 15 minutes TTL
+			"description":   "GitOps results aggregation queue",
 		},
 	)
 	if err != nil {
@@ -191,11 +191,11 @@ func (gmb *GitOpsMessageBus) setupGitOpsDLQ() error {
 	// GitOps Dead Letter Exchange
 	if err := gmb.channel.ExchangeDeclare(
 		"gitops.dlx", // name
-		"topic",     // type
-		true,        // durable
-		false,       // auto-deleted
-		false,       // internal
-		false,       // no-wait
+		"topic",      // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
 		amqp.Table{
 			"description": "GitOps Dead Letter Exchange for failed commands",
 		},

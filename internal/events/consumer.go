@@ -10,9 +10,9 @@ import (
 )
 
 type ResultConsumer struct {
-	messageBus   *GitOpsMessageBus
-	handlers     map[string]ResultHandler
-	stopChan     chan struct{}
+	messageBus *GitOpsMessageBus
+	handlers   map[string]ResultHandler
+	stopChan   chan struct{}
 }
 
 type ResultHandler interface {

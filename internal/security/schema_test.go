@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/kriipke/platformctl/internal/testutil"
 )
 
 func TestSecuritySchemaIntegration(t *testing.T) {
@@ -60,7 +60,7 @@ func testAuditLogsTable(t *testing.T, testDB *testutil.TestDB) {
 	// Test audit log insertion
 	eventID := uuid.New()
 	requestID := uuid.New()
-	
+
 	query := `
 		INSERT INTO audit_logs (
 			event_id, customer_id, user_id, session_id, ip_address, user_agent,
@@ -158,13 +158,13 @@ func testSecurityEventsTable(t *testing.T, testDB *testutil.TestDB) {
 
 	// Verify insertion
 	var storedEvent struct {
-		EventID        uuid.UUID
-		CustomerID     uuid.UUID
-		EventCategory  string
-		Severity       string
-		RiskScore      sql.NullInt32
-		Status         string
-		CorrelationID  uuid.UUID
+		EventID       uuid.UUID
+		CustomerID    uuid.UUID
+		EventCategory string
+		Severity      string
+		RiskScore     sql.NullInt32
+		Status        string
+		CorrelationID uuid.UUID
 	}
 
 	err = testDB.QueryRowContext(context.Background(),
@@ -217,14 +217,14 @@ func testSessionsTable(t *testing.T, testDB *testutil.TestDB) {
 
 	// Verify insertion
 	var storedSession struct {
-		ID            string
-		CustomerID    uuid.UUID
-		UserID        string
-		IsActive      bool
-		LoginMethod   string
-		MFAVerified   bool
-		IsPrivileged  bool
-		RequiresMFA   bool
+		ID           string
+		CustomerID   uuid.UUID
+		UserID       string
+		IsActive     bool
+		LoginMethod  string
+		MFAVerified  bool
+		IsPrivileged bool
+		RequiresMFA  bool
 	}
 
 	err = testDB.QueryRowContext(context.Background(),
@@ -260,7 +260,7 @@ func testUserPermissionsTable(t *testing.T, testDB *testutil.TestDB) {
 
 	// Insert permission
 	expiresAt := time.Now().Add(24 * time.Hour)
-	
+
 	query := `
 		INSERT INTO user_permissions (
 			customer_id, user_id, resource_type, resource_id, action,
@@ -354,14 +354,14 @@ func testSecurityConfigTable(t *testing.T, testDB *testutil.TestDB) {
 
 	// Verify insertion
 	var storedConfig struct {
-		CustomerID              uuid.UUID
-		MFAEnabled              bool
-		SessionTimeoutMinutes   int
-		RBACEnabled             bool
-		AuditRetentionDays      int
-		FailedLoginThreshold    int
-		CircuitBreakerEnabled   bool
-		UpdatedBy               string
+		CustomerID            uuid.UUID
+		MFAEnabled            bool
+		SessionTimeoutMinutes int
+		RBACEnabled           bool
+		AuditRetentionDays    int
+		FailedLoginThreshold  int
+		CircuitBreakerEnabled bool
+		UpdatedBy             string
 	}
 
 	err = testDB.QueryRowContext(context.Background(),
@@ -427,13 +427,13 @@ func testCircuitBreakerMetricsTable(t *testing.T, testDB *testutil.TestDB) {
 
 	// Verify insertion
 	var storedMetrics struct {
-		ServiceName           string
-		State                 string
-		TotalRequests         int64
-		SuccessfulRequests    int64
-		FailedRequests        int64
-		ConsecutiveFailures   int64
-		ConsecutiveSuccesses  int64
+		ServiceName          string
+		State                string
+		TotalRequests        int64
+		SuccessfulRequests   int64
+		FailedRequests       int64
+		ConsecutiveFailures  int64
+		ConsecutiveSuccesses int64
 		FailureRate          sql.NullFloat64
 		SuccessRate          sql.NullFloat64
 		AvgResponseTimeMs    sql.NullInt64
@@ -488,10 +488,10 @@ func testRowLevelSecurity(t *testing.T, testDB *testutil.TestDB) {
 
 	// Test that RLS policies would prevent cross-customer access
 	// Note: This is a conceptual test - actual RLS enforcement would require database user context
-	
+
 	// Verify data exists for both customers
 	var count1, count2 int
-	
+
 	err := testDB.QueryRowContext(context.Background(),
 		"SELECT COUNT(*) FROM audit_logs WHERE customer_id = $1", customer1ID).Scan(&count1)
 	require.NoError(t, err)

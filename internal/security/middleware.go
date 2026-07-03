@@ -16,9 +16,9 @@ import (
 
 // SecurityMiddleware provides comprehensive security validation for HTTP requests
 type SecurityMiddleware struct {
-	validator    *Validator
-	rateLimiter  *RateLimiter
-	config       *MiddlewareConfig
+	validator   *Validator
+	rateLimiter *RateLimiter
+	config      *MiddlewareConfig
 }
 
 // MiddlewareConfig holds configuration for security middleware
@@ -27,11 +27,11 @@ type MiddlewareConfig struct {
 	ValidateQueryParams bool          `json:"validate_query_params"`
 	ValidateJSONBody    bool          `json:"validate_json_body"`
 	MaxRequestSize      int64         `json:"max_request_size"`
-	Timeout            time.Duration  `json:"timeout"`
-	EnableRateLimit    bool          `json:"enable_rate_limit"`
-	RateLimitRPM       int           `json:"rate_limit_rpm"`
+	Timeout             time.Duration `json:"timeout"`
+	EnableRateLimit     bool          `json:"enable_rate_limit"`
+	RateLimitRPM        int           `json:"rate_limit_rpm"`
 	AllowedContentTypes []string      `json:"allowed_content_types"`
-	RequiredHeaders    []string      `json:"required_headers"`
+	RequiredHeaders     []string      `json:"required_headers"`
 }
 
 // DefaultMiddlewareConfig returns secure default middleware configuration
@@ -41,9 +41,9 @@ func DefaultMiddlewareConfig() *MiddlewareConfig {
 		ValidateQueryParams: true,
 		ValidateJSONBody:    true,
 		MaxRequestSize:      10 * 1024 * 1024, // 10MB
-		Timeout:            30 * time.Second,
-		EnableRateLimit:    true,
-		RateLimitRPM:       1000, // 1000 requests per minute
+		Timeout:             30 * time.Second,
+		EnableRateLimit:     true,
+		RateLimitRPM:        1000, // 1000 requests per minute
 		AllowedContentTypes: []string{
 			"application/json",
 			"application/x-www-form-urlencoded",
@@ -313,7 +313,7 @@ func (sm *SecurityMiddleware) validateJSONContent(data interface{}, path string)
 			if err := sm.validator.ValidateString(key, fmt.Sprintf("JSON key %s", key)); err != nil {
 				return err
 			}
-			
+
 			// Recursively validate value
 			fieldPath := key
 			if path != "" {
@@ -338,7 +338,7 @@ func (sm *SecurityMiddleware) validateJSONContent(data interface{}, path string)
 // validateURLPath validates the URL path for security threats
 func (sm *SecurityMiddleware) validateURLPath(r *http.Request) error {
 	path := r.URL.Path
-	
+
 	// Basic path validation
 	if err := sm.validator.ValidateString(path, "URL path"); err != nil {
 		return err
@@ -436,8 +436,8 @@ func (sm *SecurityMiddleware) writeError(w http.ResponseWriter, message string, 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	errorResponse := map[string]interface{}{
-		"error":   message,
-		"code":    statusCode,
+		"error":     message,
+		"code":      statusCode,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
 	json.NewEncoder(w).Encode(errorResponse)
@@ -479,7 +479,7 @@ func RateLimitMiddleware(rateLimiter *RateLimiter) func(http.Handler) http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clientIP := getClientIPFromRequest(r)
-			
+
 			if !rateLimiter.Allow(clientIP) {
 				writeErrorResponse(w, fmt.Sprintf("Rate limit exceeded for client %s", clientIP), http.StatusTooManyRequests)
 				return

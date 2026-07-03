@@ -283,15 +283,15 @@ func isValidVaultPath(path string) bool {
 	if len(path) == 0 {
 		return false
 	}
-	
+
 	// Vault paths should not start with / and should contain at least one /
 	if strings.HasPrefix(path, "/") {
 		return false
 	}
-	
+
 	if !strings.Contains(path, "/") {
 		return false
 	}
-	
+
 	return true
 }

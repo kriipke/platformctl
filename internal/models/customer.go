@@ -15,7 +15,7 @@ type Customer struct {
 	Active       bool      `json:"active" db:"active"`
 	PasswordHash string    `json:"-" db:"password_hash"` // Never include in JSON
 	Salt         string    `json:"-" db:"salt"`          // Never include in JSON
-	
+
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`

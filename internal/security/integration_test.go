@@ -120,22 +120,22 @@ func TestSecurityMiddlewareStack(t *testing.T) {
 
 	// Setup middleware stack
 	router := mux.NewRouter()
-	
+
 	// Apply middleware in order
 	var handler http.Handler = testHandler
-	
+
 	// Audit middleware (innermost)
 	handler = audit.LoggingMiddleware(mockAuditor)(handler)
-	
+
 	// RBAC middleware
 	handler = auth.RBACMiddleware(rbacManager)(handler)
-	
+
 	// JWT auth middleware
 	handler = auth.JWTMiddleware(jwtManager)(handler)
-	
+
 	// Security validation middleware
 	handler = CreateSecurityMiddleware(validator)(handler)
-	
+
 	// Rate limiting middleware (outermost)
 	handler = RateLimitMiddleware(rateLimiter)(handler)
 
@@ -160,7 +160,7 @@ func TestSecurityMiddlewareStack(t *testing.T) {
 			expectedAudits: 1,
 			checkResponse: func(t *testing.T, resp *http.Response, events []audit.AuditEvent) {
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-				
+
 				if len(events) > 0 {
 					event := events[0]
 					assert.Equal(t, audit.EventTypeRead, event.EventType)
@@ -225,14 +225,14 @@ func TestSecurityMiddlewareStack(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAuditor.Reset()
-			
+
 			req := tt.setupRequest()
 			recorder := httptest.NewRecorder()
 
 			router.ServeHTTP(recorder, req)
 
 			assert.Equal(t, tt.expectedStatus, recorder.Code)
-			
+
 			events := mockAuditor.GetEvents()
 			assert.Len(t, events, tt.expectedAudits)
 
@@ -297,7 +297,7 @@ func TestRateLimitingIntegration(t *testing.T) {
 
 func TestSecurityValidationIntegration(t *testing.T) {
 	config := &SecurityConfig{
-		MaxStringLength:  100,
+		MaxStringLength: 100,
 		MaxJSONSize:     1000,
 		RequireHTTPS:    false,
 		AllowPrivateIPs: true,
@@ -405,7 +405,7 @@ func TestSecurityValidationIntegration(t *testing.T) {
 
 			if tt.expectedError != "" {
 				assert.Contains(t, strings.ToLower(recorder.Body.String()), strings.ToLower(tt.expectedError))
-				
+
 				// Check audit event
 				events := mockAuditor.GetEvents()
 				require.Len(t, events, 1)
@@ -568,7 +568,7 @@ func TestAuditingIntegration(t *testing.T) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Simulate CRUD operation
 		ctx := r.Context()
-		
+
 		// Log a CRUD event
 		auditLogger.LogCRUDEvent(
 			ctx,
@@ -662,7 +662,7 @@ func TestConcurrentSecurityMiddleware(t *testing.T) {
 	const requestsPerGoroutine = 5
 
 	results := make(chan int, numGoroutines*requestsPerGoroutine)
-	
+
 	for i := 0; i < numGoroutines; i++ {
 		go func(id int) {
 			client := &http.Client{}

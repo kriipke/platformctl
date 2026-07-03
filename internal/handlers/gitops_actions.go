@@ -29,18 +29,18 @@ func NewGitOpsActionHandler(appStore *storage.AppStore, envStore *storage.Enviro
 }
 
 type GitOpsActionResponse struct {
-	Success              bool     `json:"success"`
-	CorrelationID        string   `json:"correlation_id"`
-	Message              string   `json:"message"`
-	Action               string   `json:"action"`
-	ManifestType         string   `json:"manifest_type"`
-	CustomerID           string   `json:"customer_id"`
-	AppNames             []string `json:"app_names,omitempty"`
-	EnvironmentNames     []string `json:"environment_names,omitempty"`
-	ContextPairings      []string `json:"context_pairings,omitempty"`
-	ApplicationSets      []string `json:"applicationsets,omitempty"`
-	VaultSources         []string `json:"vault_sources,omitempty"`
-	ClusterConfigs       []string `json:"cluster_configs,omitempty"`
+	Success          bool     `json:"success"`
+	CorrelationID    string   `json:"correlation_id"`
+	Message          string   `json:"message"`
+	Action           string   `json:"action"`
+	ManifestType     string   `json:"manifest_type"`
+	CustomerID       string   `json:"customer_id"`
+	AppNames         []string `json:"app_names,omitempty"`
+	EnvironmentNames []string `json:"environment_names,omitempty"`
+	ContextPairings  []string `json:"context_pairings,omitempty"`
+	ApplicationSets  []string `json:"applicationsets,omitempty"`
+	VaultSources     []string `json:"vault_sources,omitempty"`
+	ClusterConfigs   []string `json:"cluster_configs,omitempty"`
 }
 
 // App manifest synchronization endpoint
@@ -284,12 +284,12 @@ func (h *GitOpsActionHandler) HandleInspectManifests(w http.ResponseWriter, r *h
 	}
 
 	response := GitOpsActionResponse{
-		Success:      true,
+		Success:       true,
 		CorrelationID: cmd.CorrelationID,
-		Message:      fmt.Sprintf("Manifest inspection command published successfully (type: %s)", manifestType),
-		Action:       "inspect-manifests",
-		ManifestType: manifestType,
-		CustomerID:   customer.CustomerID,
+		Message:       fmt.Sprintf("Manifest inspection command published successfully (type: %s)", manifestType),
+		Action:        "inspect-manifests",
+		ManifestType:  manifestType,
+		CustomerID:    customer.CustomerID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

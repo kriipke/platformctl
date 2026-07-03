@@ -13,50 +13,50 @@ import (
 
 // Metrics provides a comprehensive Prometheus metrics collection for GitOps operations
 type Metrics struct {
-	registry        *prometheus.Registry
-	serviceName     string
-	
+	registry    *prometheus.Registry
+	serviceName string
+
 	// HTTP metrics
-	httpRequestsTotal    *prometheus.CounterVec
-	httpRequestDuration  *prometheus.HistogramVec
-	httpActiveRequests   *prometheus.GaugeVec
-	
+	httpRequestsTotal   *prometheus.CounterVec
+	httpRequestDuration *prometheus.HistogramVec
+	httpActiveRequests  *prometheus.GaugeVec
+
 	// Command processing metrics
-	commandsProcessedTotal     *prometheus.CounterVec
-	commandProcessingDuration  *prometheus.HistogramVec
-	commandsActiveProcessing   *prometheus.GaugeVec
-	
+	commandsProcessedTotal    *prometheus.CounterVec
+	commandProcessingDuration *prometheus.HistogramVec
+	commandsActiveProcessing  *prometheus.GaugeVec
+
 	// External API metrics
-	externalAPICallsTotal    *prometheus.CounterVec
-	externalAPICallDuration  *prometheus.HistogramVec
-	externalAPICallErrors    *prometheus.CounterVec
-	
+	externalAPICallsTotal   *prometheus.CounterVec
+	externalAPICallDuration *prometheus.HistogramVec
+	externalAPICallErrors   *prometheus.CounterVec
+
 	// RabbitMQ messaging metrics
-	messagesPublishedTotal   *prometheus.CounterVec
-	messagesConsumedTotal    *prometheus.CounterVec
+	messagesPublishedTotal    *prometheus.CounterVec
+	messagesConsumedTotal     *prometheus.CounterVec
 	messageProcessingDuration *prometheus.HistogramVec
 	messageProcessingErrors   *prometheus.CounterVec
-	
+
 	// Business metrics - Context operations
-	contextsTotal           *prometheus.GaugeVec
-	contextHealthStatus     *prometheus.GaugeVec
-	contextSyncStatus       *prometheus.GaugeVec
-	contextPairingStatus    *prometheus.GaugeVec
-	
+	contextsTotal        *prometheus.GaugeVec
+	contextHealthStatus  *prometheus.GaugeVec
+	contextSyncStatus    *prometheus.GaugeVec
+	contextPairingStatus *prometheus.GaugeVec
+
 	// Business metrics - GitOps operations
-	applicationSetsTotal        *prometheus.GaugeVec
-	generatedApplicationsTotal  *prometheus.GaugeVec
-	vaultSecretsValidated      *prometheus.CounterVec
+	applicationSetsTotal         *prometheus.GaugeVec
+	generatedApplicationsTotal   *prometheus.GaugeVec
+	vaultSecretsValidated        *prometheus.CounterVec
 	vaultSecretsValidationErrors *prometheus.CounterVec
-	
+
 	// Performance metrics
-	databaseConnectionsActive    *prometheus.GaugeVec
-	databaseQueryDuration       *prometheus.HistogramVec
-	cacheHitRate               *prometheus.GaugeVec
-	processingQueueLength      *prometheus.GaugeVec
-	
+	databaseConnectionsActive *prometheus.GaugeVec
+	databaseQueryDuration     *prometheus.HistogramVec
+	cacheHitRate              *prometheus.GaugeVec
+	processingQueueLength     *prometheus.GaugeVec
+
 	// Resource metrics
-	kubernetesResourcesTracked  *prometheus.GaugeVec
+	kubernetesResourcesTracked *prometheus.GaugeVec
 	helmReleasesTracked        *prometheus.GaugeVec
 	gitRepositoriesTracked     *prometheus.GaugeVec
 	customerBranchesTracked    *prometheus.GaugeVec
@@ -74,14 +74,14 @@ type MetricsConfig struct {
 // NewMetrics creates a new Prometheus metrics collector with GitOps-specific metrics
 func NewMetrics(config MetricsConfig) *Metrics {
 	registry := prometheus.NewRegistry()
-	
+
 	// Common labels for all metrics
 	commonLabels := []string{"service", "customer_id"}
-	
+
 	metrics := &Metrics{
 		registry:    registry,
 		serviceName: config.ServiceName,
-		
+
 		// HTTP metrics
 		httpRequestsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -91,7 +91,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "method", "endpoint", "status_code"),
 		),
-		
+
 		httpRequestDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: config.Namespace,
@@ -101,7 +101,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "method", "endpoint"),
 		),
-		
+
 		httpActiveRequests: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -110,7 +110,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "method", "endpoint"),
 		),
-		
+
 		// Command processing metrics
 		commandsProcessedTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -120,7 +120,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "action", "manifest_type", "status"),
 		),
-		
+
 		commandProcessingDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: config.Namespace,
@@ -130,7 +130,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "action", "manifest_type"),
 		),
-		
+
 		commandsActiveProcessing: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -139,7 +139,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "action", "manifest_type"),
 		),
-		
+
 		// External API metrics
 		externalAPICallsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -149,7 +149,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "api", "endpoint", "status_code"),
 		),
-		
+
 		externalAPICallDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: config.Namespace,
@@ -159,7 +159,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "api", "endpoint"),
 		),
-		
+
 		externalAPICallErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: config.Namespace,
@@ -168,7 +168,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "api", "endpoint", "error_type"),
 		),
-		
+
 		// RabbitMQ messaging metrics
 		messagesPublishedTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -178,7 +178,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "exchange", "routing_key", "message_type"),
 		),
-		
+
 		messagesConsumedTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: config.Namespace,
@@ -187,7 +187,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "queue", "message_type", "status"),
 		),
-		
+
 		messageProcessingDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: config.Namespace,
@@ -197,7 +197,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "queue", "message_type"),
 		),
-		
+
 		messageProcessingErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: config.Namespace,
@@ -206,7 +206,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			append(commonLabels, "queue", "message_type", "error_type"),
 		),
-		
+
 		// Business metrics - Context operations
 		contextsTotal: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -216,7 +216,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "health_status"},
 		),
-		
+
 		contextHealthStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -225,7 +225,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "health_status"},
 		),
-		
+
 		contextSyncStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -234,7 +234,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "sync_status"},
 		),
-		
+
 		contextPairingStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -243,7 +243,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "pairing_status"},
 		),
-		
+
 		// Business metrics - GitOps operations
 		applicationSetsTotal: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -253,7 +253,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "namespace", "generator_type"},
 		),
-		
+
 		generatedApplicationsTotal: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -262,7 +262,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "environment", "health_status", "sync_status"},
 		),
-		
+
 		vaultSecretsValidated: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: config.Namespace,
@@ -271,7 +271,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "environment", "validation_status"},
 		),
-		
+
 		vaultSecretsValidationErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: config.Namespace,
@@ -280,7 +280,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "environment", "error_type"},
 		),
-		
+
 		// Performance metrics
 		databaseConnectionsActive: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -290,7 +290,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"service", "database_name"},
 		),
-		
+
 		databaseQueryDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: config.Namespace,
@@ -300,7 +300,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"service", "query_type", "customer_id"},
 		),
-		
+
 		cacheHitRate: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -309,7 +309,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"service", "cache_type"},
 		),
-		
+
 		processingQueueLength: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -318,7 +318,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"service", "queue_name"},
 		),
-		
+
 		// Resource metrics
 		kubernetesResourcesTracked: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -328,7 +328,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "environment", "resource_type"},
 		),
-		
+
 		helmReleasesTracked: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -337,7 +337,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "environment", "release_status"},
 		),
-		
+
 		gitRepositoriesTracked: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -346,7 +346,7 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			},
 			[]string{"customer_id", "context_name", "repository_type"},
 		),
-		
+
 		customerBranchesTracked: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: config.Namespace,
@@ -356,10 +356,10 @@ func NewMetrics(config MetricsConfig) *Metrics {
 			[]string{"customer_id", "context_name", "branch_compliance"},
 		),
 	}
-	
+
 	// Register all metrics with the registry
 	metrics.registerMetrics()
-	
+
 	return metrics
 }
 
@@ -369,23 +369,23 @@ func (m *Metrics) registerMetrics() {
 	m.registry.MustRegister(m.httpRequestsTotal)
 	m.registry.MustRegister(m.httpRequestDuration)
 	m.registry.MustRegister(m.httpActiveRequests)
-	
+
 	// Command processing metrics
 	m.registry.MustRegister(m.commandsProcessedTotal)
 	m.registry.MustRegister(m.commandProcessingDuration)
 	m.registry.MustRegister(m.commandsActiveProcessing)
-	
+
 	// External API metrics
 	m.registry.MustRegister(m.externalAPICallsTotal)
 	m.registry.MustRegister(m.externalAPICallDuration)
 	m.registry.MustRegister(m.externalAPICallErrors)
-	
+
 	// RabbitMQ messaging metrics
 	m.registry.MustRegister(m.messagesPublishedTotal)
 	m.registry.MustRegister(m.messagesConsumedTotal)
 	m.registry.MustRegister(m.messageProcessingDuration)
 	m.registry.MustRegister(m.messageProcessingErrors)
-	
+
 	// Business metrics
 	m.registry.MustRegister(m.contextsTotal)
 	m.registry.MustRegister(m.contextHealthStatus)
@@ -395,13 +395,13 @@ func (m *Metrics) registerMetrics() {
 	m.registry.MustRegister(m.generatedApplicationsTotal)
 	m.registry.MustRegister(m.vaultSecretsValidated)
 	m.registry.MustRegister(m.vaultSecretsValidationErrors)
-	
+
 	// Performance metrics
 	m.registry.MustRegister(m.databaseConnectionsActive)
 	m.registry.MustRegister(m.databaseQueryDuration)
 	m.registry.MustRegister(m.cacheHitRate)
 	m.registry.MustRegister(m.processingQueueLength)
-	
+
 	// Resource metrics
 	m.registry.MustRegister(m.kubernetesResourcesTracked)
 	m.registry.MustRegister(m.helmReleasesTracked)
@@ -637,30 +637,30 @@ func (m *Metrics) SanitizeLabelValue(value string) string {
 	sanitized := strings.ReplaceAll(value, "\n", "_")
 	sanitized = strings.ReplaceAll(sanitized, "\t", "_")
 	sanitized = strings.ReplaceAll(sanitized, "\r", "_")
-	
+
 	// Truncate very long labels
 	if len(sanitized) > 100 {
 		sanitized = sanitized[:97] + "..."
 	}
-	
+
 	return sanitized
 }
 
 // GitOpsMetricsRecorder provides a convenient interface for recording GitOps-specific metrics
 type GitOpsMetricsRecorder struct {
-	metrics    *Metrics
-	customerID string
+	metrics     *Metrics
+	customerID  string
 	contextName string
-	startTime  time.Time
+	startTime   time.Time
 }
 
 // NewGitOpsMetricsRecorder creates a new GitOps metrics recorder
 func (m *Metrics) NewGitOpsMetricsRecorder(customerID, contextName string) *GitOpsMetricsRecorder {
 	return &GitOpsMetricsRecorder{
-		metrics:    m,
-		customerID: m.SanitizeCustomerID(customerID),
+		metrics:     m,
+		customerID:  m.SanitizeCustomerID(customerID),
 		contextName: contextName,
-		startTime:  time.Now(),
+		startTime:   time.Now(),
 	}
 }
 
@@ -688,7 +688,7 @@ func StartMetricsServer(metrics *Metrics, config MetricsConfig) error {
 	if !config.Enabled {
 		return nil
 	}
-	
+
 	mux := http.NewServeMux()
 	// Guard against an empty path: services construct MetricsConfig as a struct
 	// literal (so the `envDefault:"/metrics"` tag never applies) and don't set
@@ -698,18 +698,18 @@ func StartMetricsServer(metrics *Metrics, config MetricsConfig) error {
 		path = "/metrics"
 	}
 	mux.Handle(path, metrics.GetHandler())
-	
+
 	// Add health check endpoint for the metrics server itself
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "OK")
 	})
-	
+
 	server := &http.Server{
 		Addr:    ":" + config.Port,
 		Handler: mux,
 	}
-	
+
 	return server.ListenAndServe()
 }
 

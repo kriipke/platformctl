@@ -46,42 +46,42 @@ type ContextStatus struct {
 
 // AppManifestStatus represents the status of an app manifest
 type AppManifestStatus struct {
-	CustomerID           string                 `json:"customer_id" db:"customer_id"`
-	ContextName          string                 `json:"context_name" db:"context_name"`
-	AppName              string                 `json:"app_name" db:"app_name"`
-	ApplicationSetName   string                 `json:"applicationset_name" db:"applicationset_name"`
-	Namespace            string                 `json:"namespace" db:"namespace"`
-	GeneratorType        string                 `json:"generator_type" db:"generator_type"`
-	GeneratorConfig      map[string]interface{} `json:"generator_config"`
-	SyncStatus           string                 `json:"sync_status" db:"sync_status"`
-	HealthStatus         string                 `json:"health_status" db:"health_status"`
-	ApplicationCount     int                    `json:"application_count" db:"application_count"`
-	HelmSources          []api.HelmSourceStatus `json:"helm_sources"`
-	GitSources           []api.GitSourceStatus  `json:"git_sources"`
-	GeneratedApps        []api.ApplicationStatus `json:"generated_applications"`
-	BootstrapCorrelation map[string]interface{} `json:"bootstrap_correlation"`
-	LastSyncTime         *time.Time             `json:"last_sync_time" db:"last_sync_time"`
+	CustomerID           string                       `json:"customer_id" db:"customer_id"`
+	ContextName          string                       `json:"context_name" db:"context_name"`
+	AppName              string                       `json:"app_name" db:"app_name"`
+	ApplicationSetName   string                       `json:"applicationset_name" db:"applicationset_name"`
+	Namespace            string                       `json:"namespace" db:"namespace"`
+	GeneratorType        string                       `json:"generator_type" db:"generator_type"`
+	GeneratorConfig      map[string]interface{}       `json:"generator_config"`
+	SyncStatus           string                       `json:"sync_status" db:"sync_status"`
+	HealthStatus         string                       `json:"health_status" db:"health_status"`
+	ApplicationCount     int                          `json:"application_count" db:"application_count"`
+	HelmSources          []api.HelmSourceStatus       `json:"helm_sources"`
+	GitSources           []api.GitSourceStatus        `json:"git_sources"`
+	GeneratedApps        []api.ApplicationStatus      `json:"generated_applications"`
+	BootstrapCorrelation map[string]interface{}       `json:"bootstrap_correlation"`
+	LastSyncTime         *time.Time                   `json:"last_sync_time" db:"last_sync_time"`
 	PerformanceMetrics   api.GitOpsPerformanceMetrics `json:"performance_metrics"`
-	LastUpdated          time.Time              `json:"last_updated" db:"last_updated"`
+	LastUpdated          time.Time                    `json:"last_updated" db:"last_updated"`
 }
 
 // EnvironmentManifestStatus represents the status of an environment manifest
 type EnvironmentManifestStatus struct {
-	CustomerID                string                           `json:"customer_id" db:"customer_id"`
-	ContextName               string                           `json:"context_name" db:"context_name"`
-	EnvironmentName           string                           `json:"environment_name" db:"environment_name"`
-	VaultValidationStatus     string                           `json:"vault_validation_status" db:"vault_validation_status"`
-	ClusterValidationStatus   string                           `json:"cluster_validation_status" db:"cluster_validation_status"`
-	ValuesFileStatus          string                           `json:"values_file_status" db:"values_file_status"`
-	VaultValidations          []api.VaultValidationResult      `json:"vault_validations"`
-	ClusterValidations        []api.ClusterValidationResult    `json:"cluster_validations"`
-	ValuesFileValidations     []api.ValuesFileStatus           `json:"values_file_validations"`
-	PodEnvValidations         []api.PodEnvValidationResult     `json:"pod_env_validations"`
-	SecretCorrelations        map[string]interface{}           `json:"secret_correlations"`
-	ValidationSummary         map[string]interface{}           `json:"validation_summary"`
-	LastValidated             time.Time                        `json:"last_validated" db:"last_validated"`
-	PerformanceMetrics        api.GitOpsPerformanceMetrics     `json:"performance_metrics"`
-	LastUpdated               time.Time                        `json:"last_updated" db:"last_updated"`
+	CustomerID              string                        `json:"customer_id" db:"customer_id"`
+	ContextName             string                        `json:"context_name" db:"context_name"`
+	EnvironmentName         string                        `json:"environment_name" db:"environment_name"`
+	VaultValidationStatus   string                        `json:"vault_validation_status" db:"vault_validation_status"`
+	ClusterValidationStatus string                        `json:"cluster_validation_status" db:"cluster_validation_status"`
+	ValuesFileStatus        string                        `json:"values_file_status" db:"values_file_status"`
+	VaultValidations        []api.VaultValidationResult   `json:"vault_validations"`
+	ClusterValidations      []api.ClusterValidationResult `json:"cluster_validations"`
+	ValuesFileValidations   []api.ValuesFileStatus        `json:"values_file_validations"`
+	PodEnvValidations       []api.PodEnvValidationResult  `json:"pod_env_validations"`
+	SecretCorrelations      map[string]interface{}        `json:"secret_correlations"`
+	ValidationSummary       map[string]interface{}        `json:"validation_summary"`
+	LastValidated           time.Time                     `json:"last_validated" db:"last_validated"`
+	PerformanceMetrics      api.GitOpsPerformanceMetrics  `json:"performance_metrics"`
+	LastUpdated             time.Time                     `json:"last_updated" db:"last_updated"`
 }
 
 // MultiEnvironmentAppStatus represents app status across multiple environments
@@ -108,22 +108,22 @@ type MultiEnvironmentAppStatus struct {
 
 // VaultValidationDetail represents detailed Vault validation status
 type VaultValidationDetail struct {
-	CustomerID             string                       `json:"customer_id" db:"customer_id"`
-	ContextName            string                       `json:"context_name" db:"context_name"`
-	EnvironmentName        string                       `json:"environment_name" db:"environment_name"`
-	VaultPath              string                       `json:"vault_path" db:"vault_path"`
-	SecretName             string                       `json:"secret_name" db:"secret_name"`
-	ValidationStatus       string                       `json:"validation_status" db:"validation_status"`
-	RequiredKeys           []string                     `json:"required_keys" db:"required_keys"`
-	MissingKeys            []string                     `json:"missing_keys" db:"missing_keys"`
-	ExtraKeys              []string                     `json:"extra_keys" db:"extra_keys"`
-	PodCorrelations        []api.PodEnvValidationResult `json:"pod_correlations"`
-	KubernetesSecretName   *string                      `json:"kubernetes_secret_name" db:"kubernetes_secret_name"`
-	KubernetesNamespace    *string                      `json:"kubernetes_namespace" db:"kubernetes_namespace"`
-	LastValidated          *time.Time                   `json:"last_validated" db:"last_validated"`
-	ValidationError        *string                      `json:"validation_error" db:"validation_error"`
-	PerformanceMetrics     api.GitOpsPerformanceMetrics `json:"performance_metrics"`
-	LastUpdated            time.Time                    `json:"last_updated" db:"last_updated"`
+	CustomerID           string                       `json:"customer_id" db:"customer_id"`
+	ContextName          string                       `json:"context_name" db:"context_name"`
+	EnvironmentName      string                       `json:"environment_name" db:"environment_name"`
+	VaultPath            string                       `json:"vault_path" db:"vault_path"`
+	SecretName           string                       `json:"secret_name" db:"secret_name"`
+	ValidationStatus     string                       `json:"validation_status" db:"validation_status"`
+	RequiredKeys         []string                     `json:"required_keys" db:"required_keys"`
+	MissingKeys          []string                     `json:"missing_keys" db:"missing_keys"`
+	ExtraKeys            []string                     `json:"extra_keys" db:"extra_keys"`
+	PodCorrelations      []api.PodEnvValidationResult `json:"pod_correlations"`
+	KubernetesSecretName *string                      `json:"kubernetes_secret_name" db:"kubernetes_secret_name"`
+	KubernetesNamespace  *string                      `json:"kubernetes_namespace" db:"kubernetes_namespace"`
+	LastValidated        *time.Time                   `json:"last_validated" db:"last_validated"`
+	ValidationError      *string                      `json:"validation_error" db:"validation_error"`
+	PerformanceMetrics   api.GitOpsPerformanceMetrics `json:"performance_metrics"`
+	LastUpdated          time.Time                    `json:"last_updated" db:"last_updated"`
 }
 
 // GetContextStatus retrieves the current status of a context

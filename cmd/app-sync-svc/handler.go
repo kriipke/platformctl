@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kriipke/platformctl/internal/clients/argocd"
-	"github.com/kriipke/platformctl/internal/clients/helm"
 	"github.com/kriipke/platformctl/internal/clients/git"
+	"github.com/kriipke/platformctl/internal/clients/helm"
 	"github.com/kriipke/platformctl/internal/clients/kubernetes"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
-	"github.com/google/uuid"
 )
 
 type AppSyncHandler struct {
@@ -84,18 +84,18 @@ func (ash *AppSyncHandler) handleAppSync(cmd *api.GitOpsCommandMessage, startTim
 	// Create result
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "app",
-			AppName:         cmd.AppName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "app",
+			AppName:          cmd.AppName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "app-sync",
@@ -156,18 +156,18 @@ func (ash *AppSyncHandler) handleAppInspection(cmd *api.GitOpsCommandMessage, st
 	// Basic app inspection - get manifest metadata
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "app",
-			AppName:         cmd.AppName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "app",
+			AppName:          cmd.AppName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "app-sync",
@@ -190,18 +190,18 @@ func (ash *AppSyncHandler) handleAppInspection(cmd *api.GitOpsCommandMessage, st
 func (ash *AppSyncHandler) errorResult(cmd *api.GitOpsCommandMessage, message string, err error, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			AppName:         cmd.AppName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			AppName:          cmd.AppName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName:  "app-sync",

@@ -433,21 +433,21 @@ func TestValidatorValidateURL(t *testing.T) {
 
 func TestValidatorValidateURLWithCustomConfig(t *testing.T) {
 	config := &SecurityConfig{
-		MaxStringLength:  1000,
-		AllowedSchemes:   []string{"http", "https"},
-		BlockedDomains:   []string{"malicious.com", "blocked.org"},
-		RequireHTTPS:     false,
-		AllowPrivateIPs:  true,
+		MaxStringLength: 1000,
+		AllowedSchemes:  []string{"http", "https"},
+		BlockedDomains:  []string{"malicious.com", "blocked.org"},
+		RequireHTTPS:    false,
+		AllowPrivateIPs: true,
 	}
 
 	validator, err := NewValidator(config)
 	require.NoError(t, err)
 
 	tests := []struct {
-		name      string
-		input     string
-		wantErr   bool
-		errMsg    string
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
 	}{
 		{
 			name:    "HTTP allowed with custom config",

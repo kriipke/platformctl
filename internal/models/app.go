@@ -61,10 +61,10 @@ type ApplicationSetConfig struct {
 }
 
 type ApplicationSetGenerator struct {
-	Type     string              `json:"type" validate:"required,oneof=git clusters list"`
-	Git      *GitGenerator       `json:"git,omitempty"`
-	List     *ListGenerator      `json:"list,omitempty"`
-	Clusters *ClustersGenerator  `json:"clusters,omitempty"`
+	Type     string             `json:"type" validate:"required,oneof=git clusters list"`
+	Git      *GitGenerator      `json:"git,omitempty"`
+	List     *ListGenerator     `json:"list,omitempty"`
+	Clusters *ClustersGenerator `json:"clusters,omitempty"`
 }
 
 type GitGenerator struct {

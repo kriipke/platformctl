@@ -16,21 +16,21 @@ import (
 )
 
 var (
-	ErrInvalidInput         = errors.New("invalid input")
-	ErrInputTooLong         = errors.New("input too long")
-	ErrInvalidFormat        = errors.New("invalid format")
-	ErrSuspiciousInput      = errors.New("suspicious input detected")
-	ErrDangerousCharacters  = errors.New("dangerous characters detected")
-	ErrInvalidUUID          = errors.New("invalid UUID format")
-	ErrInvalidEmail         = errors.New("invalid email format")
-	ErrInvalidURL           = errors.New("invalid URL format")
-	ErrInvalidIPAddress     = errors.New("invalid IP address")
-	ErrWeakPassword         = errors.New("password does not meet security requirements")
+	ErrInvalidInput        = errors.New("invalid input")
+	ErrInputTooLong        = errors.New("input too long")
+	ErrInvalidFormat       = errors.New("invalid format")
+	ErrSuspiciousInput     = errors.New("suspicious input detected")
+	ErrDangerousCharacters = errors.New("dangerous characters detected")
+	ErrInvalidUUID         = errors.New("invalid UUID format")
+	ErrInvalidEmail        = errors.New("invalid email format")
+	ErrInvalidURL          = errors.New("invalid URL format")
+	ErrInvalidIPAddress    = errors.New("invalid IP address")
+	ErrWeakPassword        = errors.New("password does not meet security requirements")
 )
 
 // SecurityConfig holds configuration for security validation
 type SecurityConfig struct {
-	MaxStringLength      int      `json:"max_string_length"`
+	MaxStringLength     int      `json:"max_string_length"`
 	MaxJSONSize         int      `json:"max_json_size"`
 	AllowedSchemes      []string `json:"allowed_schemes"`
 	BlockedDomains      []string `json:"blocked_domains"`
@@ -47,7 +47,7 @@ type SecurityConfig struct {
 // DefaultSecurityConfig returns a secure default configuration
 func DefaultSecurityConfig() *SecurityConfig {
 	return &SecurityConfig{
-		MaxStringLength:      1000,
+		MaxStringLength:     1000,
 		MaxJSONSize:         1024 * 1024, // 1MB
 		AllowedSchemes:      []string{"http", "https", "git", "ssh"},
 		BlockedDomains:      []string{},
@@ -65,7 +65,7 @@ func DefaultSecurityConfig() *SecurityConfig {
 // Validator provides security-focused input validation
 type Validator struct {
 	config *SecurityConfig
-	
+
 	// Compiled regular expressions for performance
 	dnsNameRegex       *regexp.Regexp
 	emailRegex         *regexp.Regexp
@@ -88,7 +88,7 @@ func NewValidator(config *SecurityConfig) (*Validator, error) {
 
 	// Compile regular expressions
 	var err error
-	
+
 	// DNS-1123 compliant names (RFC 1123)
 	v.dnsNameRegex, err = regexp.Compile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 	if err != nil {
@@ -451,7 +451,7 @@ func (v *Validator) checkSecurityThreats(input string, fieldName string) error {
 // checkDangerousCharacters checks for dangerous or suspicious characters
 func (v *Validator) checkDangerousCharacters(input string, fieldName string) error {
 	dangerousChars := []rune{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0B, 0x0C, 0x0E, 0x0F}
-	
+
 	for _, char := range input {
 		for _, dangerous := range dangerousChars {
 			if char == dangerous {

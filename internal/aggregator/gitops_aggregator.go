@@ -33,7 +33,7 @@ func NewGitOpsAggregator(db *sqlx.DB, logger zerolog.Logger, metrics *observabil
 // ProcessResultMessage processes a GitOps result message and updates the read model
 func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api.GitOpsResultMessage) error {
 	start := time.Now()
-	
+
 	a.logger.Info().
 		Str("correlation_id", result.CorrelationID).
 		Str("service_name", result.ServiceName).
@@ -440,7 +440,7 @@ func (a *GitOpsAggregator) updateCommandRunStatus(ctx context.Context, tx *sqlx.
 func (a *GitOpsAggregator) updateContextPairingStatus(ctx context.Context, tx *sqlx.Tx, result *api.GitOpsResultMessage) error {
 	// Get app and environment references for this context
 	var appRef, envRef string
-	err := tx.GetContext(ctx, &appRef, 
+	err := tx.GetContext(ctx, &appRef,
 		"SELECT app_reference FROM contexts WHERE name = $1 AND customer_id = $2",
 		result.ContextName, result.CustomerID)
 	if err != nil {
@@ -448,7 +448,7 @@ func (a *GitOpsAggregator) updateContextPairingStatus(ctx context.Context, tx *s
 	}
 
 	err = tx.GetContext(ctx, &envRef,
-		"SELECT environment_reference FROM contexts WHERE name = $1 AND customer_id = $2", 
+		"SELECT environment_reference FROM contexts WHERE name = $1 AND customer_id = $2",
 		result.ContextName, result.CustomerID)
 	if err != nil {
 		return err
@@ -496,9 +496,9 @@ func (a *GitOpsAggregator) updateContextPairingStatus(ctx context.Context, tx *s
 	}
 
 	correlationData, _ := json.Marshal(map[string]interface{}{
-		"service":         result.ServiceName,
-		"last_processed":  time.Now(),
-		"manifest_type":   result.ManifestType,
+		"service":        result.ServiceName,
+		"last_processed": time.Now(),
+		"manifest_type":  result.ManifestType,
 	})
 
 	// Upsert context pairing status

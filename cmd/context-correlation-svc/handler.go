@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/clients/argocd"
 	"github.com/kriipke/platformctl/internal/clients/git"
 	"github.com/kriipke/platformctl/internal/clients/kubernetes"
-	"github.com/kriipke/platformctl/internal/clients/argocd"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
-	"github.com/google/uuid"
 )
 
 type ContextPairingHandler struct {
@@ -123,17 +123,17 @@ func (cph *ContextPairingHandler) handleContextCorrelation(cmd *api.GitOpsComman
 	// Create result
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "context",
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "context",
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "context-correlation",
@@ -149,7 +149,7 @@ func (cph *ContextPairingHandler) handleContextCorrelation(cmd *api.GitOpsComman
 			CorrelationData: map[string]interface{}{
 				"app_validation":         appValidation,
 				"environment_validation": envValidation,
-				"sync_result":           syncResult,
+				"sync_result":            syncResult,
 			},
 			ResourceCount:      syncResult.ResourceCount,
 			LastDeploymentTime: &syncResult.LastSyncTime,
@@ -173,17 +173,17 @@ func (cph *ContextPairingHandler) handleContextInspection(cmd *api.GitOpsCommand
 	// Basic context inspection - get manifest metadata
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "context",
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "context",
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "context-correlation",
@@ -206,17 +206,17 @@ func (cph *ContextPairingHandler) handleContextInspection(cmd *api.GitOpsCommand
 func (cph *ContextPairingHandler) errorResult(cmd *api.GitOpsCommandMessage, message string, err error, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName:  "context-correlation",

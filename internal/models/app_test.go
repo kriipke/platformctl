@@ -38,10 +38,10 @@ func TestAppMarshaling(t *testing.T) {
 					Helm: AppHelmConfig{
 						Sources: []HelmSource{
 							{
-								Type:       "helm-registry",
-								Registry:   "registry.example.com",
-								Chart:      "test-chart",
-								Version:    "1.0.0",
+								Type:     "helm-registry",
+								Registry: "registry.example.com",
+								Chart:    "test-chart",
+								Version:  "1.0.0",
 							},
 						},
 						DefaultSource: 0,
