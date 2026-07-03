@@ -215,10 +215,7 @@ k8s-status: ## Show Kubernetes deployment status
 .PHONY: k8s-port-forward-%
 k8s-port-forward-%: ## Port forward to specific service (e.g., make k8s-port-forward-gateway)
 	@service_name=$(subst k8s-port-forward-,,$@); \
-	port=$$(case $$service_name in \
-		gateway) echo "8080:80";; \
-		*) echo "9090:9090";; \
-	esac); \
+	if [ "$$service_name" = "gateway" ]; then port="8080:80"; else port="9090:9090"; fi; \
 	echo "Port forwarding $$service_name on $$port..."; \
 	$(KUBECTL) port-forward -n $(NAMESPACE) service/platformctl-$$service_name $$port
 
