@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kriipke/platformctl/internal/models"
+	"github.com/lib/pq"
 )
 
 type EnvironmentStore struct {
@@ -16,6 +17,12 @@ type EnvironmentStore struct {
 
 func NewEnvironmentStore(db *DB) *EnvironmentStore {
 	return &EnvironmentStore{db: db}
+}
+
+// execer is satisfied by both *sql.DB and *sql.Tx, so the child-row inserts can
+// run either standalone or inside a transaction.
+type execer interface {
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
 // Create creates a new Environment manifest
@@ -29,8 +36,17 @@ func (s *EnvironmentStore) Create(ctx context.Context, env *models.Environment, 
 	env.Metadata.CreatedAt = &now
 	env.Metadata.UpdatedAt = &now
 
-	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO environments (name, customer_id, spec, created_at, updated_at) 
+	// The environment row and its denormalized child rows must be created
+	// atomically; otherwise a failed child insert leaves an orphaned
+	// environments row that blocks re-creation with a duplicate-key error.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after a successful Commit
+
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO environments (name, customer_id, spec, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5)`,
 		env.Metadata.Name, customerID, specJSON, now, now,
 	)
@@ -39,26 +55,23 @@ func (s *EnvironmentStore) Create(ctx context.Context, env *models.Environment, 
 	}
 
 	// Create associated Vault source
-	err = s.createVaultSource(ctx, env.Metadata.Name, customerID, env.Spec.Vault)
-	if err != nil {
+	if err := s.createVaultSource(ctx, tx, env.Metadata.Name, customerID, env.Spec.Vault); err != nil {
 		return fmt.Errorf("failed to create vault source: %w", err)
 	}
 
 	// Create associated Vault static secrets
 	for _, vaultSecret := range env.Spec.VaultSecrets {
-		err = s.createVaultStaticSecret(ctx, env.Metadata.Name, customerID, vaultSecret)
-		if err != nil {
+		if err := s.createVaultStaticSecret(ctx, tx, env.Metadata.Name, customerID, vaultSecret); err != nil {
 			return fmt.Errorf("failed to create vault static secret: %w", err)
 		}
 	}
 
 	// Create associated cluster configuration
-	err = s.createClusterConfig(ctx, env.Metadata.Name, customerID, env.Spec.Environment)
-	if err != nil {
+	if err := s.createClusterConfig(ctx, tx, env.Metadata.Name, customerID, env.Spec.Environment); err != nil {
 		return fmt.Errorf("failed to create cluster config: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // Get retrieves an Environment manifest by name and customer ID
@@ -105,7 +118,13 @@ func (s *EnvironmentStore) Update(ctx context.Context, env *models.Environment, 
 	now := time.Now()
 	env.Metadata.UpdatedAt = &now
 
-	result, err := s.db.ExecContext(ctx,
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after a successful Commit
+
+	result, err := tx.ExecContext(ctx,
 		`UPDATE environments SET spec = $1, updated_at = $2 WHERE name = $3 AND customer_id = $4`,
 		specJSON, now, env.Metadata.Name, customerID,
 	)
@@ -123,7 +142,7 @@ func (s *EnvironmentStore) Update(ctx context.Context, env *models.Environment, 
 	}
 
 	// Update associated resources (delete and recreate for simplicity)
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`DELETE FROM vault_sources WHERE environment_name = $1 AND customer_id = $2`,
 		env.Metadata.Name, customerID,
 	)
@@ -131,7 +150,7 @@ func (s *EnvironmentStore) Update(ctx context.Context, env *models.Environment, 
 		return fmt.Errorf("failed to delete old vault sources: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`DELETE FROM vault_static_secrets WHERE environment_name = $1 AND customer_id = $2`,
 		env.Metadata.Name, customerID,
 	)
@@ -139,7 +158,7 @@ func (s *EnvironmentStore) Update(ctx context.Context, env *models.Environment, 
 		return fmt.Errorf("failed to delete old vault static secrets: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`DELETE FROM cluster_configs WHERE environment_name = $1 AND customer_id = $2`,
 		env.Metadata.Name, customerID,
 	)
@@ -148,24 +167,21 @@ func (s *EnvironmentStore) Update(ctx context.Context, env *models.Environment, 
 	}
 
 	// Recreate associated resources
-	err = s.createVaultSource(ctx, env.Metadata.Name, customerID, env.Spec.Vault)
-	if err != nil {
+	if err := s.createVaultSource(ctx, tx, env.Metadata.Name, customerID, env.Spec.Vault); err != nil {
 		return fmt.Errorf("failed to create vault source: %w", err)
 	}
 
 	for _, vaultSecret := range env.Spec.VaultSecrets {
-		err = s.createVaultStaticSecret(ctx, env.Metadata.Name, customerID, vaultSecret)
-		if err != nil {
+		if err := s.createVaultStaticSecret(ctx, tx, env.Metadata.Name, customerID, vaultSecret); err != nil {
 			return fmt.Errorf("failed to create vault static secret: %w", err)
 		}
 	}
 
-	err = s.createClusterConfig(ctx, env.Metadata.Name, customerID, env.Spec.Environment)
-	if err != nil {
+	if err := s.createClusterConfig(ctx, tx, env.Metadata.Name, customerID, env.Spec.Environment); err != nil {
 		return fmt.Errorf("failed to create cluster config: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // Delete deletes an Environment manifest
@@ -232,14 +248,14 @@ func (s *EnvironmentStore) List(ctx context.Context, customerID string) ([]*mode
 }
 
 // createVaultSource creates a Vault source entry
-func (s *EnvironmentStore) createVaultSource(ctx context.Context, envName, customerID string, vault models.EnvironmentVaultConfig) error {
+func (s *EnvironmentStore) createVaultSource(ctx context.Context, exec execer, envName, customerID string, vault models.EnvironmentVaultConfig) error {
 	authConfigJSON, err := json.Marshal(vault.Auth)
 	if err != nil {
 		return fmt.Errorf("failed to marshal auth config: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO vault_sources (environment_name, customer_id, vault_address, vault_namespace, auth_method, auth_config) 
+	_, err = exec.ExecContext(ctx,
+		`INSERT INTO vault_sources (environment_name, customer_id, vault_address, vault_namespace, auth_method, auth_config)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
 		envName, customerID, vault.Address, vault.Namespace, vault.Auth.Method, authConfigJSON,
 	)
@@ -247,19 +263,20 @@ func (s *EnvironmentStore) createVaultSource(ctx context.Context, envName, custo
 }
 
 // createVaultStaticSecret creates a Vault static secret entry
-func (s *EnvironmentStore) createVaultStaticSecret(ctx context.Context, envName, customerID string, secret models.VaultStaticSecret) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO vault_static_secrets (environment_name, customer_id, name, vault_path, destination_secret, required_keys) 
+func (s *EnvironmentStore) createVaultStaticSecret(ctx context.Context, exec execer, envName, customerID string, secret models.VaultStaticSecret) error {
+	// required_keys is a Postgres TEXT[]; lib/pq needs pq.Array to bind a []string.
+	_, err := exec.ExecContext(ctx,
+		`INSERT INTO vault_static_secrets (environment_name, customer_id, name, vault_path, destination_secret, required_keys)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		envName, customerID, secret.Name, secret.VaultPath, secret.DestinationSecret, secret.RequiredKeys,
+		envName, customerID, secret.Name, secret.VaultPath, secret.DestinationSecret, pq.Array(secret.RequiredKeys),
 	)
 	return err
 }
 
 // createClusterConfig creates a cluster configuration entry
-func (s *EnvironmentStore) createClusterConfig(ctx context.Context, envName, customerID string, envConfig models.EnvironmentConfig) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO cluster_configs (environment_name, customer_id, cluster_name, namespace, kubeconfig_vault_path, kubeconfig_vault_key) 
+func (s *EnvironmentStore) createClusterConfig(ctx context.Context, exec execer, envName, customerID string, envConfig models.EnvironmentConfig) error {
+	_, err := exec.ExecContext(ctx,
+		`INSERT INTO cluster_configs (environment_name, customer_id, cluster_name, namespace, kubeconfig_vault_path, kubeconfig_vault_key)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
 		envName, customerID, envConfig.Name, envConfig.Namespace,
 		envConfig.Cluster.KubeconfigSecretRef.Vault, envConfig.Cluster.KubeconfigSecretRef.Key,

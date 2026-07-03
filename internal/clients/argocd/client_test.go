@@ -6,18 +6,19 @@ import (
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 )
 
-func TestServerAddr(t *testing.T) {
+func TestRestBaseURL(t *testing.T) {
 	tests := []struct {
 		in, want string
 	}{
-		{"https://argocd.example.com", "argocd.example.com"},
-		{"http://argocd.example.com/", "argocd.example.com"},
-		{"argocd.example.com:443", "argocd.example.com:443"},
-		{"https://argocd.example.com:8080/", "argocd.example.com:8080"},
+		{"argocd-server.argocd.svc.cluster.local", "https://argocd-server.argocd.svc.cluster.local"},
+		{"https://argocd.example.com", "https://argocd.example.com"},
+		{"http://argocd.example.com/", "http://argocd.example.com"},
+		{"argocd.example.com:443", "https://argocd.example.com:443"},
+		{"https://argocd.example.com:8080/", "https://argocd.example.com:8080"},
 	}
 	for _, tt := range tests {
-		if got := serverAddr(tt.in); got != tt.want {
-			t.Errorf("serverAddr(%q) = %q, want %q", tt.in, got, tt.want)
+		if got := restBaseURL(tt.in); got != tt.want {
+			t.Errorf("restBaseURL(%q) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }
