@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +24,7 @@ import (
 	"github.com/kriipke/platformctl/internal/database"
 	"github.com/kriipke/platformctl/internal/events"
 	"github.com/kriipke/platformctl/internal/handlers"
+	"github.com/kriipke/platformctl/internal/models"
 	"github.com/kriipke/platformctl/internal/observability"
 	"github.com/kriipke/platformctl/internal/readmodel"
 	"github.com/kriipke/platformctl/pkg/api"
@@ -36,7 +39,9 @@ type Phase1DIntegrationTestSuite struct {
 	store         *readmodel.GitOpsStore
 	statusHandler *handlers.GitOpsStatusHandler
 	server        *httptest.Server
+	customerUUID  uuid.UUID
 	customerID    string
+	correlationID string
 	contextName   string
 }
 
@@ -67,18 +72,26 @@ func (suite *Phase1DIntegrationTestSuite) SetupSuite() {
 
 	// Initialize components
 	logger := suite.createTestLogger()
-	metrics := observability.NewMetrics("phase1d_integration_test")
+	metrics := observability.NewMetrics(observability.MetricsConfig{
+		ServiceName: "phase1d-integration-test",
+		Namespace:   "platformctl",
+	})
 
 	suite.aggregator = aggregator.NewGitOpsAggregator(suite.db, logger, metrics)
 	suite.store = readmodel.NewGitOpsStore(suite.db)
 	suite.statusHandler = handlers.NewGitOpsStatusHandler(suite.store, logger)
 
+	// Setup test data. Customer and correlation IDs must be UUIDs: the status
+	// handlers key on models.Customer.ID and command_runs.correlation_id is a
+	// UUID column.
+	suite.customerUUID = uuid.MustParse("11111111-1111-4111-8111-111111111111")
+	suite.customerID = suite.customerUUID.String()
+	suite.correlationID = "22222222-2222-4222-8222-222222222222"
+	suite.contextName = "test-context"
+
 	// Setup test HTTP server
 	suite.server = httptest.NewServer(suite.createTestRouter())
 
-	// Setup test data
-	suite.customerID = "test-customer-123"
-	suite.contextName = "test-context"
 	suite.setupTestData()
 }
 
@@ -271,8 +284,23 @@ func (suite *Phase1DIntegrationTestSuite) TestErrorHandling() {
 // Helper methods for test setup and utilities
 
 func (suite *Phase1DIntegrationTestSuite) setupTestData() {
-	// Insert test context
+	// Insert the app and environment the context references (FK constraints)
 	_, err := suite.db.Exec(`
+		INSERT INTO apps (name, customer_id, spec)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (name, customer_id) DO NOTHING
+	`, "test-app", suite.customerID, `{"kind": "App"}`)
+	require.NoError(suite.T(), err)
+
+	_, err = suite.db.Exec(`
+		INSERT INTO environments (name, customer_id, spec)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (name, customer_id) DO NOTHING
+	`, "production", suite.customerID, `{"kind": "Environment"}`)
+	require.NoError(suite.T(), err)
+
+	// Insert test context
+	_, err = suite.db.Exec(`
 		INSERT INTO contexts (name, customer_id, app_reference, environment_reference, spec)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (name, customer_id) DO NOTHING
@@ -284,7 +312,7 @@ func (suite *Phase1DIntegrationTestSuite) setupTestData() {
 		INSERT INTO command_runs (correlation_id, context_name, customer_id, action, manifest_type, requested_by, requested_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (correlation_id) DO NOTHING
-	`, "test-correlation-id", suite.contextName, suite.customerID, "sync-app", "app", "test-user", time.Now())
+	`, suite.correlationID, suite.contextName, suite.customerID, "sync-app", "app", "test-user", time.Now())
 	require.NoError(suite.T(), err)
 }
 
@@ -292,7 +320,7 @@ func (suite *Phase1DIntegrationTestSuite) cleanupTestData() {
 	// Clean up in reverse dependency order
 	tables := []string{
 		"customer_git_branch_correlation",
-		"multi_environment_app_status", 
+		"multi_environment_app_status",
 		"gitops_vault_validation_status",
 		"context_pairing_operations",
 		"environment_manifest_validation",
@@ -301,6 +329,8 @@ func (suite *Phase1DIntegrationTestSuite) cleanupTestData() {
 		"result_events",
 		"command_runs",
 		"contexts",
+		"apps",
+		"environments",
 	}
 
 	for _, table := range tables {
@@ -315,7 +345,7 @@ func (suite *Phase1DIntegrationTestSuite) createTestAppManifestResult() *api.Git
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
 			MessageID:     "test-app-msg-id",
-			CorrelationID: "test-correlation-id",
+			CorrelationID: suite.correlationID,
 			CustomerID:    suite.customerID,
 			ContextName:   suite.contextName,
 			ManifestType:  "app",
@@ -358,7 +388,7 @@ func (suite *Phase1DIntegrationTestSuite) createTestAppManifestResult() *api.Git
 				},
 				{
 					Name:         "backend-staging",
-					Environment:  "staging", 
+					Environment:  "staging",
 					Cluster:      "staging-cluster",
 					Namespace:    "backend-staging",
 					SyncStatus:   "synced",
@@ -393,7 +423,7 @@ func (suite *Phase1DIntegrationTestSuite) createTestEnvironmentManifestResult() 
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
 			MessageID:       "test-env-msg-id",
-			CorrelationID:   "test-correlation-id",
+			CorrelationID:   suite.correlationID,
 			CustomerID:      suite.customerID,
 			ContextName:     suite.contextName,
 			EnvironmentName: "production",
@@ -452,7 +482,7 @@ func (suite *Phase1DIntegrationTestSuite) createTestContextPairingResult() *api.
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
 			MessageID:     "test-context-msg-id",
-			CorrelationID: "test-correlation-id",
+			CorrelationID: suite.correlationID,
 			CustomerID:    suite.customerID,
 			ContextName:   suite.contextName,
 			ManifestType:  "context",
@@ -486,7 +516,7 @@ func (suite *Phase1DIntegrationTestSuite) createTestContextPairingResult() *api.
 
 func (suite *Phase1DIntegrationTestSuite) createMultiEnvironmentData() error {
 	environments := []string{"dev", "staging", "production"}
-	
+
 	for _, env := range environments {
 		_, err := suite.db.Exec(`
 			INSERT INTO multi_environment_app_status (
@@ -517,36 +547,33 @@ func (suite *Phase1DIntegrationTestSuite) createTestLogger() zerolog.Logger {
 }
 
 func (suite *Phase1DIntegrationTestSuite) createTestRouter() http.Handler {
-	mux := http.NewServeMux()
-	
-	// Add authentication middleware simulation
-	authMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Simulate customer authentication
-			r = r.WithContext(context.WithValue(r.Context(), "customer", &handlers.Customer{
-				ID: suite.customerID,
-			}))
-			next.ServeHTTP(w, r)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Simulate customer authentication: the status handlers read a
+	// *models.Customer from the gin context under the "customer" key.
+	router.Use(func(c *gin.Context) {
+		c.Set("customer", &models.Customer{
+			ID:       suite.customerUUID,
+			Name:     "Test Customer",
+			Username: "test-user",
+			Active:   true,
 		})
-	}
+		c.Next()
+	})
 
-	// Register status endpoints with auth middleware
-	statusRoutes := map[string]http.HandlerFunc{
-		"/api/v1/gitops/contexts/status":                                                statusHandler.ListContextStatuses,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/status":                     statusHandler.GetContextStatus,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/health":                     statusHandler.GetContextHealth,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/apps/test-app/status":       statusHandler.GetAppManifestStatus,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/apps/test-app/environments/status": statusHandler.GetMultiEnvironmentAppStatus,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/environments/production/status":   statusHandler.GetEnvironmentManifestStatus,
-		"/api/v1/gitops/contexts/" + suite.contextName + "/environments/production/vault/status": statusHandler.GetVaultValidationDetails,
-		"/api/v1/gitops/health/overview": statusHandler.GetSystemHealthOverview,
-	}
+	// Mirror the gateway's GitOps status routes (cmd/gateway/main.go)
+	gitopsGroup := router.Group("/api/v1/gitops")
+	gitopsGroup.GET("/contexts/status", suite.statusHandler.ListContextStatuses)
+	gitopsGroup.GET("/contexts/:contextName/status", suite.statusHandler.GetContextStatus)
+	gitopsGroup.GET("/contexts/:contextName/health", suite.statusHandler.GetContextHealth)
+	gitopsGroup.GET("/contexts/:contextName/apps/:appName/status", suite.statusHandler.GetAppManifestStatus)
+	gitopsGroup.GET("/contexts/:contextName/apps/:appName/environments/status", suite.statusHandler.GetMultiEnvironmentAppStatus)
+	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/status", suite.statusHandler.GetEnvironmentManifestStatus)
+	gitopsGroup.GET("/contexts/:contextName/environments/:environmentName/vault/status", suite.statusHandler.GetVaultValidationDetails)
+	gitopsGroup.GET("/health/overview", suite.statusHandler.GetSystemHealthOverview)
 
-	for path, handler := range statusRoutes {
-		mux.Handle(path, authMiddleware(http.HandlerFunc(handler)))
-	}
-
-	return mux
+	return router
 }
 
 func (suite *Phase1DIntegrationTestSuite) createTestAuthHeader() map[string]string {
