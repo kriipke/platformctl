@@ -23,6 +23,18 @@ func NewContextHandler(contextStore *storage.ContextStore) *ContextHandler {
 	}
 }
 
+// formatMetadataTime formats an optional context metadata timestamp. The
+// ContextStore sets CreatedAt/UpdatedAt on the struct before the handler runs,
+// but guard against a nil pointer so a missing timestamp degrades to an empty
+// string instead of panicking with a nil dereference (which would surface to the
+// client as a 500).
+func formatMetadataTime(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format(time.RFC3339)
+}
+
 // CreateContext handles POST /contexts
 func (h *ContextHandler) CreateContext(w http.ResponseWriter, r *http.Request) {
 	customer, err := auth.RequireCustomer(r.Context())
@@ -60,7 +72,7 @@ func (h *ContextHandler) CreateContext(w http.ResponseWriter, r *http.Request) {
 		Success:     true,
 		Message:     "Context created successfully",
 		ContextName: req.Context.Metadata.Name,
-		CreatedAt:   req.Context.Metadata.CreatedAt.Format(time.RFC3339),
+		CreatedAt:   formatMetadataTime(req.Context.Metadata.CreatedAt),
 	}
 
 	writeJSONResponse(w, response, http.StatusCreated)
@@ -175,7 +187,7 @@ func (h *ContextHandler) UpdateContext(w http.ResponseWriter, r *http.Request) {
 	response := api.UpdateContextResponse{
 		Success:   true,
 		Message:   "Context updated successfully",
-		UpdatedAt: req.Context.Metadata.UpdatedAt.Format(time.RFC3339),
+		UpdatedAt: formatMetadataTime(req.Context.Metadata.UpdatedAt),
 	}
 
 	writeJSONResponse(w, response, http.StatusOK)
