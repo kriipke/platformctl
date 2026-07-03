@@ -49,11 +49,6 @@ config:
   METRICS_ENABLED: "true"
   HEALTH_CHECK_PORT: "8081"
   TRACING_ENABLED: "false"
-  # GitOps integration feature flags
-  ENABLE_VAULT_INTEGRATION: "true"
-  ENABLE_ARGOCD_INTEGRATION: "true"
-  ENABLE_GIT_INTEGRATION: "true"
-  ENABLE_KUBERNETES_INTEGRATION: "true"
   # ArgoCD connection (internal/config ArgoCDConfig, envPrefix ARGOCD_).
   # Points at the in-cluster ArgoCD on stemx; the gRPC-web client strips the
   # scheme, so this is host[:port]. INSECURE=true because argocd-server serves
