@@ -38,7 +38,7 @@ func (m *Middleware) AuditMiddleware() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Generate a request ID for correlation
 			requestID := uuid.New()
-			ctx := context.WithValue(r.Context(), "request_id", requestID)
+			ctx := context.WithValue(r.Context(), requestIDContextKey, requestID)
 			r = r.WithContext(ctx)
 
 			// Create a response recorder to capture response details
@@ -110,7 +110,7 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 					event.WithError(errorCode, errorMessage)
 				}
 
-				m.logger.LogEvent(r.Context(), event)
+				_ = m.logger.LogEvent(r.Context(), event)
 			}
 		})
 	}
@@ -164,7 +164,7 @@ func (m *Middleware) logHTTPEvent(ctx context.Context, r *http.Request, recorder
 		event.WithError(errorCode, errorMessage)
 	}
 
-	m.logger.LogEvent(ctx, event)
+	_ = m.logger.LogEvent(ctx, event)
 }
 
 // responseRecorder captures response details for audit logging

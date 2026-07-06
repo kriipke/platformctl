@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -36,7 +37,8 @@ func (p *GitOpsCommandPublisher) PublishGitOpsCommand(cmd *api.GitOpsCommandMess
 		priority = 10
 	}
 
-	err = p.messageBus.channel.Publish(
+	err = p.messageBus.channel.PublishWithContext(
+		context.Background(),
 		"gitops.commands", // exchange
 		routingKey,        // routing key
 		false,             // mandatory

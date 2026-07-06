@@ -275,7 +275,7 @@ func (a *EnhancedAuthService) Login(r *http.Request, username, password string, 
 	tokens, err := a.jwtManager.GenerateTokenPair(modelCustomer, sessionID, permissions, roles)
 	if err != nil {
 		// Clean up session if token generation fails
-		a.InvalidateSession(sessionID)
+		_ = a.InvalidateSession(sessionID)
 		return nil, "", fmt.Errorf("failed to generate tokens: %w", err)
 	}
 

@@ -55,7 +55,7 @@ func (a *EnhancedAuthService) RBACMiddleware(rbacManager *RBACManager) func(http
 			}
 
 			// Add permission context for downstream handlers
-			ctx := context.WithValue(r.Context(), "granted_permission", permission)
+			ctx := context.WithValue(r.Context(), grantedPermissionContextKey, permission)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

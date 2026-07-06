@@ -440,7 +440,7 @@ func (sm *SecurityMiddleware) writeError(w http.ResponseWriter, message string, 
 		"code":      statusCode,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	json.NewEncoder(w).Encode(errorResponse)
+	_ = json.NewEncoder(w).Encode(errorResponse)
 }
 
 // getClientIPFromRequest extracts client IP for rate limiting
@@ -500,5 +500,5 @@ func writeErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 		"code":      statusCode,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	json.NewEncoder(w).Encode(errorResponse)
+	_ = json.NewEncoder(w).Encode(errorResponse)
 }
