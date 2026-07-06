@@ -1,14 +1,17 @@
 package argocd
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
-	apiclient "github.com/argoproj/argo-cd/v2/pkg/apiclient"
-	applicationpkg "github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
-	applicationsetpkg "github.com/argoproj/argo-cd/v2/pkg/apiclient/applicationset"
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 
 	"github.com/kriipke/platformctl/internal/circuitbreaker"
@@ -26,17 +29,26 @@ type ArgoCDClient interface {
 	SyncApplicationSet(customerID, appSetName string, forceSync bool) (*api.ApplicationSetSyncResult, error)
 }
 
-// ArgoCDClientImpl talks to an ArgoCD server via its gRPC API client. External
-// calls are routed through a circuit breaker.
+// ArgoCDClientImpl talks to an ArgoCD server via its REST API. The gRPC / gRPC-web
+// apiclient does not interoperate with every ArgoCD server configuration (see the
+// stemx v2.13 server, which rejects gRPC-web), whereas the REST API is stable, so
+// this client uses REST over HTTPS with a bearer token. External calls are routed
+// through a circuit breaker.
 type ArgoCDClientImpl struct {
 	config config.ArgoCDConfig
 	cb     *circuitbreaker.CircuitBreaker
+	http   *http.Client
 }
 
 func NewArgoCDClient(cfg config.ArgoCDConfig) *ArgoCDClientImpl {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if cfg.Insecure {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- ArgoCD serves a self-signed cert; opt-in via ARGOCD_INSECURE
+	}
 	return &ArgoCDClientImpl{
 		config: cfg,
 		cb:     resilience.New("argocd"),
+		http:   &http.Client{Timeout: argoCDTimeout, Transport: transport},
 	}
 }
 
@@ -65,26 +77,16 @@ func (ac *ArgoCDClientImpl) SyncApplicationSet(customerID, appSetName string, fo
 	})
 }
 
-// --- real implementations ---
+// --- real implementations (REST) ---
 
 func (ac *ArgoCDClientImpl) getApplicationSetsForApp(customerID, appName string) ([]api.ApplicationSetStatus, error) {
-	client, err := ac.newClient()
-	if err != nil {
-		return nil, err
+	q := url.Values{}
+	if ac.config.Namespace != "" {
+		q.Set("appsetNamespace", ac.config.Namespace)
 	}
-	closer, asClient, err := client.NewApplicationSetClient()
-	if err != nil {
-		return nil, fmt.Errorf("create applicationset client: %w", err)
-	}
-	defer closer.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), argoCDTimeout)
-	defer cancel()
-
-	list, err := asClient.List(ctx, &applicationsetpkg.ApplicationSetListQuery{
-		AppsetNamespace: ac.config.Namespace,
-	})
-	if err != nil {
+	var list v1alpha1.ApplicationSetList
+	if err := ac.get("/api/v1/applicationsets", q, &list); err != nil {
 		return nil, fmt.Errorf("list applicationsets: %w", err)
 	}
 
@@ -100,49 +102,17 @@ func (ac *ArgoCDClientImpl) getApplicationSetsForApp(customerID, appName string)
 }
 
 func (ac *ArgoCDClientImpl) getApplicationSetApplications(customerID, appSetName string) ([]api.ApplicationSetApplication, error) {
-	client, err := ac.newClient()
+	appset, err := ac.getApplicationSet(appSetName)
 	if err != nil {
 		return nil, err
-	}
-	closer, asClient, err := client.NewApplicationSetClient()
-	if err != nil {
-		return nil, fmt.Errorf("create applicationset client: %w", err)
-	}
-	defer closer.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), argoCDTimeout)
-	defer cancel()
-
-	appset, err := asClient.Get(ctx, &applicationsetpkg.ApplicationSetGetQuery{
-		Name:            appSetName,
-		AppsetNamespace: ac.config.Namespace,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get applicationset %s: %w", appSetName, err)
 	}
 	return mapAppSetApplications(appset.Status.ApplicationStatus), nil
 }
 
 func (ac *ArgoCDClientImpl) validateApplicationSetTemplate(customerID, appSetName string) error {
-	client, err := ac.newClient()
+	appset, err := ac.getApplicationSet(appSetName)
 	if err != nil {
 		return err
-	}
-	closer, asClient, err := client.NewApplicationSetClient()
-	if err != nil {
-		return fmt.Errorf("create applicationset client: %w", err)
-	}
-	defer closer.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), argoCDTimeout)
-	defer cancel()
-
-	appset, err := asClient.Get(ctx, &applicationsetpkg.ApplicationSetGetQuery{
-		Name:            appSetName,
-		AppsetNamespace: ac.config.Namespace,
-	})
-	if err != nil {
-		return fmt.Errorf("get applicationset %s: %w", appSetName, err)
 	}
 	if len(appset.Spec.Generators) == 0 {
 		return fmt.Errorf("applicationset %s has no generators", appSetName)
@@ -151,36 +121,12 @@ func (ac *ArgoCDClientImpl) validateApplicationSetTemplate(customerID, appSetNam
 }
 
 func (ac *ArgoCDClientImpl) syncApplicationSet(customerID, appSetName string, forceSync bool) (*api.ApplicationSetSyncResult, error) {
-	client, err := ac.newClient()
+	appset, err := ac.getApplicationSet(appSetName)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), argoCDTimeout)
-	defer cancel()
-
-	// Discover the applications generated by the ApplicationSet.
-	asCloser, asClient, err := client.NewApplicationSetClient()
-	if err != nil {
-		return nil, fmt.Errorf("create applicationset client: %w", err)
-	}
-	defer asCloser.Close()
-
-	appset, err := asClient.Get(ctx, &applicationsetpkg.ApplicationSetGetQuery{
-		Name:            appSetName,
-		AppsetNamespace: ac.config.Namespace,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get applicationset %s: %w", appSetName, err)
-	}
-
 	// ApplicationSets are not synced directly; sync each generated application.
-	appCloser, appClient, err := client.NewApplicationClient()
-	if err != nil {
-		return nil, fmt.Errorf("create application client: %w", err)
-	}
-	defer appCloser.Close()
-
 	started := time.Now()
 	prune := forceSync
 	synced := []string{}
@@ -190,10 +136,8 @@ func (ac *ArgoCDClientImpl) syncApplicationSet(customerID, appSetName string, fo
 		if name == "" {
 			continue
 		}
-		if _, err := appClient.Sync(ctx, &applicationpkg.ApplicationSyncRequest{
-			Name:  &name,
-			Prune: &prune,
-		}); err != nil {
+		body := map[string]interface{}{"name": name, "prune": prune}
+		if err := ac.post("/api/v1/applications/"+url.PathEscape(name)+"/sync", body, nil); err != nil {
 			return nil, fmt.Errorf("sync application %s: %w", name, err)
 		}
 		synced = append(synced, name)
@@ -212,22 +156,99 @@ func (ac *ArgoCDClientImpl) syncApplicationSet(customerID, appSetName string, fo
 	}, nil
 }
 
-// --- client + mapping helpers ---
+func (ac *ArgoCDClientImpl) getApplicationSet(name string) (*v1alpha1.ApplicationSet, error) {
+	q := url.Values{}
+	if ac.config.Namespace != "" {
+		q.Set("appsetNamespace", ac.config.Namespace)
+	}
+	var appset v1alpha1.ApplicationSet
+	if err := ac.get("/api/v1/applicationsets/"+url.PathEscape(name), q, &appset); err != nil {
+		return nil, fmt.Errorf("get applicationset %s: %w", name, err)
+	}
+	return &appset, nil
+}
 
-func (ac *ArgoCDClientImpl) newClient() (apiclient.Client, error) {
+// --- REST transport ---
+
+func (ac *ArgoCDClientImpl) get(path string, query url.Values, out interface{}) error {
+	base, err := ac.baseURL()
+	if err != nil {
+		return err
+	}
+	u := base + path
+	if len(query) > 0 {
+		u += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+	return ac.do(req, out)
+}
+
+func (ac *ArgoCDClientImpl) post(path string, body, out interface{}) error {
+	base, err := ac.baseURL()
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("encode request body: %w", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, base+path, bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return ac.do(req, out)
+}
+
+func (ac *ArgoCDClientImpl) do(req *http.Request, out interface{}) error {
+	if ac.config.AuthToken != "" {
+		req.Header.Set("Authorization", "Bearer "+ac.config.AuthToken)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := ac.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("argocd request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= http.StatusBadRequest {
+		return fmt.Errorf("argocd %s %s: status %d: %s", req.Method, req.URL.Path, resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+	if out != nil && len(bytes.TrimSpace(respBody)) > 0 {
+		if err := json.Unmarshal(respBody, out); err != nil {
+			return fmt.Errorf("decode argocd response: %w", err)
+		}
+	}
+	return nil
+}
+
+// baseURL returns the ArgoCD REST base URL (scheme://host[:port]) from config.
+func (ac *ArgoCDClientImpl) baseURL() (string, error) {
 	if !ac.config.Enabled {
-		return nil, fmt.Errorf("argocd integration is disabled")
+		return "", fmt.Errorf("argocd integration is disabled")
 	}
 	if ac.config.ServerURL == "" {
-		return nil, fmt.Errorf("argocd server URL is not configured")
+		return "", fmt.Errorf("argocd server URL is not configured")
 	}
-	return apiclient.NewClient(&apiclient.ClientOptions{
-		ServerAddr: serverAddr(ac.config.ServerURL),
-		AuthToken:  ac.config.AuthToken,
-		Insecure:   ac.config.Insecure,
-		GRPCWeb:    true,
-	})
+	return restBaseURL(ac.config.ServerURL), nil
 }
+
+// restBaseURL normalizes a configured server address into an HTTPS base URL.
+// A bare host (no scheme) is assumed to be HTTPS, since argocd-server serves TLS.
+func restBaseURL(serverURL string) string {
+	s := strings.TrimSpace(serverURL)
+	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		s = "https://" + s
+	}
+	return strings.TrimRight(s, "/")
+}
+
+// --- mapping helpers ---
 
 func mapApplicationSet(appset *v1alpha1.ApplicationSet, customerID, appName string) api.ApplicationSetStatus {
 	status := api.ApplicationSetStatus{
@@ -303,12 +324,4 @@ func generatorType(g v1alpha1.ApplicationSetGenerator) string {
 	default:
 		return "unknown"
 	}
-}
-
-// serverAddr strips the scheme and trailing slash so the ArgoCD client receives
-// a host:port address.
-func serverAddr(serverURL string) string {
-	s := strings.TrimPrefix(serverURL, "https://")
-	s = strings.TrimPrefix(s, "http://")
-	return strings.TrimRight(s, "/")
 }
