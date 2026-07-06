@@ -132,6 +132,10 @@ func TestRetryExecutorExecuteMaxRetriesExceeded(t *testing.T) {
 		MaxRetries:    2,
 		InitialDelay:  10 * time.Millisecond,
 		BackoffFactor: 2.0,
+		// Treat every error as retryable so this test exercises the
+		// max-retries-exceeded path; by default the executor only retries
+		// transient errors (Temporary/Timeout/HTTP-5xx/known patterns).
+		IsRetryable: func(error) bool { return true },
 	})
 	require.NoError(t, err)
 

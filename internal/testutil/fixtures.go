@@ -24,10 +24,14 @@ type TestDB struct {
 func NewTestDB(t *testing.T) *TestDB {
 	t.Helper()
 
-	// Get database URL from environment or use default
+	// Database-backed tests need a Postgres reachable via TEST_DATABASE_URL.
+	// When it is unset — the unit-test CI job, or a plain `go test ./...`
+	// locally — skip rather than fail, matching the other DB-gated suites
+	// (e.g. TestPhase1DIntegration). Real DB coverage runs where the variable
+	// is provided.
 	dbURL := os.Getenv("TEST_DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://postgres:password@localhost:5432/platformctl_test?sslmode=disable"
+		t.Skip("TEST_DATABASE_URL not set; skipping database-backed test")
 	}
 
 	// Create unique database name for this test
