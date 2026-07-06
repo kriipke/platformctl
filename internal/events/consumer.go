@@ -51,9 +51,9 @@ func (c *ResultConsumer) Start() error {
 			case msg := <-msgs:
 				if err := c.processMessage(msg); err != nil {
 					log.Printf("Error processing message: %v", err)
-					msg.Nack(false, true) // Requeue on error
+					_ = msg.Nack(false, true) // Requeue on error
 				} else {
-					msg.Ack(false)
+					_ = msg.Ack(false)
 				}
 			case <-c.stopChan:
 				return

@@ -402,7 +402,10 @@ func TestRateLimiterEdgeCases(t *testing.T) {
 	})
 
 	t.Run("very short period", func(t *testing.T) {
-		rl := NewRateLimiter(5, time.Nanosecond)
+		// A short refill period: tokens should come back quickly once it
+		// elapses. (A sub-microsecond period can't be tested meaningfully —
+		// the bucket would refill between the exhausting calls themselves.)
+		rl := NewRateLimiter(5, 10*time.Millisecond)
 		clientIP := "192.168.1.701"
 
 		// Use all tokens
@@ -411,8 +414,8 @@ func TestRateLimiterEdgeCases(t *testing.T) {
 		}
 		assert.False(t, rl.Allow(clientIP))
 
-		// Even with nanosecond refill, should get tokens back quickly
-		time.Sleep(time.Microsecond) // Much longer than nanosecond
+		// After the short period elapses, tokens should be refilled
+		time.Sleep(15 * time.Millisecond)
 		assert.True(t, rl.Allow(clientIP))
 	})
 

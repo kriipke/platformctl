@@ -146,7 +146,7 @@ func (vc *HashiCorpVaultClient) validateAuth() error {
 
 	// Set Vault address and namespace
 	if vc.config.Address != "" {
-		vc.client.SetAddress(vc.config.Address)
+		_ = vc.client.SetAddress(vc.config.Address)
 	}
 	if vc.config.Namespace != "" {
 		vc.client.SetNamespace(vc.config.Namespace)

@@ -617,7 +617,7 @@ func testRateLimitingWorkflow(t *testing.T, suite *E2ESecurityTestSuite) {
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	})
 
 	var handler http.Handler = testHandler
@@ -687,7 +687,7 @@ func testSecurityHeadersAndValidation(t *testing.T, suite *E2ESecurityTestSuite)
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "ok"}`))
+		_, _ = w.Write([]byte(`{"status": "ok"}`))
 	})
 
 	var handler http.Handler = testHandler
@@ -795,14 +795,14 @@ func createAdminHandler(suite *E2ESecurityTestSuite) http.Handler {
 		// Admin operations require privileged access
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "admin operation completed"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "admin operation completed"})
 	})
 }
 
 func handleGetApps(w http.ResponseWriter, r *http.Request, suite *E2ESecurityTestSuite) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"apps": []map[string]string{
 			{"id": "app-123", "name": "test-app"},
 			{"id": "app-456", "name": "another-app"},
@@ -813,7 +813,7 @@ func handleGetApps(w http.ResponseWriter, r *http.Request, suite *E2ESecurityTes
 func handleCreateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityTestSuite) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"id":     "app-789",
 		"name":   "new-app",
 		"status": "created",
@@ -823,7 +823,7 @@ func handleCreateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityT
 func handleUpdateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityTestSuite) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"id":     "app-123",
 		"name":   "updated-app",
 		"status": "updated",
@@ -833,7 +833,7 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityT
 func handleDeleteApp(w http.ResponseWriter, r *http.Request, suite *E2ESecurityTestSuite) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"id":     "app-123",
 		"status": "deleted",
 	})

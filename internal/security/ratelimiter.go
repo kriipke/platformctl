@@ -36,34 +36,12 @@ func NewRateLimiter(requestsPerPeriod int, period time.Duration) *RateLimiter {
 
 // Allow checks if a request from the given client should be allowed
 func (rl *RateLimiter) Allow(clientIP string) bool {
-	rl.mutex.RLock()
-	bucket, exists := rl.clients[clientIP]
-	rl.mutex.RUnlock()
-
-	if !exists {
-		bucket = &ClientBucket{
-			tokens:     rl.maxTokens - 1, // Consume one token for this request
-			lastRefill: time.Now(),
-		}
-		rl.mutex.Lock()
-		rl.clients[clientIP] = bucket
-		rl.mutex.Unlock()
-		return true
-	}
+	bucket := rl.bucketFor(clientIP)
 
 	bucket.mutex.Lock()
 	defer bucket.mutex.Unlock()
 
-	now := time.Now()
-
-	// Refill tokens based on time elapsed
-	timeSinceRefill := now.Sub(bucket.lastRefill)
-	if timeSinceRefill >= rl.refillRate {
-		periodsElapsed := int(timeSinceRefill / rl.refillRate)
-		tokensToAdd := periodsElapsed * rl.maxTokens
-		bucket.tokens = min(bucket.tokens+tokensToAdd, rl.maxTokens)
-		bucket.lastRefill = now
-	}
+	rl.refill(bucket, time.Now())
 
 	// Check if we have tokens available
 	if bucket.tokens > 0 {
@@ -72,6 +50,46 @@ func (rl *RateLimiter) Allow(clientIP string) bool {
 	}
 
 	return false
+}
+
+// bucketFor returns the bucket for a client, creating a fresh full bucket the
+// first time a client is seen. It uses double-checked locking so that
+// concurrent first requests from the same client share one bucket rather than
+// racing to overwrite each other (which would leak tokens).
+func (rl *RateLimiter) bucketFor(clientIP string) *ClientBucket {
+	rl.mutex.RLock()
+	bucket, exists := rl.clients[clientIP]
+	rl.mutex.RUnlock()
+	if exists {
+		return bucket
+	}
+
+	rl.mutex.Lock()
+	defer rl.mutex.Unlock()
+	if bucket, exists = rl.clients[clientIP]; exists {
+		return bucket
+	}
+	bucket = &ClientBucket{
+		tokens:     rl.maxTokens,
+		lastRefill: time.Now(),
+	}
+	rl.clients[clientIP] = bucket
+	return bucket
+}
+
+// refill tops up a bucket based on the time elapsed since its last refill,
+// capped at maxTokens. The caller must hold bucket.mutex.
+func (rl *RateLimiter) refill(bucket *ClientBucket, now time.Time) {
+	if rl.refillRate <= 0 {
+		return
+	}
+	timeSinceRefill := now.Sub(bucket.lastRefill)
+	if timeSinceRefill >= rl.refillRate {
+		periodsElapsed := int(timeSinceRefill / rl.refillRate)
+		tokensToAdd := periodsElapsed * rl.maxTokens
+		bucket.tokens = min(bucket.tokens+tokensToAdd, rl.maxTokens)
+		bucket.lastRefill = now
+	}
 }
 
 // cleanup removes old client entries to prevent memory leaks
@@ -108,6 +126,10 @@ func (rl *RateLimiter) GetTokenCount(clientIP string) int {
 
 	bucket.mutex.Lock()
 	defer bucket.mutex.Unlock()
+
+	// Apply any pending refill so the reported count reflects elapsed time,
+	// matching what the next Allow call would see.
+	rl.refill(bucket, time.Now())
 
 	return bucket.tokens
 }

@@ -15,6 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// contextKey is a private type for context keys used within testutil, avoiding
+// collisions with keys defined in other packages (staticcheck SA1029).
+type contextKey string
+
+const customerContextKey contextKey = "customer"
+
 // HTTPTestContext provides utilities for HTTP handler testing
 type HTTPTestContext struct {
 	Server     *httptest.Server
@@ -133,7 +139,7 @@ func MockCustomerAuth(customerID string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Create customer context
-			ctx := context.WithValue(r.Context(), "customer", struct {
+			ctx := context.WithValue(r.Context(), customerContextKey, struct {
 				CustomerID string
 			}{
 				CustomerID: customerID,
@@ -280,7 +286,7 @@ func MockRequestWithCustomer(method, url, customerID string, body io.Reader) *ht
 	}
 
 	// Add customer context
-	ctx := context.WithValue(req.Context(), "customer", struct {
+	ctx := context.WithValue(req.Context(), customerContextKey, struct {
 		CustomerID string
 	}{
 		CustomerID: customerID,

@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -78,9 +79,9 @@ func (c *CommandConsumer) Start(handler CommandHandler) error {
 			case msg := <-msgs:
 				if err := c.processMessage(msg, handler); err != nil {
 					log.Printf("Error processing message: %v", err)
-					msg.Nack(false, true) // Requeue
+					_ = msg.Nack(false, true) // Requeue
 				} else {
-					msg.Ack(false)
+					_ = msg.Ack(false)
 				}
 			case <-c.stopChan:
 				return
@@ -175,7 +176,8 @@ func (c *CommandConsumer) publishResult(result *api.GitOpsResultMessage) error {
 	}
 	priority := uint8(p)
 
-	return c.messageBus.channel.Publish(
+	return c.messageBus.channel.PublishWithContext(
+		context.Background(),
 		"gitops.results",         // exchange
 		resultRoutingKey(result), // routing key
 		false,                    // mandatory

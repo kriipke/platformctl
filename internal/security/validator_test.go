@@ -935,7 +935,7 @@ func TestValidatorValidatePassword(t *testing.T) {
 		},
 		{
 			name:      "missing numbers",
-			input:     "MyPassword!",
+			input:     "MyPasswordWithoutNumber!", // >= min length so the number check is what fails
 			fieldName: "password",
 			wantErr:   true,
 			errMsg:    "must contain at least one number",
@@ -1225,27 +1225,27 @@ func TestValidatorSecurityThreatDetection(t *testing.T) {
 		{
 			name:   "SQL injection - UNION",
 			input:  "'; UNION SELECT * FROM users --",
-			threat: "SQL injection",
+			threat: "sql injection",
 		},
 		{
 			name:   "SQL injection - DROP",
 			input:  "'; DROP TABLE users; --",
-			threat: "SQL injection",
+			threat: "sql injection",
 		},
 		{
 			name:   "XSS - script tag",
 			input:  "<script>alert('xss')</script>",
-			threat: "XSS",
+			threat: "xss",
 		},
 		{
 			name:   "XSS - javascript protocol",
 			input:  "javascript:alert('xss')",
-			threat: "XSS",
+			threat: "xss",
 		},
 		{
 			name:   "XSS - event handler",
 			input:  "<img onerror=\"alert('xss')\" src=\"x\">",
-			threat: "XSS",
+			threat: "xss",
 		},
 		{
 			name:   "Command injection - semicolon rm",
