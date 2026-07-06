@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -58,11 +59,22 @@ func (m *Middleware) AuditMiddleware() func(http.Handler) http.Handler {
 				r.Body = io.NopCloser(bytes.NewReader(requestBody))
 			}
 
-			// Call the next handler
-			next.ServeHTTP(recorder, r)
+			// Call the next handler, recovering from any panic so the request
+			// is still audited (as an error) and the client gets a 500 rather
+			// than a dropped connection.
+			var panicValue interface{}
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						panicValue = rec
+						recorder.WriteHeader(http.StatusInternalServerError)
+					}
+				}()
+				next.ServeHTTP(recorder, r)
+			}()
 
 			// Log the audit event
-			m.logHTTPEvent(ctx, r, recorder, startTime, requestBody)
+			m.logHTTPEvent(ctx, r, recorder, startTime, requestBody, panicValue)
 		})
 	}
 }
@@ -117,7 +129,7 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 }
 
 // logHTTPEvent logs a general HTTP request/response audit event
-func (m *Middleware) logHTTPEvent(ctx context.Context, r *http.Request, recorder *responseRecorder, startTime time.Time, requestBody []byte) {
+func (m *Middleware) logHTTPEvent(ctx context.Context, r *http.Request, recorder *responseRecorder, startTime time.Time, requestBody []byte, panicValue interface{}) {
 	auditCtx := ExtractAuditContext(ctx, r)
 
 	// Determine event type based on the endpoint
@@ -158,7 +170,9 @@ func (m *Middleware) logHTTPEvent(ctx context.Context, r *http.Request, recorder
 	}
 
 	// Log any errors
-	if recorder.statusCode >= 400 {
+	if panicValue != nil {
+		event.WithError(strconv.Itoa(http.StatusInternalServerError), fmt.Sprintf("panic: %v", panicValue))
+	} else if recorder.statusCode >= 400 {
 		errorCode := strconv.Itoa(recorder.statusCode)
 		errorMessage := http.StatusText(recorder.statusCode)
 		event.WithError(errorCode, errorMessage)

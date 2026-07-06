@@ -54,7 +54,11 @@ jobs:
 
       - name: Run tests
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
+          # -short skips the DB/RabbitMQ integration suites (they guard on
+          # testing.Short()); real integration coverage runs in the separate
+          # Integration Tests job. DB-backed unit tests skip themselves when
+          # TEST_DATABASE_URL is unset (internal/testutil NewTestDB).
+          go test -v -race -short -coverprofile=coverage.out ./...
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
