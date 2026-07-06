@@ -1,6 +1,10 @@
 {
   "ignorePatterns": [
     {
+      "_comment": "kubernetes.io resets the checker's connection ('socket hang up'); the page is valid.",
+      "pattern": "^https://kubernetes\\.io/docs/reference/config-api"
+    },
+    {
       "pattern": "^http://localhost"
     },
     {
