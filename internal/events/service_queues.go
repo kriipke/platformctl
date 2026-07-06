@@ -25,25 +25,25 @@ func (sqm *ServiceQueueManager) SetupAllServiceQueues() error {
 			"cmd.environment.*",
 			"cmd.context.validate-environments",
 		},
-		
+
 		// App Manifest Sync Service
 		"gitops.app-sync.q": {
 			"cmd.app.*",
 			"cmd.context.sync-apps",
 		},
-		
+
 		// Context Pairing Correlation Service
 		"gitops.context-correlation.q": {
 			"cmd.context.correlate-contexts",
 			"cmd.context.inspect-manifests",
 		},
-		
+
 		// Multi-Environment Kubernetes Service
 		"gitops.multi-environment-kubernetes.q": {
 			"cmd.context.correlate-context",
 			"cmd.environment.correlate-context",
 		},
-		
+
 		// Customer Git Branch Service
 		"gitops.customer-git-branch.q": {
 			"cmd.git.*",
@@ -70,10 +70,10 @@ func (sqm *ServiceQueueManager) setupServiceQueue(queueName string, routingKeys 
 		false, // exclusive
 		false, // no-wait
 		amqp.Table{
-			"x-message-ttl":     600000, // 10 minutes TTL
-			"x-max-priority":    10,
+			"x-message-ttl":          600000, // 10 minutes TTL
+			"x-max-priority":         10,
 			"x-dead-letter-exchange": "gitops.dlx",
-			"description":       fmt.Sprintf("GitOps service queue for %s", queueName),
+			"description":            fmt.Sprintf("GitOps service queue for %s", queueName),
 		},
 	)
 	if err != nil {
@@ -134,6 +134,6 @@ func UpdateCommandConsumerBindings(consumer *CommandConsumer, serviceName string
 
 	// Update consumer bindings (this would be used in the consumer setup)
 	_ = bindings // Implementation would update the consumer's binding configuration
-	
+
 	return nil
 }

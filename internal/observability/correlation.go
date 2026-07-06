@@ -56,7 +56,7 @@ type CorrelationEvent struct {
 func (ct *CorrelationTracker) TrackHTTPRequest(ctx context.Context, method, endpoint string) *CorrelationContext {
 	correlationID := GetCorrelationID(ctx)
 	customerID := GetCustomerID(ctx)
-	
+
 	correlationCtx := &CorrelationContext{
 		CorrelationID: correlationID,
 		CustomerID:    customerID,
@@ -66,23 +66,23 @@ func (ct *CorrelationTracker) TrackHTTPRequest(ctx context.Context, method, endp
 		StartTime:     time.Now(),
 		RequestedAt:   time.Now(),
 	}
-	
+
 	// Log the start of the correlation chain
 	ct.logger.GitOpsEvent(ctx, "correlation_start").
 		WithAction(correlationCtx.Action).
 		WithStatus("started").
 		Send("HTTP request correlation started")
-	
+
 	// Record metric
 	ct.metrics.IncrementHTTPRequests(customerID, method, endpoint, 0) // Status will be updated later
-	
+
 	return correlationCtx
 }
 
 // TrackCommandPublished tracks when a GitOps command is published to RabbitMQ
 func (ct *CorrelationTracker) TrackCommandPublished(ctx context.Context, command *api.GitOpsCommandMessage, exchange, routingKey string) {
 	correlationID := GetCorrelationID(ctx)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "command",
@@ -91,16 +91,16 @@ func (ct *CorrelationTracker) TrackCommandPublished(ctx context.Context, command
 		Timestamp:     time.Now(),
 		Status:        "published",
 		Metadata: map[string]interface{}{
-			"exchange":      exchange,
-			"routing_key":   routingKey,
-			"command_type":  command.CommandType,
-			"manifest_type": command.ManifestType,
+			"exchange":       exchange,
+			"routing_key":    routingKey,
+			"command_type":   command.CommandType,
+			"manifest_type":  command.ManifestType,
 			"target_service": command.TargetService,
 		},
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	// Record RabbitMQ metrics
 	ct.metrics.IncrementMessagesPublished(command.CustomerID, exchange, routingKey, "command")
 }
@@ -110,7 +110,7 @@ func (ct *CorrelationTracker) TrackCommandReceived(ctx context.Context, serviceN
 	// Extract correlation context from message
 	ctx = WithCorrelationFromMessage(ctx, message)
 	correlationID := GetCorrelationID(ctx)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "command",
@@ -123,9 +123,9 @@ func (ct *CorrelationTracker) TrackCommandReceived(ctx context.Context, serviceN
 			"message_id": message.MessageId,
 		},
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	return ctx
 }
 
@@ -133,7 +133,7 @@ func (ct *CorrelationTracker) TrackCommandReceived(ctx context.Context, serviceN
 func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, serviceName, operation string) *ServiceExecutionTracker {
 	correlationID := GetCorrelationID(ctx)
 	customerID := GetCustomerID(ctx)
-	
+
 	tracker := &ServiceExecutionTracker{
 		correlationTracker: ct,
 		CorrelationID:      correlationID,
@@ -143,7 +143,7 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 		StartTime:          time.Now(),
 		ctx:                ctx,
 	}
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "execution",
@@ -155,9 +155,9 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 			"operation": operation,
 		},
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	// Increment active processing metric
 	contextName := ctx.Value("context_name")
 	if contextNameStr, ok := contextName.(string); ok {
@@ -166,7 +166,7 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 			ct.metrics.IncrementCommandsActiveProcessing(customerID, contextNameStr, manifestTypeStr)
 		}
 	}
-	
+
 	return tracker
 }
 
@@ -174,7 +174,7 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 func (ct *CorrelationTracker) TrackExternalAPICall(ctx context.Context, serviceName, api, endpoint string) *ExternalAPICallTracker {
 	correlationID := GetCorrelationID(ctx)
 	customerID := GetCustomerID(ctx)
-	
+
 	tracker := &ExternalAPICallTracker{
 		correlationTracker: ct,
 		CorrelationID:      correlationID,
@@ -185,7 +185,7 @@ func (ct *CorrelationTracker) TrackExternalAPICall(ctx context.Context, serviceN
 		StartTime:          time.Now(),
 		ctx:                ctx,
 	}
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "external_api",
@@ -198,16 +198,16 @@ func (ct *CorrelationTracker) TrackExternalAPICall(ctx context.Context, serviceN
 			"endpoint": endpoint,
 		},
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	return tracker
 }
 
 // TrackResultPublished tracks when a service publishes a result
 func (ct *CorrelationTracker) TrackResultPublished(ctx context.Context, result *api.GitOpsResultMessage, exchange, routingKey string) {
 	correlationID := GetCorrelationID(ctx)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "result",
@@ -221,13 +221,13 @@ func (ct *CorrelationTracker) TrackResultPublished(ctx context.Context, result *
 			"manifest_type": result.ManifestType,
 		},
 	}
-	
+
 	if result.ErrorMessage != "" {
 		event.Error = result.ErrorMessage
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	// Record RabbitMQ metrics
 	ct.metrics.IncrementMessagesPublished(result.CustomerID, exchange, routingKey, "result")
 }
@@ -235,7 +235,7 @@ func (ct *CorrelationTracker) TrackResultPublished(ctx context.Context, result *
 // TrackResultProcessed tracks when the aggregator processes a result
 func (ct *CorrelationTracker) TrackResultProcessed(ctx context.Context, result *api.GitOpsResultMessage, processingDuration time.Duration) {
 	correlationID := GetCorrelationID(ctx)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationID,
 		EventType:     "result",
@@ -249,9 +249,9 @@ func (ct *CorrelationTracker) TrackResultProcessed(ctx context.Context, result *
 			"manifest_type":  result.ManifestType,
 		},
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	// Record processing metrics
 	ct.metrics.RecordMessageProcessingDuration(result.CustomerID, "results."+result.ServiceName, "result", processingDuration)
 }
@@ -259,7 +259,7 @@ func (ct *CorrelationTracker) TrackResultProcessed(ctx context.Context, result *
 // TrackCorrelationComplete marks the end of a correlation chain
 func (ct *CorrelationTracker) TrackCorrelationComplete(ctx context.Context, correlationCtx *CorrelationContext, status string, err error) {
 	duration := time.Since(correlationCtx.StartTime)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: correlationCtx.CorrelationID,
 		EventType:     "correlation_complete",
@@ -272,14 +272,14 @@ func (ct *CorrelationTracker) TrackCorrelationComplete(ctx context.Context, corr
 			"total_duration_ms": duration.Milliseconds(),
 		},
 	}
-	
+
 	if err != nil {
 		event.Error = err.Error()
 		event.Status = "failed"
 	}
-	
+
 	ct.logCorrelationEvent(ctx, event)
-	
+
 	// Log correlation summary
 	ct.logger.GitOpsEvent(ctx, "correlation_complete").
 		WithContext(correlationCtx.ContextName).
@@ -304,7 +304,7 @@ type ServiceExecutionTracker struct {
 // Complete marks the service execution as complete
 func (set *ServiceExecutionTracker) Complete(status string, err error) {
 	duration := time.Since(set.StartTime)
-	
+
 	event := CorrelationEvent{
 		CorrelationID: set.CorrelationID,
 		EventType:     "execution",
@@ -317,16 +317,16 @@ func (set *ServiceExecutionTracker) Complete(status string, err error) {
 			"operation": set.Operation,
 		},
 	}
-	
+
 	if err != nil {
 		event.Error = err.Error()
 		if status == "" {
 			event.Status = "failed"
 		}
 	}
-	
+
 	set.correlationTracker.logCorrelationEvent(set.ctx, event)
-	
+
 	// Record metrics
 	contextName := set.ctx.Value("context_name")
 	if contextNameStr, ok := contextName.(string); ok {
@@ -355,7 +355,7 @@ type ExternalAPICallTracker struct {
 func (eact *ExternalAPICallTracker) Complete(statusCode int, err error) {
 	duration := time.Since(eact.StartTime)
 	status := "success"
-	
+
 	if err != nil {
 		status = "error"
 	} else if statusCode >= 400 {
@@ -364,7 +364,7 @@ func (eact *ExternalAPICallTracker) Complete(statusCode int, err error) {
 			status = "server_error"
 		}
 	}
-	
+
 	event := CorrelationEvent{
 		CorrelationID: eact.CorrelationID,
 		EventType:     "external_api",
@@ -379,17 +379,17 @@ func (eact *ExternalAPICallTracker) Complete(statusCode int, err error) {
 			"status_code": statusCode,
 		},
 	}
-	
+
 	if err != nil {
 		event.Error = err.Error()
 	}
-	
+
 	eact.correlationTracker.logCorrelationEvent(eact.ctx, event)
-	
+
 	// Record metrics
 	eact.correlationTracker.metrics.IncrementExternalAPICalls(eact.CustomerID, eact.API, eact.Endpoint, statusCode)
 	eact.correlationTracker.metrics.RecordExternalAPICallDuration(eact.CustomerID, eact.API, eact.Endpoint, duration)
-	
+
 	if err != nil {
 		errorType := "network"
 		if statusCode >= 400 {
@@ -410,18 +410,18 @@ func WithCorrelationFromMessage(ctx context.Context, message amqp.Delivery) cont
 			correlationID = headerCorrelationID
 		}
 	}
-	
+
 	if correlationID != "" {
 		ctx = WithCorrelationID(ctx, correlationID)
 	}
-	
+
 	// Extract customer ID
 	if message.Headers != nil {
 		if customerID, ok := message.Headers["customer_id"].(string); ok {
 			ctx = WithCustomerID(ctx, customerID)
 		}
 	}
-	
+
 	// Try to extract additional context from message body if it's a GitOps message
 	if message.ContentType == "application/json" {
 		var envelope api.GitOpsMessageEnvelope
@@ -432,7 +432,7 @@ func WithCorrelationFromMessage(ctx context.Context, message amqp.Delivery) cont
 			ctx = context.WithValue(ctx, "manifest_type", envelope.ManifestType)
 		}
 	}
-	
+
 	return ctx
 }
 
@@ -441,7 +441,7 @@ func (ct *CorrelationTracker) logCorrelationEvent(ctx context.Context, event Cor
 	logEvent := ct.logger.GitOpsEvent(ctx, "correlation_event").
 		WithStatus(event.Status).
 		WithDuration(event.Duration)
-	
+
 	if event.Metadata != nil {
 		for key, value := range event.Metadata {
 			if str, ok := value.(string); ok {
@@ -455,11 +455,11 @@ func (ct *CorrelationTracker) logCorrelationEvent(ctx context.Context, event Cor
 			}
 		}
 	}
-	
+
 	if event.Error != "" {
 		logEvent.WithError(fmt.Errorf("%s", event.Error))
 	}
-	
+
 	logEvent.Send(fmt.Sprintf("%s: %s", event.ServiceName, event.Stage))
 }
 

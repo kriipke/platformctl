@@ -32,24 +32,24 @@ func TestContextStore_Create(t *testing.T) {
 	}{
 		{
 			name: "valid context creation",
-			context: testutil.CreateTestContext("test-context-1", "test-app-1", 
+			context: testutil.CreateTestContext("test-context-1", "test-app-1",
 				testutil.CreateTestContextDeployments("test-app-1", "dev-env", "prod-env")),
 			expectError: false,
 		},
 		{
-			name: "context with customer branch",
-			context: testutil.CreateTestCustomerBranchContext("test-context-branch", "branch-app", "customer/enterprise-client"),
+			name:        "context with customer branch",
+			context:     testutil.CreateTestCustomerBranchContext("test-context-branch", "branch-app", "customer/enterprise-client"),
 			expectError: false,
 		},
 		{
 			name: "context with single deployment",
-			context: testutil.CreateTestContext("test-context-single", "single-app", 
+			context: testutil.CreateTestContext("test-context-single", "single-app",
 				testutil.CreateTestContextDeployments("single-app", "prod-env")),
 			expectError: false,
 		},
 		{
 			name: "context with multiple deployments",
-			context: testutil.CreateTestContext("test-context-multi", "multi-app", 
+			context: testutil.CreateTestContext("test-context-multi", "multi-app",
 				testutil.CreateTestContextDeployments("multi-app", "dev-env", "staging-env", "prod-env")),
 			expectError: false,
 		},
@@ -71,7 +71,7 @@ func TestContextStore_Create(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify timestamps are set
 				assert.NotNil(t, tt.context.Metadata.CreatedAt)
 				assert.NotNil(t, tt.context.Metadata.UpdatedAt)
@@ -93,7 +93,7 @@ func TestContextStore_Get(t *testing.T) {
 	customerID := "test-customer-123"
 
 	// Create test context
-	originalContext := testutil.CreateTestContext("get-test-context", "get-app", 
+	originalContext := testutil.CreateTestContext("get-test-context", "get-app",
 		testutil.CreateTestContextDeployments("get-app", "dev-env", "prod-env"))
 	err := store.Create(ctx, &originalContext, customerID)
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestContextStore_Get(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				require.NotNil(t, contextObj)
-				
+
 				// Compare contexts (ignoring timestamps)
 				testutil.AssertContextEqual(t, *tt.expectedContext, *contextObj)
 			}
@@ -162,7 +162,7 @@ func TestContextStore_Update(t *testing.T) {
 	customerID := "test-customer-123"
 
 	// Create test context
-	originalContext := testutil.CreateTestContext("update-test-context", "update-app", 
+	originalContext := testutil.CreateTestContext("update-test-context", "update-app",
 		testutil.CreateTestContextDeployments("update-app", "dev-env", "prod-env"))
 	err := store.Create(ctx, &originalContext, customerID)
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestContextStore_Update(t *testing.T) {
 		{
 			name: "update non-existent context",
 			setupFunc: func() models.Context {
-				contextObj := testutil.CreateTestContext("non-existent-context", "some-app", 
+				contextObj := testutil.CreateTestContext("non-existent-context", "some-app",
 					testutil.CreateTestContextDeployments("some-app", "dev-env"))
 				return contextObj
 			},
@@ -251,7 +251,7 @@ func TestContextStore_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			contextObj := tt.setupFunc()
 			originalUpdateTime := contextObj.Metadata.UpdatedAt
-			
+
 			err := store.Update(ctx, &contextObj, tt.customerID)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -260,13 +260,13 @@ func TestContextStore_Update(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify UpdatedAt timestamp is updated
 				assert.NotNil(t, contextObj.Metadata.UpdatedAt)
 				if originalUpdateTime != nil {
 					assert.True(t, contextObj.Metadata.UpdatedAt.After(*originalUpdateTime))
 				}
-				
+
 				// Verify the update by fetching the context
 				updatedContext, err := store.Get(ctx, contextObj.Metadata.Name, tt.customerID)
 				assert.NoError(t, err)
@@ -289,11 +289,11 @@ func TestContextStore_Delete(t *testing.T) {
 	customerID := "test-customer-123"
 
 	// Create test contexts
-	context1 := testutil.CreateTestContext("delete-test-context-1", "delete-app-1", 
+	context1 := testutil.CreateTestContext("delete-test-context-1", "delete-app-1",
 		testutil.CreateTestContextDeployments("delete-app-1", "dev-env"))
-	context2 := testutil.CreateTestContext("delete-test-context-2", "delete-app-2", 
+	context2 := testutil.CreateTestContext("delete-test-context-2", "delete-app-2",
 		testutil.CreateTestContextDeployments("delete-app-2", "prod-env"))
-	
+
 	err := store.Create(ctx, &context1, customerID)
 	require.NoError(t, err)
 	err = store.Create(ctx, &context2, customerID)
@@ -345,7 +345,7 @@ func TestContextStore_Delete(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify the context is deleted
 				_, err := store.Get(ctx, tt.contextName, tt.customerID)
 				assert.ErrorIs(t, err, storage.ErrNotFound)
@@ -369,13 +369,13 @@ func TestContextStore_List(t *testing.T) {
 
 	// Create test contexts for customer 1
 	customer1Contexts := []models.Context{
-		testutil.CreateTestContext("customer1-context-1", "app-1", 
+		testutil.CreateTestContext("customer1-context-1", "app-1",
 			testutil.CreateTestContextDeployments("app-1", "dev-env")),
-		testutil.CreateTestContext("customer1-context-2", "app-2", 
+		testutil.CreateTestContext("customer1-context-2", "app-2",
 			testutil.CreateTestContextDeployments("app-2", "prod-env")),
 		testutil.CreateTestCustomerBranchContext("customer1-context-3", "app-3", "customer/client-1"),
 	}
-	
+
 	for _, contextObj := range customer1Contexts {
 		err := store.Create(ctx, &contextObj, customerID1)
 		require.NoError(t, err)
@@ -383,10 +383,10 @@ func TestContextStore_List(t *testing.T) {
 
 	// Create test contexts for customer 2
 	customer2Contexts := []models.Context{
-		testutil.CreateTestContext("customer2-context-1", "app-1", 
+		testutil.CreateTestContext("customer2-context-1", "app-1",
 			testutil.CreateTestContextDeployments("app-1", "staging-env")),
 	}
-	
+
 	for _, contextObj := range customer2Contexts {
 		err := store.Create(ctx, &contextObj, customerID2)
 		require.NoError(t, err)
@@ -426,7 +426,7 @@ func TestContextStore_List(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, contexts, tt.expectedCount)
-				
+
 				// Verify all contexts belong to the correct customer
 				for _, contextObj := range contexts {
 					assert.NotNil(t, contextObj)
@@ -434,7 +434,7 @@ func TestContextStore_List(t *testing.T) {
 					assert.Equal(t, "platformctl/v1", contextObj.APIVersion)
 					assert.Equal(t, "Context", contextObj.Kind)
 				}
-				
+
 				// Verify contexts are sorted by name
 				if len(contexts) > 1 {
 					for i := 1; i < len(contexts); i++ {
@@ -461,11 +461,11 @@ func TestContextStore_GetByAppAndEnvironment(t *testing.T) {
 	customerID := "test-customer-123"
 
 	// Create test contexts
-	context1 := testutil.CreateTestContext("context-app1-dev", "app-1", 
+	context1 := testutil.CreateTestContext("context-app1-dev", "app-1",
 		testutil.CreateTestContextDeployments("app-1", "dev-env"))
-	context2 := testutil.CreateTestContext("context-app1-prod", "app-1", 
+	context2 := testutil.CreateTestContext("context-app1-prod", "app-1",
 		testutil.CreateTestContextDeployments("app-1", "prod-env"))
-	context3 := testutil.CreateTestContext("context-app2-dev", "app-2", 
+	context3 := testutil.CreateTestContext("context-app2-dev", "app-2",
 		testutil.CreateTestContextDeployments("app-2", "dev-env"))
 
 	contexts := []models.Context{context1, context2, context3}
@@ -532,11 +532,11 @@ func TestContextStore_GetByAppAndEnvironment(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, contexts, tt.expectedCount)
-				
+
 				// Verify all contexts match the query
 				for _, contextObj := range contexts {
 					assert.Equal(t, tt.appRef, contextObj.Spec.AppRef)
-					// Note: The current implementation stores app_reference and environment_reference 
+					// Note: The current implementation stores app_reference and environment_reference
 					// from the first deployment, so we check the first deployment
 					if len(contextObj.Spec.Deployments) > 0 {
 						assert.Equal(t, tt.envRef, contextObj.Spec.Deployments[0].EnvironmentRef)
@@ -566,8 +566,8 @@ func TestContextStore_ConcurrentOperations(t *testing.T) {
 
 		for i := 0; i < numGoroutines; i++ {
 			go func(id int) {
-				contextObj := testutil.CreateTestContext(fmt.Sprintf("concurrent-context-%d", id), 
-					fmt.Sprintf("concurrent-app-%d", id), 
+				contextObj := testutil.CreateTestContext(fmt.Sprintf("concurrent-context-%d", id),
+					fmt.Sprintf("concurrent-app-%d", id),
 					testutil.CreateTestContextDeployments(fmt.Sprintf("concurrent-app-%d", id), "dev-env"))
 				err := store.Create(ctx, &contextObj, customerID)
 				done <- err
@@ -597,7 +597,7 @@ func TestContextStore_ConcurrentOperations(t *testing.T) {
 	// Test concurrent reads of the same context
 	t.Run("concurrent_reads", func(t *testing.T) {
 		// Create a test context first
-		contextObj := testutil.CreateTestContext("concurrent-read-context", "read-app", 
+		contextObj := testutil.CreateTestContext("concurrent-read-context", "read-app",
 			testutil.CreateTestContextDeployments("read-app", "dev-env"))
 		err := store.Create(ctx, &contextObj, customerID)
 		require.NoError(t, err)
@@ -668,8 +668,8 @@ func TestContextStore_ComplexDeploymentScenarios(t *testing.T) {
 	// Configure monitoring for all aspects
 	contextObj.Spec.GitOps.Monitoring = models.MonitoringConfig{
 		ApplicationSets:       true,
-		VaultSecrets:         true,
-		HelmValues:           true,
+		VaultSecrets:          true,
+		HelmValues:            true,
 		CrossEnvironmentDrift: true,
 	}
 
@@ -731,7 +731,7 @@ func TestContextStore_ComplexDeploymentScenarios(t *testing.T) {
 			prodDeployment = &updatedContext.Spec.Deployments[i]
 		}
 	}
-	
+
 	require.NotNil(t, stagingDeployment)
 	require.NotNil(t, prodDeployment)
 	assert.True(t, stagingDeployment.Active, "Staging should be active after update")
@@ -785,8 +785,8 @@ func TestContextStore_CustomerBranchScenarios(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			contextObj := testutil.CreateTestContext(fmt.Sprintf("branch-test-context-%d", i), 
-				fmt.Sprintf("branch-app-%d", i), 
+			contextObj := testutil.CreateTestContext(fmt.Sprintf("branch-test-context-%d", i),
+				fmt.Sprintf("branch-app-%d", i),
 				testutil.CreateTestContextDeployments(fmt.Sprintf("branch-app-%d", i), "dev-env"))
 			contextObj.Spec.GitOps.CustomerBranch = tt.customerBranch
 
@@ -824,8 +824,8 @@ func TestContextStore_MonitoringConfiguration(t *testing.T) {
 			name: "all monitoring disabled",
 			monitoring: models.MonitoringConfig{
 				ApplicationSets:       false,
-				VaultSecrets:         false,
-				HelmValues:           false,
+				VaultSecrets:          false,
+				HelmValues:            false,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -833,8 +833,8 @@ func TestContextStore_MonitoringConfiguration(t *testing.T) {
 			name: "all monitoring enabled",
 			monitoring: models.MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         true,
-				HelmValues:           true,
+				VaultSecrets:          true,
+				HelmValues:            true,
 				CrossEnvironmentDrift: true,
 			},
 		},
@@ -842,8 +842,8 @@ func TestContextStore_MonitoringConfiguration(t *testing.T) {
 			name: "selective monitoring",
 			monitoring: models.MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         false,
-				HelmValues:           true,
+				VaultSecrets:          false,
+				HelmValues:            true,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -851,8 +851,8 @@ func TestContextStore_MonitoringConfiguration(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			contextObj := testutil.CreateTestContext(fmt.Sprintf("monitoring-test-context-%d", i), 
-				fmt.Sprintf("monitoring-app-%d", i), 
+			contextObj := testutil.CreateTestContext(fmt.Sprintf("monitoring-test-context-%d", i),
+				fmt.Sprintf("monitoring-app-%d", i),
 				testutil.CreateTestContextDeployments(fmt.Sprintf("monitoring-app-%d", i), "prod-env"))
 			contextObj.Spec.GitOps.Monitoring = tt.monitoring
 

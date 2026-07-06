@@ -21,12 +21,12 @@ type EnvironmentMetadata struct {
 }
 
 type EnvironmentSpec struct {
-	Environment      EnvironmentConfig              `json:"environment" validate:"required"`
-	Helm             EnvironmentHelmConfig          `json:"helm" validate:"required"`
-	Vault            EnvironmentVaultConfig         `json:"vault" validate:"required"`
-	Datasources      map[string]VaultDatasource     `json:"datasources" validate:"required"`
-	VaultSecrets     []VaultStaticSecret            `json:"vaultSecrets" validate:"required,min=1"`
-	PodEnvValidation PodEnvValidationConfig         `json:"podEnvValidation" validate:"required"`
+	Environment      EnvironmentConfig          `json:"environment" validate:"required"`
+	Helm             EnvironmentHelmConfig      `json:"helm" validate:"required"`
+	Vault            EnvironmentVaultConfig     `json:"vault" validate:"required"`
+	Datasources      map[string]VaultDatasource `json:"datasources" validate:"required"`
+	VaultSecrets     []VaultStaticSecret        `json:"vaultSecrets" validate:"required,min=1"`
+	PodEnvValidation PodEnvValidationConfig     `json:"podEnvValidation" validate:"required"`
 }
 
 type EnvironmentConfig struct {
@@ -62,9 +62,9 @@ type EnvironmentVaultConfig struct {
 }
 
 type VaultAuthConfig struct {
-	Method     string                  `json:"method" validate:"required,oneof=kubernetes token"`
-	Token      string                  `json:"token,omitempty"`
-	Kubernetes *VaultKubernetesAuth    `json:"kubernetes,omitempty"`
+	Method     string               `json:"method" validate:"required,oneof=kubernetes token"`
+	Token      string               `json:"token,omitempty"`
+	Kubernetes *VaultKubernetesAuth `json:"kubernetes,omitempty"`
 }
 
 type VaultKubernetesAuth struct {

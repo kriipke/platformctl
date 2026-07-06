@@ -50,40 +50,40 @@ const (
 
 // AuditEvent represents a single audit event
 type AuditEvent struct {
-	ID            int64                  `json:"id" db:"id"`
-	EventID       uuid.UUID              `json:"event_id" db:"event_id"`
-	Timestamp     time.Time              `json:"timestamp" db:"timestamp"`
-	UserID        *string                `json:"user_id,omitempty" db:"user_id"`
-	CustomerID    uuid.UUID              `json:"customer_id" db:"customer_id"`
-	SessionID     *string                `json:"session_id,omitempty" db:"session_id"`
-	IPAddress     *net.IP                `json:"ip_address,omitempty" db:"ip_address"`
-	UserAgent     *string                `json:"user_agent,omitempty" db:"user_agent"`
-	EventType     EventType              `json:"event_type" db:"event_type"`
-	ResourceType  ResourceType           `json:"resource_type" db:"resource_type"`
-	ResourceID    *string                `json:"resource_id,omitempty" db:"resource_id"`
-	ResourceName  *string                `json:"resource_name,omitempty" db:"resource_name"`
-	Action        string                 `json:"action" db:"action"`
-	Outcome       Outcome                `json:"outcome" db:"outcome"`
-	ErrorCode     *string                `json:"error_code,omitempty" db:"error_code"`
-	ErrorMessage  *string                `json:"error_message,omitempty" db:"error_message"`
-	RequestID     *uuid.UUID             `json:"request_id,omitempty" db:"request_id"`
-	Method        *string                `json:"method,omitempty" db:"method"`
-	Endpoint      *string                `json:"endpoint,omitempty" db:"endpoint"`
-	OldValues     Metadata `json:"old_values,omitempty" db:"old_values"`
-	NewValues     Metadata `json:"new_values,omitempty" db:"new_values"`
-	Metadata      Metadata `json:"metadata,omitempty" db:"metadata"`
-	IsSensitive   bool                   `json:"is_sensitive" db:"is_sensitive"`
+	ID           int64        `json:"id" db:"id"`
+	EventID      uuid.UUID    `json:"event_id" db:"event_id"`
+	Timestamp    time.Time    `json:"timestamp" db:"timestamp"`
+	UserID       *string      `json:"user_id,omitempty" db:"user_id"`
+	CustomerID   uuid.UUID    `json:"customer_id" db:"customer_id"`
+	SessionID    *string      `json:"session_id,omitempty" db:"session_id"`
+	IPAddress    *net.IP      `json:"ip_address,omitempty" db:"ip_address"`
+	UserAgent    *string      `json:"user_agent,omitempty" db:"user_agent"`
+	EventType    EventType    `json:"event_type" db:"event_type"`
+	ResourceType ResourceType `json:"resource_type" db:"resource_type"`
+	ResourceID   *string      `json:"resource_id,omitempty" db:"resource_id"`
+	ResourceName *string      `json:"resource_name,omitempty" db:"resource_name"`
+	Action       string       `json:"action" db:"action"`
+	Outcome      Outcome      `json:"outcome" db:"outcome"`
+	ErrorCode    *string      `json:"error_code,omitempty" db:"error_code"`
+	ErrorMessage *string      `json:"error_message,omitempty" db:"error_message"`
+	RequestID    *uuid.UUID   `json:"request_id,omitempty" db:"request_id"`
+	Method       *string      `json:"method,omitempty" db:"method"`
+	Endpoint     *string      `json:"endpoint,omitempty" db:"endpoint"`
+	OldValues    Metadata     `json:"old_values,omitempty" db:"old_values"`
+	NewValues    Metadata     `json:"new_values,omitempty" db:"new_values"`
+	Metadata     Metadata     `json:"metadata,omitempty" db:"metadata"`
+	IsSensitive  bool         `json:"is_sensitive" db:"is_sensitive"`
 }
 
 // AuditContext contains information about the context of an audit event
 type AuditContext struct {
-	UserID      *string
-	CustomerID  uuid.UUID
-	SessionID   *string
-	IPAddress   *net.IP
-	UserAgent   *string
-	RequestID   *uuid.UUID
-	HTTPMethod  *string
+	UserID       *string
+	CustomerID   uuid.UUID
+	SessionID    *string
+	IPAddress    *net.IP
+	UserAgent    *string
+	RequestID    *uuid.UUID
+	HTTPMethod   *string
 	HTTPEndpoint *string
 }
 
@@ -153,7 +153,7 @@ func ExtractAuditContext(ctx context.Context, r *http.Request) *AuditContext {
 		// Extract HTTP method and endpoint
 		method := r.Method
 		auditCtx.HTTPMethod = &method
-		
+
 		endpoint := r.URL.Path
 		auditCtx.HTTPEndpoint = &endpoint
 	}
@@ -185,7 +185,7 @@ func getClientIP(r *http.Request) *net.IP {
 	if err != nil {
 		return nil
 	}
-	
+
 	if ip := net.ParseIP(host); ip != nil {
 		return &ip
 	}
@@ -196,14 +196,14 @@ func getClientIP(r *http.Request) *net.IP {
 // parseXForwardedFor parses the X-Forwarded-For header and returns a list of IP addresses
 func parseXForwardedFor(header string) []net.IP {
 	var ips []net.IP
-	
+
 	// Split by comma and parse each IP
 	for _, ipStr := range splitAndTrim(header, ",") {
 		if ip := net.ParseIP(ipStr); ip != nil {
 			ips = append(ips, ip)
 		}
 	}
-	
+
 	return ips
 }
 
@@ -224,11 +224,11 @@ func splitString(s, delimiter string) []string {
 	if s == "" {
 		return []string{}
 	}
-	
+
 	var parts []string
 	start := 0
 	delimLen := len(delimiter)
-	
+
 	for i := 0; i <= len(s)-delimLen; i++ {
 		if s[i:i+delimLen] == delimiter {
 			parts = append(parts, s[start:i])
@@ -236,7 +236,7 @@ func splitString(s, delimiter string) []string {
 			i += delimLen - 1
 		}
 	}
-	
+
 	parts = append(parts, s[start:])
 	return parts
 }
@@ -245,17 +245,17 @@ func splitString(s, delimiter string) []string {
 func trimWhitespace(s string) string {
 	start := 0
 	end := len(s)
-	
+
 	// Trim leading whitespace
 	for start < end && isWhitespace(s[start]) {
 		start++
 	}
-	
+
 	// Trim trailing whitespace
 	for end > start && isWhitespace(s[end-1]) {
 		end--
 	}
-	
+
 	return s[start:end]
 }
 

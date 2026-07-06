@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/kriipke/platformctl/internal/models"
 )
 
 func TestNewAuditEvent(t *testing.T) {

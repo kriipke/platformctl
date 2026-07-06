@@ -8,9 +8,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/kriipke/platformctl/internal/models"
 )
 
 func TestNewJWTManager(t *testing.T) {
@@ -61,8 +61,8 @@ func TestNewJWTManager(t *testing.T) {
 			},
 		},
 		{
-			name:   "default config",
-			config: &JWTConfig{},
+			name:    "default config",
+			config:  &JWTConfig{},
 			wantErr: false,
 			check: func(t *testing.T, manager *JWTManager) {
 				assert.Equal(t, "platformctl", manager.config.Issuer)
@@ -92,8 +92,8 @@ func TestNewJWTManager(t *testing.T) {
 
 func TestJWTManagerGenerateTokenPair(t *testing.T) {
 	manager, err := NewJWTManager(&JWTConfig{
-		Issuer:            "test",
-		AccessTokenExpiry: 15 * time.Minute,
+		Issuer:             "test",
+		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 24 * time.Hour,
 	})
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestJWTManagerGenerateMFAToken(t *testing.T) {
 
 func TestJWTManagerValidateToken(t *testing.T) {
 	manager, err := NewJWTManager(&JWTConfig{
-		Issuer: "test-issuer",
+		Issuer:           "test-issuer",
 		AllowedAudiences: []string{"test-api"},
 	})
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestJWTManagerRefreshTokens(t *testing.T) {
 	// Refresh tokens
 	newPermissions := []string{"read", "write"}
 	newRoles := []string{"editor"}
-	
+
 	refreshedTokenPair, err := manager.RefreshTokens(originalTokenPair.RefreshToken, newPermissions, newRoles)
 	assert.NoError(t, err)
 	assert.NotNil(t, refreshedTokenPair)
@@ -568,7 +568,7 @@ func TestJWTManagerTokenWithMetadata(t *testing.T) {
 
 	// Test adding custom metadata during token creation
 	claims.Metadata["custom_field"] = "custom_value"
-	
+
 	// This would require extending the API to support custom metadata
 	// For now, we verify the structure is correct
 	assert.Equal(t, "custom_value", claims.Metadata["custom_field"])

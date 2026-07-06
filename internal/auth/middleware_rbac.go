@@ -290,7 +290,7 @@ func EnvironmentSpecificMiddleware(rbacManager *RBACManager) func(http.Handler) 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract environment from context or URL
 			environment := extractEnvironmentFromRequest(r)
-			
+
 			// Different permission requirements for different environments
 			var requiredAction string
 			switch environment {
@@ -374,10 +374,10 @@ func (a *EnhancedAuthService) AuditMiddleware(rbacManager *RBACManager, auditLog
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Apply RBAC first
 			rbacMiddleware := a.RBACMiddleware(rbacManager)
-			
+
 			// Then apply audit logging
 			auditMiddleware := (*auditLogger).Middleware()
-			
+
 			// Chain the middlewares
 			rbacMiddleware(auditMiddleware(next)).ServeHTTP(w, r)
 		})

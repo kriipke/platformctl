@@ -98,9 +98,17 @@ jobs:
 
       - name: Validate rendered manifests
         run: |
-          # Client-side only: no cluster/API server in CI, so skip schema
-          # validation (which would try to download the openapi spec).
-          kubectl apply --dry-run=client --validate=false -f /tmp/manifests-${{ matrix.environment }}.yaml
+          # Offline schema validation of the environment-specific render. A
+          # cluster isn't available in CI (kubectl --dry-run=client still does
+          # API discovery and fails), so validate each rendered manifest against
+          # the upstream Kubernetes JSON schemas with kubeconform instead.
+          # -strict rejects unknown/duplicate fields; -ignore-missing-schemas
+          # skips CRD instances that have no published schema.
+          curl -sSL -o /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp kubeconform
+          /tmp/kubeconform -strict -ignore-missing-schemas -summary \
+            /tmp/manifests-${{ matrix.environment }}.yaml
 
       - name: Validate security contexts
         run: |

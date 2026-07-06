@@ -59,8 +59,8 @@ func TestContextMarshaling(t *testing.T) {
 						},
 						Monitoring: MonitoringConfig{
 							ApplicationSets:       true,
-							VaultSecrets:         true,
-							HelmValues:           true,
+							VaultSecrets:          true,
+							HelmValues:            true,
 							CrossEnvironmentDrift: true,
 						},
 					},
@@ -203,8 +203,8 @@ func TestMonitoringConfig(t *testing.T) {
 			name: "all monitoring enabled",
 			config: MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         true,
-				HelmValues:           true,
+				VaultSecrets:          true,
+				HelmValues:            true,
 				CrossEnvironmentDrift: true,
 			},
 		},
@@ -212,8 +212,8 @@ func TestMonitoringConfig(t *testing.T) {
 			name: "selective monitoring",
 			config: MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         false,
-				HelmValues:           true,
+				VaultSecrets:          false,
+				HelmValues:            true,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -221,8 +221,8 @@ func TestMonitoringConfig(t *testing.T) {
 			name: "no monitoring",
 			config: MonitoringConfig{
 				ApplicationSets:       false,
-				VaultSecrets:         false,
-				HelmValues:           false,
+				VaultSecrets:          false,
+				HelmValues:            false,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -253,8 +253,8 @@ func TestContextGitOpsConfig(t *testing.T) {
 		},
 		Monitoring: MonitoringConfig{
 			ApplicationSets:       true,
-			VaultSecrets:         true,
-			HelmValues:           false,
+			VaultSecrets:          true,
+			HelmValues:            false,
 			CrossEnvironmentDrift: true,
 		},
 	}
@@ -310,8 +310,8 @@ func TestContextSpecComplexStructure(t *testing.T) {
 			},
 			Monitoring: MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         true,
-				HelmValues:           true,
+				VaultSecrets:          true,
+				HelmValues:            true,
 				CrossEnvironmentDrift: true,
 			},
 		},
@@ -363,14 +363,14 @@ func TestContextManifestRelationships(t *testing.T) {
 			Deployments: []ContextDeployment{
 				{
 					Environment:    "development",
-					AppRef:         "ecommerce-api-app",      // Same App manifest
-					EnvironmentRef: "dev-ecommerce-env",     // References Environment manifest
+					AppRef:         "ecommerce-api-app", // Same App manifest
+					EnvironmentRef: "dev-ecommerce-env", // References Environment manifest
 					Active:         true,
 				},
 				{
 					Environment:    "production",
-					AppRef:         "ecommerce-api-app",      // Same App manifest
-					EnvironmentRef: "prod-ecommerce-env",    // Different Environment manifest
+					AppRef:         "ecommerce-api-app",  // Same App manifest
+					EnvironmentRef: "prod-ecommerce-env", // Different Environment manifest
 					Active:         true,
 				},
 			},
@@ -380,8 +380,8 @@ func TestContextManifestRelationships(t *testing.T) {
 				},
 				Monitoring: MonitoringConfig{
 					ApplicationSets:       true,
-					VaultSecrets:         true,
-					HelmValues:           true,
+					VaultSecrets:          true,
+					HelmValues:            true,
 					CrossEnvironmentDrift: true, // Monitor drift across environments
 				},
 			},
@@ -397,7 +397,7 @@ func TestContextManifestRelationships(t *testing.T) {
 
 	// Verify manifest relationships are preserved
 	assert.Equal(t, "ecommerce-api-app", unmarshaled.Spec.AppRef)
-	
+
 	// Check that all deployments reference the same app
 	for _, deployment := range unmarshaled.Spec.Deployments {
 		assert.Equal(t, "ecommerce-api-app", deployment.AppRef)

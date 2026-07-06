@@ -34,7 +34,7 @@ type Client struct {
 func NewClient(f *GlobalFlags, logw io.Writer) *Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if f.Insecure {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // opt-in via --insecure
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- opt-in via --insecure
 	}
 	return &Client{
 		baseURL:    f.Server,

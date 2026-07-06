@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kriipke/platformctl/internal/clients/vault"
-	"github.com/kriipke/platformctl/internal/clients/kubernetes"
-	"github.com/kriipke/platformctl/internal/clients/helm"
+	"github.com/google/uuid"
 	"github.com/kriipke/platformctl/internal/clients/git"
+	"github.com/kriipke/platformctl/internal/clients/helm"
+	"github.com/kriipke/platformctl/internal/clients/kubernetes"
+	"github.com/kriipke/platformctl/internal/clients/vault"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
-	"github.com/google/uuid"
 )
 
 type EnvironmentValidationHandler struct {
@@ -53,18 +53,18 @@ func (evh *EnvironmentValidationHandler) GetSupportedActions() []string {
 func (evh *EnvironmentValidationHandler) handleEnvironmentValidation(cmd *api.GitOpsCommandMessage, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "environment",
-			EnvironmentName: cmd.EnvironmentName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "environment",
+			EnvironmentName:  cmd.EnvironmentName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "environment-validation",
@@ -118,7 +118,7 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentValidation(cmd *api.Gi
 		}
 	}
 
-	// Validate pod environment variables correlation  
+	// Validate pod environment variables correlation
 	// TODO: Use podEnvValidations in result payload
 	var podEnvValidations []api.PodEnvValidationResult
 	if checkPodEnv, ok := cmd.Payload["check_pod_env"].(bool); ok && checkPodEnv {
@@ -141,7 +141,7 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentValidation(cmd *api.Gi
 		ValuesFileStatus:   valuesFileValidations,
 		LastValidated:      time.Now().UTC(),
 	}
-	
+
 	// Use podEnvValidations to avoid unused variable error
 	_ = podEnvValidations
 
@@ -158,18 +158,18 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentInspection(cmd *api.Gi
 	// Basic environment inspection - get manifest metadata
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    "environment",
-			EnvironmentName: cmd.EnvironmentName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     "environment",
+			EnvironmentName:  cmd.EnvironmentName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "environment-validation",
@@ -192,24 +192,24 @@ func (evh *EnvironmentValidationHandler) handleEnvironmentInspection(cmd *api.Gi
 func (evh *EnvironmentValidationHandler) errorResult(cmd *api.GitOpsCommandMessage, message string, err error, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			EnvironmentName: cmd.EnvironmentName,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			EnvironmentName:  cmd.EnvironmentName,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
-		ServiceName: "environment-validation",
-		Status:      "error",
+		ServiceName:  "environment-validation",
+		Status:       "error",
 		ErrorMessage: fmt.Sprintf("%s: %v", message, err),
-		CompletedAt: time.Now().UTC(),
+		CompletedAt:  time.Now().UTC(),
 		PerformanceMetrics: api.GitOpsPerformanceMetrics{
 			ProcessingTimeMs: time.Since(startTime).Milliseconds(),
 			ApiCallsCount:    0,

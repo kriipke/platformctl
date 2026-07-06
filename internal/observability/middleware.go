@@ -22,7 +22,7 @@ func NewCorrelationMiddleware(logger *Logger, correlationHeader string) *Correla
 	if correlationHeader == "" {
 		correlationHeader = "X-Correlation-ID"
 	}
-	
+
 	return &CorrelationMiddleware{
 		logger: logger,
 		header: correlationHeader,
@@ -37,17 +37,17 @@ func (cm *CorrelationMiddleware) GinMiddleware() gin.HandlerFunc {
 			// Generate new correlation ID if not provided
 			correlationID = generateCorrelationID()
 		}
-		
+
 		// Add correlation ID to context
 		ctx := WithCorrelationID(c.Request.Context(), correlationID)
 		c.Request = c.Request.WithContext(ctx)
-		
+
 		// Add correlation ID to response header
 		c.Header(cm.header, correlationID)
-		
+
 		// Store in Gin context for easy access
 		c.Set("correlation_id", correlationID)
-		
+
 		// Continue with request processing
 		c.Next()
 	}
@@ -60,14 +60,14 @@ func (cm *CorrelationMiddleware) HTTPMiddleware(next http.Handler) http.Handler 
 		if correlationID == "" {
 			correlationID = generateCorrelationID()
 		}
-		
+
 		// Add correlation ID to context
 		ctx := WithCorrelationID(r.Context(), correlationID)
 		r = r.WithContext(ctx)
-		
+
 		// Add correlation ID to response header
 		w.Header().Set(cm.header, correlationID)
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -90,28 +90,28 @@ func NewMetricsMiddleware(metrics *Metrics, logger *Logger) *MetricsMiddleware {
 func (mm *MetricsMiddleware) GinMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Extract customer ID from context (set by auth middleware)
 		customerID := getCustomerIDFromContext(c)
-		
+
 		// Get endpoint pattern (without path parameters)
 		endpoint := getEndpointPattern(c)
-		
+
 		// Increment active requests
 		mm.metrics.IncrementHTTPActiveRequests(customerID, c.Request.Method, endpoint)
-		
+
 		// Continue with request processing
 		c.Next()
-		
+
 		// Record metrics after request completion
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
-		
+
 		// Record metrics
 		mm.metrics.IncrementHTTPRequests(customerID, c.Request.Method, endpoint, statusCode)
 		mm.metrics.RecordHTTPDuration(customerID, c.Request.Method, endpoint, duration)
 		mm.metrics.DecrementHTTPActiveRequests(customerID, c.Request.Method, endpoint)
-		
+
 		// Log request completion
 		correlationID := GetCorrelationID(c.Request.Context())
 		mm.logger.NewContextLogger(c.Request.Context()).Info().
@@ -131,28 +131,28 @@ func (mm *MetricsMiddleware) GinMiddleware() gin.HandlerFunc {
 func (mm *MetricsMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Extract customer ID from context
 		customerID := GetCustomerID(r.Context())
 		endpoint := r.URL.Path
-		
+
 		// Increment active requests
 		mm.metrics.IncrementHTTPActiveRequests(customerID, r.Method, endpoint)
-		
+
 		// Wrap response writer to capture status code
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-		
+
 		// Continue with request processing
 		next.ServeHTTP(wrapped, r)
-		
+
 		// Record metrics after request completion
 		duration := time.Since(start)
 		statusCode := wrapped.statusCode
-		
+
 		mm.metrics.IncrementHTTPRequests(customerID, r.Method, endpoint, statusCode)
 		mm.metrics.RecordHTTPDuration(customerID, r.Method, endpoint, duration)
 		mm.metrics.DecrementHTTPActiveRequests(customerID, r.Method, endpoint)
-		
+
 		// Log request completion
 		correlationID := GetCorrelationID(r.Context())
 		mm.logger.NewContextLogger(r.Context()).Info().
@@ -184,11 +184,11 @@ func NewLoggingMiddleware(logger *Logger) *LoggingMiddleware {
 func (lm *LoggingMiddleware) GinMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Extract context information
 		correlationID := GetCorrelationID(c.Request.Context())
 		customerID := getCustomerIDFromContext(c)
-		
+
 		// Log request start
 		lm.logger.NewContextLogger(c.Request.Context()).Debug().
 			Str("method", c.Request.Method).
@@ -199,14 +199,14 @@ func (lm *LoggingMiddleware) GinMiddleware() gin.HandlerFunc {
 			Str("user_agent", c.Request.UserAgent()).
 			Str("remote_addr", c.ClientIP()).
 			Msg("HTTP request started")
-		
+
 		// Continue with request processing
 		c.Next()
-		
+
 		// Log request completion
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
-		
+
 		logLevel := lm.logger.NewContextLogger(c.Request.Context()).Info()
 		if statusCode >= 400 {
 			logLevel = lm.logger.NewContextLogger(c.Request.Context()).Warn()
@@ -214,7 +214,7 @@ func (lm *LoggingMiddleware) GinMiddleware() gin.HandlerFunc {
 		if statusCode >= 500 {
 			logLevel = lm.logger.NewContextLogger(c.Request.Context()).Error()
 		}
-		
+
 		logLevel.
 			Str("method", c.Request.Method).
 			Str("path", c.Request.URL.Path).
@@ -224,7 +224,7 @@ func (lm *LoggingMiddleware) GinMiddleware() gin.HandlerFunc {
 			Dur("duration", duration).
 			Int("response_size", c.Writer.Size()).
 			Msg("HTTP request completed")
-		
+
 		// Log any errors that occurred during processing
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
@@ -257,7 +257,7 @@ func (rm *RecoveryMiddleware) GinMiddleware() gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
 		correlationID := GetCorrelationID(c.Request.Context())
 		customerID := getCustomerIDFromContext(c)
-		
+
 		// Log the panic
 		rm.logger.NewContextLogger(c.Request.Context()).Error().
 			Str("correlation_id", correlationID).
@@ -266,13 +266,13 @@ func (rm *RecoveryMiddleware) GinMiddleware() gin.HandlerFunc {
 			Str("path", c.Request.URL.Path).
 			Interface("panic", recovered).
 			Msg("Panic recovered in HTTP handler")
-		
+
 		// Record panic metric
 		if rm.metrics != nil {
 			endpoint := getEndpointPattern(c)
 			rm.metrics.IncrementHTTPRequests(customerID, c.Request.Method, endpoint, 500)
 		}
-		
+
 		// Return error response
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":          "Internal server error",
@@ -299,21 +299,21 @@ func (mcm *MessageCorrelationMiddleware) WrapPublishing(ctx context.Context, pub
 	if correlationID == "" {
 		correlationID = generateCorrelationID()
 	}
-	
+
 	// Add correlation ID to message headers
 	if publishing.Headers == nil {
 		publishing.Headers = make(map[string]interface{})
 	}
 	publishing.Headers["correlation_id"] = correlationID
-	
+
 	// Set AMQP correlation ID
 	publishing.CorrelationId = correlationID
-	
+
 	// Add customer ID if present in context
 	if customerID := GetCustomerID(ctx); customerID != "" {
 		publishing.Headers["customer_id"] = customerID
 	}
-	
+
 	// Add timestamp
 	publishing.Timestamp = time.Now()
 }
@@ -330,21 +330,21 @@ func (mcm *MessageCorrelationMiddleware) WrapConsuming(ctx context.Context, deli
 			}
 		}
 	}
-	
+
 	if correlationID == "" {
 		correlationID = generateCorrelationID()
 	}
-	
+
 	// Add correlation ID to context
 	ctx = WithCorrelationID(ctx, correlationID)
-	
+
 	// Extract customer ID from headers if present
 	if delivery.Headers != nil {
 		if customerID, ok := delivery.Headers["customer_id"].(string); ok {
 			ctx = WithCustomerID(ctx, customerID)
 		}
 	}
-	
+
 	return ctx
 }
 
@@ -368,13 +368,13 @@ func (sm *SecurityMiddleware) GinMiddleware() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		
+
 		// Remove server information
 		c.Header("Server", "")
-		
+
 		// Log security-relevant events
 		customerID := getCustomerIDFromContext(c)
-		
+
 		// Check for suspicious headers or patterns
 		userAgent := c.Request.UserAgent()
 		if containsSuspiciousPatterns(userAgent) {
@@ -385,7 +385,7 @@ func (sm *SecurityMiddleware) GinMiddleware() gin.HandlerFunc {
 				WithResult(false, "Suspicious user agent detected").
 				Send("Suspicious request detected")
 		}
-		
+
 		// Continue with request processing
 		c.Next()
 	}
@@ -407,12 +407,12 @@ func getCustomerIDFromContext(c *gin.Context) string {
 			return customerData.ID
 		}
 	}
-	
+
 	// Try to get from request context
 	if customerID := GetCustomerID(c.Request.Context()); customerID != "" {
 		return customerID
 	}
-	
+
 	return "anonymous"
 }
 
@@ -422,7 +422,7 @@ func getEndpointPattern(c *gin.Context) string {
 	if route := c.FullPath(); route != "" {
 		return route
 	}
-	
+
 	// Fallback to request path
 	return c.Request.URL.Path
 }
@@ -434,14 +434,14 @@ func containsSuspiciousPatterns(userAgent string) bool {
 		"dirbuster", "gobuster", "ffuf",
 		"<script>", "javascript:", "eval(",
 	}
-	
+
 	userAgentLower := strings.ToLower(userAgent)
 	for _, pattern := range suspiciousPatterns {
 		if strings.Contains(userAgentLower, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

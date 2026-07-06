@@ -67,6 +67,21 @@ test/                 # integration tests
 
 ---
 
+## Installation
+
+```bash
+git clone https://github.com/kriipke/platformctl.git
+cd platformctl
+make build                 # compile all service binaries into ./bin
+go install ./cmd/cli       # put the `platformctl` CLI on your PATH
+```
+
+Prebuilt container images for every service are published to
+`ghcr.io/kriipke/platformctl-<service>`; see [Deployment](#deployment) to run
+the full stack on Kubernetes.
+
+---
+
 ## Development
 
 Prereqs: Go 1.24+, Docker, `make`. A reachable PostgreSQL and RabbitMQ for anything beyond compiling.

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kriipke/platformctl/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/kriipke/platformctl/internal/testutil"
 )
 
 func TestNewPostgresLogger(t *testing.T) {
@@ -42,7 +42,7 @@ func TestPostgresLoggerLogEvent(t *testing.T) {
 
 	// Create a test customer first
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -59,28 +59,28 @@ func TestPostgresLoggerLogEvent(t *testing.T) {
 	errorMessage := "Invalid input"
 
 	event := &AuditEvent{
-		EventID:       uuid.New(),
-		Timestamp:     time.Now().UTC(),
-		UserID:        &userID,
-		CustomerID:    customerID,
-		SessionID:     &sessionID,
-		IPAddress:     &ip,
-		UserAgent:     &userAgent,
-		EventType:     EventTypeCreate,
-		ResourceType:  ResourceTypeApp,
-		ResourceID:    stringPtr("app-123"),
-		ResourceName:  stringPtr("test-app"),
-		Action:        "create_app",
-		Outcome:       OutcomeError,
-		ErrorCode:     &errorCode,
-		ErrorMessage:  &errorMessage,
-		RequestID:     &requestID,
-		Method:        &method,
-		Endpoint:      &endpoint,
-		OldValues:     map[string]interface{}{"name": "old-name"},
-		NewValues:     map[string]interface{}{"name": "new-name"},
-		Metadata:      map[string]interface{}{"source": "api"},
-		IsSensitive:   true,
+		EventID:      uuid.New(),
+		Timestamp:    time.Now().UTC(),
+		UserID:       &userID,
+		CustomerID:   customerID,
+		SessionID:    &sessionID,
+		IPAddress:    &ip,
+		UserAgent:    &userAgent,
+		EventType:    EventTypeCreate,
+		ResourceType: ResourceTypeApp,
+		ResourceID:   stringPtr("app-123"),
+		ResourceName: stringPtr("test-app"),
+		Action:       "create_app",
+		Outcome:      OutcomeError,
+		ErrorCode:    &errorCode,
+		ErrorMessage: &errorMessage,
+		RequestID:    &requestID,
+		Method:       &method,
+		Endpoint:     &endpoint,
+		OldValues:    map[string]interface{}{"name": "old-name"},
+		NewValues:    map[string]interface{}{"name": "new-name"},
+		Metadata:     map[string]interface{}{"source": "api"},
+		IsSensitive:  true,
 	}
 
 	// Log the event
@@ -90,7 +90,7 @@ func TestPostgresLoggerLogEvent(t *testing.T) {
 	// Verify the event was logged
 	var storedEvent AuditEvent
 	var oldValuesJSON, newValuesJSON, metadataJSON sql.NullString
-	
+
 	err = testDB.QueryRowContext(context.Background(), `
 		SELECT event_id, timestamp, user_id, customer_id, session_id, ip_address, user_agent,
 			   event_type, resource_type, resource_id, resource_name, action, outcome,
@@ -162,7 +162,7 @@ func TestPostgresLoggerLogCRUDEvent(t *testing.T) {
 
 	// Create a test customer first
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestPostgresLoggerLogAuthEvent(t *testing.T) {
 
 	// Create a test customer first
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestPostgresLoggerLogSystemEvent(t *testing.T) {
 
 	// Create a test customer first (system events still need a customer context)
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -279,9 +279,9 @@ func TestPostgresLoggerQueryEvents(t *testing.T) {
 	// Create test customers
 	customer1 := uuid.New()
 	customer2 := uuid.New()
-	
+
 	for _, id := range []uuid.UUID{customer1, customer2} {
-		_, err = testDB.ExecContext(context.Background(), 
+		_, err = testDB.ExecContext(context.Background(),
 			"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 			id, "Test Customer", "testcustomer", "test@example.com", true)
 		require.NoError(t, err)
@@ -405,9 +405,9 @@ func TestPostgresLoggerQueryEvents(t *testing.T) {
 
 			// Verify results are ordered by timestamp desc
 			for i := 1; i < len(results); i++ {
-				assert.True(t, 
-					results[i-1].Timestamp.After(results[i].Timestamp) || 
-					results[i-1].Timestamp.Equal(results[i].Timestamp),
+				assert.True(t,
+					results[i-1].Timestamp.After(results[i].Timestamp) ||
+						results[i-1].Timestamp.Equal(results[i].Timestamp),
 					"Results should be ordered by timestamp DESC")
 			}
 		})
@@ -424,7 +424,7 @@ func TestPostgresLoggerQueryEventsWithPagination(t *testing.T) {
 
 	// Create test customer
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -495,7 +495,7 @@ func TestPostgresLoggerConcurrentWrites(t *testing.T) {
 
 	// Create test customer
 	customerID := uuid.New()
-	_, err = testDB.ExecContext(context.Background(), 
+	_, err = testDB.ExecContext(context.Background(),
 		"INSERT INTO customers (id, name, username, email, active) VALUES ($1, $2, $3, $4, $5)",
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
@@ -518,7 +518,7 @@ func TestPostgresLoggerConcurrentWrites(t *testing.T) {
 					Action:       "create",
 					Outcome:      OutcomeSuccess,
 				}
-				
+
 				if err := logger.LogEvent(context.Background(), event); err != nil {
 					errCh <- err
 					return
@@ -536,8 +536,8 @@ func TestPostgresLoggerConcurrentWrites(t *testing.T) {
 
 	// Verify all events were written
 	var count int
-	err = testDB.QueryRowContext(context.Background(), 
-		"SELECT COUNT(*) FROM audit_logs WHERE customer_id = $1", 
+	err = testDB.QueryRowContext(context.Background(),
+		"SELECT COUNT(*) FROM audit_logs WHERE customer_id = $1",
 		customerID).Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, numGoroutines*eventsPerGoroutine, count)
@@ -568,8 +568,8 @@ func TestPostgresLoggerTransactionRollback(t *testing.T) {
 
 	// Verify no partial data was written
 	var count int
-	err = testDB.QueryRowContext(context.Background(), 
-		"SELECT COUNT(*) FROM audit_logs WHERE event_id = $1", 
+	err = testDB.QueryRowContext(context.Background(),
+		"SELECT COUNT(*) FROM audit_logs WHERE event_id = $1",
 		event.EventID).Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)

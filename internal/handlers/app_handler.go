@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-		"net/http"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -212,4 +212,3 @@ func (h *AppHandler) DeleteApp(w http.ResponseWriter, r *http.Request) {
 
 	writeJSONResponse(w, response, http.StatusOK)
 }
-

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kriipke/platformctl/internal/clients/kubernetes"
 	"github.com/kriipke/platformctl/internal/config"
 	"github.com/kriipke/platformctl/pkg/api"
-	"github.com/google/uuid"
 )
 
 type MultiEnvironmentKubernetesHandler struct {
@@ -62,7 +62,7 @@ func (mekh *MultiEnvironmentKubernetesHandler) handleMultiEnvironmentCorrelation
 	for _, env := range environments {
 		client := mekh.kubernetesClients["default"]
 		namespace := fmt.Sprintf("%s-%s", cmd.CustomerID, env)
-		
+
 		status, err := client.GetWorkloadStatus(cmd.CustomerID, env, namespace)
 		if err != nil {
 			// Log error but continue with other environments
@@ -80,17 +80,17 @@ func (mekh *MultiEnvironmentKubernetesHandler) handleMultiEnvironmentCorrelation
 	// Create result
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "multi-environment-kubernetes",
@@ -117,17 +117,17 @@ func (mekh *MultiEnvironmentKubernetesHandler) handleMultiEnvironmentInspection(
 	// Basic multi-environment inspection
 	result := &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName: "multi-environment-kubernetes",
@@ -166,17 +166,17 @@ func (mekh *MultiEnvironmentKubernetesHandler) countHealthyEnvironments(environm
 func (mekh *MultiEnvironmentKubernetesHandler) errorResult(cmd *api.GitOpsCommandMessage, message string, err error, startTime time.Time) (*api.GitOpsResultMessage, error) {
 	return &api.GitOpsResultMessage{
 		GitOpsMessageEnvelope: api.GitOpsMessageEnvelope{
-			SchemaVersion:   1,
-			MessageID:       generateUUID(),
-			CorrelationID:   cmd.CorrelationID,
-			CustomerID:      cmd.CustomerID,
-			ContextName:     cmd.ContextName,
-			Action:          cmd.Action,
-			ManifestType:    cmd.ManifestType,
-			RequestedBy:     cmd.RequestedBy,
-			RequestedAt:     cmd.RequestedAt,
-			Priority:        cmd.Priority,
-			Payload:         make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    cmd.CorrelationID,
+			CustomerID:       cmd.CustomerID,
+			ContextName:      cmd.ContextName,
+			Action:           cmd.Action,
+			ManifestType:     cmd.ManifestType,
+			RequestedBy:      cmd.RequestedBy,
+			RequestedAt:      cmd.RequestedAt,
+			Priority:         cmd.Priority,
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: cmd.ManifestMetadata,
 		},
 		ServiceName:  "multi-environment-kubernetes",
