@@ -114,14 +114,14 @@ func (c *GitOpsResultConsumer) consumeFromQueue(ctx context.Context, channel *am
 
 				// Reject message and requeue if it's a transient error
 				if c.shouldRequeue(err) {
-					msg.Nack(false, true)
+					_ = msg.Nack(false, true)
 					c.metrics.IncrementCounter("gitops_result_consumer_requeued", map[string]string{
 						"queue": queueName,
 						"error": "transient",
 					})
 				} else {
 					// Reject without requeue for permanent failures
-					msg.Nack(false, false)
+					_ = msg.Nack(false, false)
 					c.metrics.IncrementCounter("gitops_result_consumer_rejected", map[string]string{
 						"queue": queueName,
 						"error": "permanent",
@@ -129,7 +129,7 @@ func (c *GitOpsResultConsumer) consumeFromQueue(ctx context.Context, channel *am
 				}
 			} else {
 				// Acknowledge successful processing
-				msg.Ack(false)
+				_ = msg.Ack(false)
 				c.metrics.IncrementCounter("gitops_result_consumer_processed", map[string]string{
 					"queue": queueName,
 				})

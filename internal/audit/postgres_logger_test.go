@@ -169,8 +169,8 @@ func TestPostgresLoggerLogCRUDEvent(t *testing.T) {
 
 	// Create context with audit information
 	userID := "test-user"
-	ctx := context.WithValue(context.Background(), "user_id", userID)
-	ctx = context.WithValue(ctx, "customer_id", customerID)
+	ctx := context.WithValue(context.Background(), userIDContextKey, userID)
+	ctx = context.WithValue(ctx, customerIDContextKey, customerID)
 
 	oldValues := map[string]interface{}{"version": "1.0.0"}
 	newValues := map[string]interface{}{"version": "1.1.0"}
@@ -212,8 +212,8 @@ func TestPostgresLoggerLogAuthEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create context with audit information
-	ctx := context.WithValue(context.Background(), "customer_id", customerID)
-	ctx = context.WithValue(ctx, "user_id", "test-user")
+	ctx := context.WithValue(context.Background(), customerIDContextKey, customerID)
+	ctx = context.WithValue(ctx, userIDContextKey, "test-user")
 
 	metadata := map[string]interface{}{
 		"login_method": "password",
@@ -248,7 +248,7 @@ func TestPostgresLoggerLogSystemEvent(t *testing.T) {
 		customerID, "Test Customer", "testcustomer", "test@example.com", true)
 	require.NoError(t, err)
 
-	ctx := context.WithValue(context.Background(), "customer_id", customerID)
+	ctx := context.WithValue(context.Background(), customerIDContextKey, customerID)
 
 	metadata := map[string]interface{}{
 		"component": "database",

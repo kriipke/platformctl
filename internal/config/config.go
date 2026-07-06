@@ -126,7 +126,7 @@ func validateGitOpsConfig(cfg *Config) error {
 	}
 
 	if cfg.Vault.Enabled && cfg.Vault.Address == "" {
-		return errors.New("Vault address is required when Vault is enabled")
+		return errors.New("vault address is required when Vault is enabled")
 	}
 
 	if cfg.MultiTenant.Enabled && cfg.MultiTenant.IsolationMode != "strict" && cfg.MultiTenant.IsolationMode != "permissive" {

@@ -302,7 +302,7 @@ func (hm *HealthManager) livenessHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusOK)
 	}
 
-	json.NewEncoder(w).Encode(health)
+	_ = json.NewEncoder(w).Encode(health)
 }
 
 func (hm *HealthManager) readinessHandler(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +318,7 @@ func (hm *HealthManager) readinessHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	json.NewEncoder(w).Encode(health)
+	_ = json.NewEncoder(w).Encode(health)
 }
 
 func (hm *HealthManager) detailedHealthHandler(w http.ResponseWriter, r *http.Request) {
@@ -329,7 +329,7 @@ func (hm *HealthManager) detailedHealthHandler(w http.ResponseWriter, r *http.Re
 
 	// Always return 200 for detailed health - let the client interpret the status
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(health)
+	_ = json.NewEncoder(w).Encode(health)
 }
 
 // Built-in Health Checkers

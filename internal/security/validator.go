@@ -119,13 +119,16 @@ func NewValidator(config *SecurityConfig) (*Validator, error) {
 		return nil, fmt.Errorf("failed to compile k8s name regex: %w", err)
 	}
 
-	// Security threat detection patterns
-	v.sqlInjectionRegex, err = regexp.Compile(`(?i)(union\s+(all\s+)?select|insert\s+into|delete\s+from|update\s+.+\s+set|drop\s+(table|database)|exec\s*\(|script\s*:|javascript\s*:|vbscript\s*:)`)
+	// Security threat detection patterns.
+	// script:/javascript:/vbscript: are XSS/script-injection vectors and live in
+	// the XSS pattern below, not here — otherwise they'd be matched first and
+	// mislabelled as SQL injection.
+	v.sqlInjectionRegex, err = regexp.Compile(`(?i)(union\s+(all\s+)?select|insert\s+into|delete\s+from|update\s+.+\s+set|drop\s+(table|database)|exec\s*\()`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile SQL injection regex: %w", err)
 	}
 
-	v.xssRegex, err = regexp.Compile(`(?i)(<script[^>]*>.*?</script>|javascript\s*:|vbscript\s*:|onload\s*=|onerror\s*=|onclick\s*=|onmouseover\s*=)`)
+	v.xssRegex, err = regexp.Compile(`(?i)(<script[^>]*>.*?</script>|script\s*:|javascript\s*:|vbscript\s*:|onload\s*=|onerror\s*=|onclick\s*=|onmouseover\s*=)`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile XSS regex: %w", err)
 	}
@@ -218,6 +221,14 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) error {
 		return fmt.Errorf("%w: %s is not a valid URL: %v", ErrInvalidURL, fieldName, err)
 	}
 
+	// url.Parse is lenient and happily accepts relative/opaque strings such as
+	// "not-a-url" (scheme and host both empty). Reject those explicitly as
+	// malformed rather than letting them fall through to the scheme check with a
+	// confusing "scheme '' is not allowed" message.
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return fmt.Errorf("%w: %s is not a valid URL", ErrInvalidURL, fieldName)
+	}
+
 	// Check allowed schemes
 	if len(v.config.AllowedSchemes) > 0 {
 		allowed := false
@@ -260,7 +271,12 @@ func (v *Validator) ValidateUUID(uuidStr string, fieldName string) error {
 		return err
 	}
 
-	if _, err := uuid.Parse(uuidStr); err != nil {
+	// uuid.Parse is lenient — it also accepts non-canonical forms such as a
+	// hyphen-less 32-char string, a urn:uuid: prefix, or brace-wrapped values.
+	// Require the canonical 8-4-4-4-12 hyphenated form by round-tripping through
+	// String() (which always emits canonical lowercase) and comparing.
+	parsed, err := uuid.Parse(uuidStr)
+	if err != nil || parsed.String() != strings.ToLower(uuidStr) {
 		return fmt.Errorf("%w: %s is not a valid UUID", ErrInvalidUUID, fieldName)
 	}
 

@@ -98,7 +98,7 @@ func (h *GitOpsActionHandler) HandleSyncApps(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // Environment manifest validation endpoint
@@ -161,7 +161,7 @@ func (h *GitOpsActionHandler) HandleValidateEnvironments(w http.ResponseWriter, 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // Context pairing correlation endpoint
@@ -204,7 +204,7 @@ func (h *GitOpsActionHandler) HandleCorrelateContexts(w http.ResponseWriter, r *
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // Multi-environment correlation endpoint - routes work to the multi-environment
@@ -293,5 +293,5 @@ func (h *GitOpsActionHandler) HandleInspectManifests(w http.ResponseWriter, r *h
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

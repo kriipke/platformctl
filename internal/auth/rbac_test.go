@@ -150,7 +150,7 @@ func TestRBACManagerCheckPermissionWithRoles(t *testing.T) {
 		ID: customerID,
 	}
 
-	ctx := context.WithValue(context.Background(), "customer", customer)
+	ctx := context.WithValue(context.Background(), customerContextKey, customer)
 	ctx = context.WithValue(ctx, JWTClaimsKey, claims)
 
 	// Test role-based permission
@@ -241,7 +241,7 @@ func TestRBACManagerCheckPermissionWithConditions(t *testing.T) {
 
 	// Create context with customer information
 	customer := &models.Customer{ID: customerID}
-	ctx := context.WithValue(context.Background(), "customer", customer)
+	ctx := context.WithValue(context.Background(), customerContextKey, customer)
 
 	// Grant permission with condition that customer_id matches
 	conditions := map[string]interface{}{
@@ -802,7 +802,7 @@ func TestRBACManagerConditionEvaluation(t *testing.T) {
 		MFAVerified: true,
 	}
 
-	ctx := context.WithValue(context.Background(), "customer", customer)
+	ctx := context.WithValue(context.Background(), customerContextKey, customer)
 	ctx = context.WithValue(ctx, JWTClaimsKey, claims)
 
 	tests := []struct {
