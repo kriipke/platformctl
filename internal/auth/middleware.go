@@ -11,6 +11,10 @@ type contextKey string
 
 const CustomerContextKey contextKey = "customer"
 
+const grantedPermissionContextKey contextKey = "granted_permission"
+
+const customerContextKey contextKey = "customer"
+
 // Customer represents the authenticated customer
 type Customer struct {
 	CustomerID string

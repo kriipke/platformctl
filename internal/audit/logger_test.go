@@ -153,10 +153,10 @@ func TestExtractAuditContext(t *testing.T) {
 				customer := &models.Customer{
 					ID: uuid.New(),
 				}
-				ctx = context.WithValue(ctx, "customer", customer)
-				ctx = context.WithValue(ctx, "user_id", "test-user")
-				ctx = context.WithValue(ctx, "session_id", "test-session")
-				ctx = context.WithValue(ctx, "request_id", uuid.New())
+				ctx = context.WithValue(ctx, customerContextKey, customer)
+				ctx = context.WithValue(ctx, userIDContextKey, "test-user")
+				ctx = context.WithValue(ctx, sessionIDContextKey, "test-session")
+				ctx = context.WithValue(ctx, requestIDContextKey, uuid.New())
 				return ctx
 			},
 			expectedResult: func(t *testing.T, auditCtx *AuditContext) {
@@ -199,7 +199,7 @@ func TestExtractAuditContext(t *testing.T) {
 			},
 			setupContext: func() context.Context {
 				customer := &models.Customer{ID: uuid.New()}
-				ctx := context.WithValue(context.Background(), "customer", customer)
+				ctx := context.WithValue(context.Background(), customerContextKey, customer)
 				return ctx
 			},
 			expectedResult: func(t *testing.T, auditCtx *AuditContext) {

@@ -11,6 +11,15 @@ import (
 	"github.com/kriipke/platformctl/pkg/api"
 )
 
+// contextKey types the values this package stores in a context.Context so they
+// cannot collide with keys defined by other packages (staticcheck SA1029).
+type contextKey string
+
+const (
+	contextNameKey  contextKey = "context_name"
+	manifestTypeKey contextKey = "manifest_type"
+)
+
 // CorrelationTracker provides end-to-end correlation tracking for GitOps operations
 type CorrelationTracker struct {
 	logger  *Logger
@@ -159,9 +168,9 @@ func (ct *CorrelationTracker) TrackServiceExecution(ctx context.Context, service
 	ct.logCorrelationEvent(ctx, event)
 
 	// Increment active processing metric
-	contextName := ctx.Value("context_name")
+	contextName := ctx.Value(contextNameKey)
 	if contextNameStr, ok := contextName.(string); ok {
-		manifestType := ctx.Value("manifest_type")
+		manifestType := ctx.Value(manifestTypeKey)
 		if manifestTypeStr, ok := manifestType.(string); ok {
 			ct.metrics.IncrementCommandsActiveProcessing(customerID, contextNameStr, manifestTypeStr)
 		}
@@ -328,9 +337,9 @@ func (set *ServiceExecutionTracker) Complete(status string, err error) {
 	set.correlationTracker.logCorrelationEvent(set.ctx, event)
 
 	// Record metrics
-	contextName := set.ctx.Value("context_name")
+	contextName := set.ctx.Value(contextNameKey)
 	if contextNameStr, ok := contextName.(string); ok {
-		manifestType := set.ctx.Value("manifest_type")
+		manifestType := set.ctx.Value(manifestTypeKey)
 		if manifestTypeStr, ok := manifestType.(string); ok {
 			set.correlationTracker.metrics.IncrementCommandsProcessed(set.CustomerID, contextNameStr, manifestTypeStr, status)
 			set.correlationTracker.metrics.RecordCommandProcessingDuration(set.CustomerID, contextNameStr, manifestTypeStr, duration)
@@ -428,8 +437,8 @@ func WithCorrelationFromMessage(ctx context.Context, message amqp.Delivery) cont
 		if err := json.Unmarshal(message.Body, &envelope); err == nil {
 			ctx = WithCustomerID(ctx, envelope.CustomerID)
 			ctx = WithCorrelationID(ctx, envelope.CorrelationID)
-			ctx = context.WithValue(ctx, "context_name", envelope.ContextName)
-			ctx = context.WithValue(ctx, "manifest_type", envelope.ManifestType)
+			ctx = context.WithValue(ctx, contextNameKey, envelope.ContextName)
+			ctx = context.WithValue(ctx, manifestTypeKey, envelope.ManifestType)
 		}
 	}
 

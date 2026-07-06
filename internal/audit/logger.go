@@ -13,6 +13,18 @@ import (
 	"github.com/kriipke/platformctl/internal/models"
 )
 
+// contextKey is a private type for context keys to avoid collisions with
+// keys defined in other packages.
+type contextKey string
+
+const (
+	customerContextKey   contextKey = "customer"
+	userIDContextKey     contextKey = "user_id"
+	sessionIDContextKey  contextKey = "session_id"
+	requestIDContextKey  contextKey = "request_id"
+	customerIDContextKey contextKey = "customer_id"
+)
+
 // EventType represents the type of audit event
 type EventType string
 
@@ -116,22 +128,22 @@ func ExtractAuditContext(ctx context.Context, r *http.Request) *AuditContext {
 	auditCtx := &AuditContext{}
 
 	// Extract customer from context (set by auth middleware)
-	if customer, ok := ctx.Value("customer").(*models.Customer); ok {
+	if customer, ok := ctx.Value(customerContextKey).(*models.Customer); ok {
 		auditCtx.CustomerID = customer.ID
 	}
 
 	// Extract user information from context
-	if userID, ok := ctx.Value("user_id").(string); ok {
+	if userID, ok := ctx.Value(userIDContextKey).(string); ok {
 		auditCtx.UserID = &userID
 	}
 
 	// Extract session information
-	if sessionID, ok := ctx.Value("session_id").(string); ok {
+	if sessionID, ok := ctx.Value(sessionIDContextKey).(string); ok {
 		auditCtx.SessionID = &sessionID
 	}
 
 	// Extract request ID for correlation
-	if requestID, ok := ctx.Value("request_id").(uuid.UUID); ok {
+	if requestID, ok := ctx.Value(requestIDContextKey).(uuid.UUID); ok {
 		auditCtx.RequestID = &requestID
 	} else {
 		// Generate a new request ID if not present

@@ -66,7 +66,7 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 			a.metrics.IncrementCounter("aggregator_transaction_errors", map[string]string{"error": "begin"})
 			return fmt.Errorf("failed to begin transaction: %w", err)
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 		if err := a.updateCommandRunStatus(ctx, tx, result); err != nil {
 			return fmt.Errorf("failed to update command run status for error result: %w", err)
 		}
@@ -79,7 +79,7 @@ func (a *GitOpsAggregator) ProcessResultMessage(ctx context.Context, result *api
 		a.metrics.IncrementCounter("aggregator_transaction_errors", map[string]string{"error": "begin"})
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Process based on manifest type and service
 	switch result.ManifestType {

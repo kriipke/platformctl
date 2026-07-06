@@ -115,7 +115,7 @@ func TestSecurityMiddlewareStack(t *testing.T) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	})
 
 	// Setup middleware stack
@@ -252,7 +252,7 @@ func TestRateLimitingIntegration(t *testing.T) {
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	})
 
 	// Simple middleware stack for rate limiting test
@@ -309,7 +309,7 @@ func TestSecurityValidationIntegration(t *testing.T) {
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	})
 
 	var handler http.Handler = testHandler
@@ -442,7 +442,7 @@ func TestAuthenticationIntegration(t *testing.T) {
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("protected resource"))
+		_, _ = w.Write([]byte("protected resource"))
 	})
 
 	var handler http.Handler = testHandler
@@ -570,7 +570,7 @@ func TestAuditingIntegration(t *testing.T) {
 		ctx := r.Context()
 
 		// Log a CRUD event
-		auditLogger.LogCRUDEvent(
+		_ = auditLogger.LogCRUDEvent(
 			ctx,
 			audit.EventTypeCreate,
 			audit.ResourceTypeApp,
@@ -581,7 +581,7 @@ func TestAuditingIntegration(t *testing.T) {
 		)
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id": "app-123", "name": "test-app"}`))
+		_, _ = w.Write([]byte(`{"id": "app-123", "name": "test-app"}`))
 	})
 
 	var handler http.Handler = testHandler
@@ -647,7 +647,7 @@ func TestConcurrentSecurityMiddleware(t *testing.T) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(10 * time.Millisecond) // Simulate work
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	})
 
 	var handler http.Handler = testHandler
