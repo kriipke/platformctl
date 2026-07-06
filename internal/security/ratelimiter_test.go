@@ -304,17 +304,17 @@ func TestRateLimiterConcurrentMultipleClients(t *testing.T) {
 	for i := 0; i < numClients; i++ {
 		wg.Add(1)
 		clientIP := fmt.Sprintf("192.168.1.%d", 400+i)
-		
+
 		go func(ip string) {
 			defer wg.Done()
 			clientAllowed := 0
-			
+
 			for j := 0; j < requestsPerClient; j++ {
 				if rl.Allow(ip) {
 					clientAllowed++
 				}
 			}
-			
+
 			mu.Lock()
 			totalAllowed += clientAllowed
 			mu.Unlock()
@@ -395,7 +395,7 @@ func TestRateLimiterDifferentClients(t *testing.T) {
 func TestRateLimiterEdgeCases(t *testing.T) {
 	t.Run("zero max tokens", func(t *testing.T) {
 		rl := NewRateLimiter(0, time.Second)
-		
+
 		// Should reject all requests
 		assert.False(t, rl.Allow("192.168.1.700"))
 		assert.Equal(t, 0, rl.GetTokenCount("192.168.1.700"))
@@ -507,11 +507,10 @@ func TestRateLimiterStateConsistency(t *testing.T) {
 	assert.Equal(t, 0, tokens3)
 }
 
-
 // Benchmark tests
 func BenchmarkRateLimiterAllow(b *testing.B) {
 	rl := NewRateLimiter(1000000, time.Second) // High limit to avoid rejections
-	
+
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
@@ -524,13 +523,13 @@ func BenchmarkRateLimiterAllow(b *testing.B) {
 
 func BenchmarkRateLimiterGetTokenCount(b *testing.B) {
 	rl := NewRateLimiter(100, time.Second)
-	
+
 	// Pre-populate with some clients
 	for i := 0; i < 100; i++ {
 		clientIP := fmt.Sprintf("192.168.1.%d", i)
 		rl.Allow(clientIP)
 	}
-	
+
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {

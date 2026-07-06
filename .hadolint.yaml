@@ -1,0 +1,8 @@
+# Hadolint configuration for the multi-stage service Dockerfile.
+#
+# DL3018 (pin versions in `apk add`) is intentionally ignored: the build and
+# runtime stages install a small, stable set of Alpine packages, and pinning
+# apk versions ties the image to specific Alpine point releases that change on
+# every base-image bump, causing spurious build breaks.
+ignored:
+  - DL3018

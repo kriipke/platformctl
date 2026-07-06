@@ -261,7 +261,7 @@ func (h *GitOpsStatusHandler) GetVaultValidationDetails(c *gin.Context) {
 	})
 }
 
-// GetContextHealth handles GET /gitops/contexts/{contextName}/health  
+// GetContextHealth handles GET /gitops/contexts/{contextName}/health
 func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 	customer, exists := c.Get("customer")
 	if !exists {
@@ -310,12 +310,12 @@ func (h *GitOpsStatusHandler) GetContextHealth(c *gin.Context) {
 
 	// Build health summary
 	healthSummary := gin.H{
-		"context_name":    contextName,
-		"pairing_status":  contextStatus.PairingStatus,
-		"sync_status":     contextStatus.SyncStatus,
-		"health_status":   contextStatus.HealthStatus,
-		"resource_count":  contextStatus.ResourceCount,
-		"last_updated":    contextStatus.LastUpdated,
+		"context_name":   contextName,
+		"pairing_status": contextStatus.PairingStatus,
+		"sync_status":    contextStatus.SyncStatus,
+		"health_status":  contextStatus.HealthStatus,
+		"resource_count": contextStatus.ResourceCount,
+		"last_updated":   contextStatus.LastUpdated,
 	}
 
 	if appStatus != nil {
@@ -368,11 +368,11 @@ func (h *GitOpsStatusHandler) GetSystemHealthOverview(c *gin.Context) {
 	}
 
 	syncCounts := map[string]int{
-		"synced":     0,
+		"synced":      0,
 		"out_of_sync": 0,
-		"syncing":    0,
-		"failed":     0,
-		"unknown":    0,
+		"syncing":     0,
+		"failed":      0,
+		"unknown":     0,
 	}
 
 	pairingCounts := map[string]int{
@@ -411,14 +411,14 @@ func (h *GitOpsStatusHandler) GetSystemHealthOverview(c *gin.Context) {
 
 	overview := gin.H{
 		"summary": gin.H{
-			"total_contexts":   len(statuses),
-			"active_contexts":  activeContexts,
-			"total_resources":  totalResources,
+			"total_contexts":  len(statuses),
+			"active_contexts": activeContexts,
+			"total_resources": totalResources,
 		},
 		"health_distribution":  healthCounts,
 		"sync_distribution":    syncCounts,
 		"pairing_distribution": pairingCounts,
-		"timestamp":            statuses,  // Include timestamp from most recent status
+		"timestamp":            statuses, // Include timestamp from most recent status
 	}
 
 	c.JSON(http.StatusOK, overview)

@@ -23,18 +23,18 @@ type Config struct {
 	DBTimeout        time.Duration `env:"DB_TIMEOUT" envDefault:"10s"`
 
 	// RabbitMQ configuration
-	RabbitMQURL              string        `env:"RABBITMQ_URL" envDefault:"amqp://localhost:5672/"`
-	RabbitMQConnectionRetries int          `env:"RABBITMQ_CONNECTION_RETRIES" envDefault:"5"`
-	RabbitMQRetryDelay       time.Duration `env:"RABBITMQ_RETRY_DELAY" envDefault:"5s"`
-	RabbitMQHeartbeat        time.Duration `env:"RABBITMQ_HEARTBEAT" envDefault:"10s"`
+	RabbitMQURL               string        `env:"RABBITMQ_URL" envDefault:"amqp://localhost:5672/"`
+	RabbitMQConnectionRetries int           `env:"RABBITMQ_CONNECTION_RETRIES" envDefault:"5"`
+	RabbitMQRetryDelay        time.Duration `env:"RABBITMQ_RETRY_DELAY" envDefault:"5s"`
+	RabbitMQHeartbeat         time.Duration `env:"RABBITMQ_HEARTBEAT" envDefault:"10s"`
 
 	// Observability configuration
 	Observability ObservabilityConfig `envPrefix:"OBS_"`
 
 	// GitOps integration configuration
-	ArgoCD   ArgoCDConfig   `envPrefix:"ARGOCD_"`
-	Vault    VaultConfig    `envPrefix:"VAULT_"`
-	Helm     HelmConfig     `envPrefix:"HELM_"`
+	ArgoCD ArgoCDConfig `envPrefix:"ARGOCD_"`
+	Vault  VaultConfig  `envPrefix:"VAULT_"`
+	Helm   HelmConfig   `envPrefix:"HELM_"`
 
 	// Multi-tenant configuration
 	MultiTenant MultiTenantConfig `envPrefix:"TENANT_"`
@@ -80,13 +80,13 @@ type ObservabilityConfig struct {
 	LogLevel         string `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat        string `env:"LOG_FORMAT" envDefault:"json"`
 	EnableConsoleLog bool   `env:"ENABLE_CONSOLE_LOG" envDefault:"false"`
-	
+
 	// Metrics configuration
-	MetricsEnabled     bool   `env:"METRICS_ENABLED" envDefault:"true"`
-	MetricsPort        string `env:"METRICS_PORT" envDefault:"9090"`
-	MetricsPath        string `env:"METRICS_PATH" envDefault:"/metrics"`
-	MetricsNamespace   string `env:"METRICS_NAMESPACE" envDefault:"platformctl"`
-	
+	MetricsEnabled   bool   `env:"METRICS_ENABLED" envDefault:"true"`
+	MetricsPort      string `env:"METRICS_PORT" envDefault:"9090"`
+	MetricsPath      string `env:"METRICS_PATH" envDefault:"/metrics"`
+	MetricsNamespace string `env:"METRICS_NAMESPACE" envDefault:"platformctl"`
+
 	// Health check configuration
 	HealthCheckPort     string        `env:"HEALTH_CHECK_PORT" envDefault:"8081"`
 	ReadinessPath       string        `env:"READINESS_PATH" envDefault:"/ready"`
@@ -94,10 +94,10 @@ type ObservabilityConfig struct {
 	HealthCheckInterval time.Duration `env:"HEALTH_CHECK_INTERVAL" envDefault:"30s"`
 	HealthCheckTimeout  time.Duration `env:"HEALTH_CHECK_TIMEOUT" envDefault:"5s"`
 	EnableDeepChecks    bool          `env:"ENABLE_DEEP_HEALTH_CHECKS" envDefault:"true"`
-	
+
 	// Correlation configuration
 	CorrelationHeader string `env:"CORRELATION_HEADER" envDefault:"X-Correlation-ID"`
-	
+
 	// Tracing configuration (for future use)
 	TracingEnabled bool   `env:"TRACING_ENABLED" envDefault:"false"`
 	TracingURL     string `env:"TRACING_URL"`
@@ -187,12 +187,12 @@ func (cfg *Config) GetMetricsConfig(serviceName string) MetricsConfig {
 
 func (cfg *Config) GetHealthCheckConfig() observability.HealthCheckConfig {
 	return observability.HealthCheckConfig{
-		Port:              cfg.Observability.HealthCheckPort,
-		ReadinessPath:     cfg.Observability.ReadinessPath,
-		LivenessPath:      cfg.Observability.LivenessPath,
-		CheckInterval:     cfg.Observability.HealthCheckInterval,
-		CheckTimeout:      cfg.Observability.HealthCheckTimeout,
-		EnableDeepChecks:  cfg.Observability.EnableDeepChecks,
+		Port:             cfg.Observability.HealthCheckPort,
+		ReadinessPath:    cfg.Observability.ReadinessPath,
+		LivenessPath:     cfg.Observability.LivenessPath,
+		CheckInterval:    cfg.Observability.HealthCheckInterval,
+		CheckTimeout:     cfg.Observability.HealthCheckTimeout,
+		EnableDeepChecks: cfg.Observability.EnableDeepChecks,
 	}
 }
 
@@ -216,4 +216,3 @@ type MetricsConfig struct {
 	ServiceName string
 	Namespace   string
 }
-

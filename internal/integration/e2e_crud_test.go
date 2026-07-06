@@ -115,8 +115,8 @@ func TestE2E_CompleteCRUDWorkflow(t *testing.T) {
 		}
 		contextObj.Spec.GitOps.Monitoring = models.MonitoringConfig{
 			ApplicationSets:       true,
-			VaultSecrets:         true,
-			HelmValues:           true,
+			VaultSecrets:          true,
+			HelmValues:            true,
 			CrossEnvironmentDrift: true,
 		}
 
@@ -168,7 +168,7 @@ func TestE2E_CompleteCRUDWorkflow(t *testing.T) {
 
 		for _, deployment := range contextObj.Spec.Deployments {
 			assert.Equal(t, "e2e-web-app", deployment.AppRef, "All deployments should reference the same app")
-			
+
 			switch deployment.Environment {
 			case "dev":
 				assert.Equal(t, "e2e-dev-env", deployment.EnvironmentRef)
@@ -336,7 +336,7 @@ func TestE2E_CompleteCRUDWorkflow(t *testing.T) {
 		// 5.1: Create second app that shares some environments
 		app2 := testutil.CreateTestAppWithGitSource("e2e-api-service")
 		app2.Spec.Environments = []models.AppEnvironmentRef{
-			{Name: "dev", EnvironmentRef: "e2e-dev-env"}, // Shared environment
+			{Name: "dev", EnvironmentRef: "e2e-dev-env"},   // Shared environment
 			{Name: "prod", EnvironmentRef: "e2e-prod-env"}, // Shared environment
 		}
 
@@ -395,7 +395,7 @@ func TestE2E_CompleteCRUDWorkflow(t *testing.T) {
 		// Verify different configurations
 		assert.True(t, webAppContext.Spec.GitOps.CustomerBranch.Enabled)
 		assert.False(t, apiServiceContext.Spec.GitOps.CustomerBranch.Enabled)
-		assert.Len(t, webAppContext.Spec.Deployments, 4) // web-app has canary
+		assert.Len(t, webAppContext.Spec.Deployments, 4)     // web-app has canary
 		assert.Len(t, apiServiceContext.Spec.Deployments, 2) // api-service doesn't have canary
 
 		t.Log("✓ Verified complex relationship scenarios with shared environments")
@@ -478,7 +478,7 @@ func TestE2E_ManifestValidationWorkflow(t *testing.T) {
 		t.Run("RejectInvalidManifests", func(t *testing.T) {
 			// Invalid app
 			invalidApp := testutil.CreateTestApp("invalid-app")
-			invalidApp.Spec.Application.Version = "invalid-version" // Not semver
+			invalidApp.Spec.Application.Version = "invalid-version"  // Not semver
 			invalidApp.Spec.Application.Maintainer = "invalid-email" // Not email
 
 			err := validation.ValidateApp(&invalidApp)
@@ -527,7 +527,7 @@ func TestE2E_ManifestValidationWorkflow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Valid context
-			validContext := testutil.CreateTestContext("valid-context", "valid-app", 
+			validContext := testutil.CreateTestContext("valid-context", "valid-app",
 				testutil.CreateTestContextDeployments("valid-app", "valid-env"))
 			err = validation.ValidateContext(&validContext)
 			assert.NoError(t, err)
@@ -560,7 +560,7 @@ func TestE2E_ErrorHandlingAndRecovery(t *testing.T) {
 		// Test duplicate creation errors
 		t.Run("DuplicateCreationErrors", func(t *testing.T) {
 			app := testutil.CreateTestApp("duplicate-app")
-			
+
 			err := appStore.Create(ctx, &app, customerID)
 			assert.NoError(t, err, "First creation should succeed")
 

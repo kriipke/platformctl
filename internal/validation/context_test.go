@@ -45,8 +45,8 @@ func TestValidateContext(t *testing.T) {
 						},
 						Monitoring: models.MonitoringConfig{
 							ApplicationSets:       true,
-							VaultSecrets:         true,
-							HelmValues:           true,
+							VaultSecrets:          true,
+							HelmValues:            true,
 							CrossEnvironmentDrift: false,
 						},
 					},
@@ -365,8 +365,8 @@ func TestValidateContextGitOpsConfig(t *testing.T) {
 				},
 				Monitoring: models.MonitoringConfig{
 					ApplicationSets:       true,
-					VaultSecrets:         true,
-					HelmValues:           false,
+					VaultSecrets:          true,
+					HelmValues:            false,
 					CrossEnvironmentDrift: true,
 				},
 			},
@@ -381,8 +381,8 @@ func TestValidateContextGitOpsConfig(t *testing.T) {
 				},
 				Monitoring: models.MonitoringConfig{
 					ApplicationSets:       false,
-					VaultSecrets:         false,
-					HelmValues:           false,
+					VaultSecrets:          false,
+					HelmValues:            false,
 					CrossEnvironmentDrift: false,
 				},
 			},
@@ -552,8 +552,8 @@ func TestValidateMonitoringConfig(t *testing.T) {
 			name: "all monitoring enabled",
 			config: models.MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         true,
-				HelmValues:           true,
+				VaultSecrets:          true,
+				HelmValues:            true,
 				CrossEnvironmentDrift: true,
 			},
 		},
@@ -561,8 +561,8 @@ func TestValidateMonitoringConfig(t *testing.T) {
 			name: "all monitoring disabled",
 			config: models.MonitoringConfig{
 				ApplicationSets:       false,
-				VaultSecrets:         false,
-				HelmValues:           false,
+				VaultSecrets:          false,
+				HelmValues:            false,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -570,8 +570,8 @@ func TestValidateMonitoringConfig(t *testing.T) {
 			name: "partial monitoring",
 			config: models.MonitoringConfig{
 				ApplicationSets:       true,
-				VaultSecrets:         false,
-				HelmValues:           true,
+				VaultSecrets:          false,
+				HelmValues:            true,
 				CrossEnvironmentDrift: false,
 			},
 		},
@@ -683,8 +683,8 @@ func TestValidateContextSpecComplexScenarios(t *testing.T) {
 					},
 					Monitoring: models.MonitoringConfig{
 						ApplicationSets:       true,
-						VaultSecrets:         true,
-						HelmValues:           true,
+						VaultSecrets:          true,
+						HelmValues:            true,
 						CrossEnvironmentDrift: true,
 					},
 				},
@@ -744,8 +744,8 @@ func TestValidateContextSpecComplexScenarios(t *testing.T) {
 					},
 					Monitoring: models.MonitoringConfig{
 						ApplicationSets:       false,
-						VaultSecrets:         true,
-						HelmValues:           false,
+						VaultSecrets:          true,
+						HelmValues:            false,
 						CrossEnvironmentDrift: true,
 					},
 				},
@@ -787,7 +787,7 @@ func TestValidateContextWithAllEnvironmentTypes(t *testing.T) {
 	// Test case sensitivity
 	t.Run("case_insensitive_environments", func(t *testing.T) {
 		caseVariations := []string{"DEV", "Dev", "PRODUCTION", "Production", "STAGING", "Staging"}
-		
+
 		for _, env := range caseVariations {
 			deployment := models.ContextDeployment{
 				Environment:    env,

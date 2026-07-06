@@ -29,142 +29,142 @@ func NewEnvironmentCorrelator(db *sqlx.DB, store *readmodel.GitOpsStore, logger 
 
 // EnvironmentCorrelation represents correlation data across environments
 type EnvironmentCorrelation struct {
-	CustomerID          string                                `json:"customer_id"`
-	ContextName         string                                `json:"context_name"`
-	AppName             string                                `json:"app_name"`
-	Environments        []EnvironmentStatus                   `json:"environments"`
-	OverallHealth       string                                `json:"overall_health"`
-	SyncStatusSummary   map[string]int                        `json:"sync_status_summary"`
-	HealthStatusSummary map[string]int                        `json:"health_status_summary"`
-	DriftDetection      []DriftAlert                          `json:"drift_detection"`
-	ValuesComparison    map[string]ValuesFileDifference       `json:"values_comparison"`
-	VaultCorrelation    []VaultSecretCorrelation              `json:"vault_correlation"`
-	DeploymentTimeline  []DeploymentEvent                     `json:"deployment_timeline"`
-	ResourceVersions    map[string]ResourceVersionComparison  `json:"resource_versions"`
-	LastCorrelated      time.Time                             `json:"last_correlated"`
+	CustomerID          string                               `json:"customer_id"`
+	ContextName         string                               `json:"context_name"`
+	AppName             string                               `json:"app_name"`
+	Environments        []EnvironmentStatus                  `json:"environments"`
+	OverallHealth       string                               `json:"overall_health"`
+	SyncStatusSummary   map[string]int                       `json:"sync_status_summary"`
+	HealthStatusSummary map[string]int                       `json:"health_status_summary"`
+	DriftDetection      []DriftAlert                         `json:"drift_detection"`
+	ValuesComparison    map[string]ValuesFileDifference      `json:"values_comparison"`
+	VaultCorrelation    []VaultSecretCorrelation             `json:"vault_correlation"`
+	DeploymentTimeline  []DeploymentEvent                    `json:"deployment_timeline"`
+	ResourceVersions    map[string]ResourceVersionComparison `json:"resource_versions"`
+	LastCorrelated      time.Time                            `json:"last_correlated"`
 }
 
 // EnvironmentStatus represents the status of an app in a specific environment
 type EnvironmentStatus struct {
-	Environment      string                           `json:"environment"`
-	ClusterName      string                           `json:"cluster_name"`
-	Namespace        string                           `json:"namespace"`
-	SyncStatus       string                           `json:"sync_status"`
-	HealthStatus     string                           `json:"health_status"`
-	DeploymentStatus string                           `json:"deployment_status"`
-	HelmRevision     string                           `json:"helm_revision"`
-	GitCommit        string                           `json:"git_commit"`
-	ImageTags        map[string]string                `json:"image_tags"`
-	LastDeployed     *time.Time                       `json:"last_deployed"`
-	ValuesFile       string                           `json:"values_file"`
-	VaultSecrets     []VaultSecretReference           `json:"vault_secrets"`
-	ResourceCount    int                              `json:"resource_count"`
-	Errors           []string                         `json:"errors,omitempty"`
+	Environment      string                 `json:"environment"`
+	ClusterName      string                 `json:"cluster_name"`
+	Namespace        string                 `json:"namespace"`
+	SyncStatus       string                 `json:"sync_status"`
+	HealthStatus     string                 `json:"health_status"`
+	DeploymentStatus string                 `json:"deployment_status"`
+	HelmRevision     string                 `json:"helm_revision"`
+	GitCommit        string                 `json:"git_commit"`
+	ImageTags        map[string]string      `json:"image_tags"`
+	LastDeployed     *time.Time             `json:"last_deployed"`
+	ValuesFile       string                 `json:"values_file"`
+	VaultSecrets     []VaultSecretReference `json:"vault_secrets"`
+	ResourceCount    int                    `json:"resource_count"`
+	Errors           []string               `json:"errors,omitempty"`
 }
 
 // DriftAlert represents configuration drift between environments
 type DriftAlert struct {
-	Type             string    `json:"type"` // values, image_tag, helm_version, vault_secret
-	SourceEnv        string    `json:"source_env"`
-	TargetEnv        string    `json:"target_env"`
-	DriftDescription string    `json:"drift_description"`
-	Severity         string    `json:"severity"` // low, medium, high, critical
-	DetectedAt       time.Time `json:"detected_at"`
-	RecommendedAction string   `json:"recommended_action"`
+	Type              string    `json:"type"` // values, image_tag, helm_version, vault_secret
+	SourceEnv         string    `json:"source_env"`
+	TargetEnv         string    `json:"target_env"`
+	DriftDescription  string    `json:"drift_description"`
+	Severity          string    `json:"severity"` // low, medium, high, critical
+	DetectedAt        time.Time `json:"detected_at"`
+	RecommendedAction string    `json:"recommended_action"`
 }
 
 // ValuesFileDifference represents differences in Helm values files between environments
 type ValuesFileDifference struct {
-	Environment     string                 `json:"environment"`
-	FilePath        string                 `json:"file_path"`
-	KeyDifferences  []ValuesDifference     `json:"key_differences"`
-	MissingKeys     []string               `json:"missing_keys"`
-	ExtraKeys       []string               `json:"extra_keys"`
-	LastModified    *time.Time             `json:"last_modified"`
-	ComparedAgainst string                 `json:"compared_against"` // base environment for comparison
+	Environment     string             `json:"environment"`
+	FilePath        string             `json:"file_path"`
+	KeyDifferences  []ValuesDifference `json:"key_differences"`
+	MissingKeys     []string           `json:"missing_keys"`
+	ExtraKeys       []string           `json:"extra_keys"`
+	LastModified    *time.Time         `json:"last_modified"`
+	ComparedAgainst string             `json:"compared_against"` // base environment for comparison
 }
 
 // ValuesDifference represents a specific difference in values
 type ValuesDifference struct {
-	Key           string      `json:"key"`
-	SourceValue   interface{} `json:"source_value"`
-	TargetValue   interface{} `json:"target_value"`
-	DifferenceType string     `json:"difference_type"` // value, type, structure
+	Key            string      `json:"key"`
+	SourceValue    interface{} `json:"source_value"`
+	TargetValue    interface{} `json:"target_value"`
+	DifferenceType string      `json:"difference_type"` // value, type, structure
 }
 
 // VaultSecretCorrelation represents Vault secret usage across environments
 type VaultSecretCorrelation struct {
-	VaultPath           string                      `json:"vault_path"`
-	SecretName          string                      `json:"secret_name"`
-	Environments        []VaultSecretEnvironment    `json:"environments"`
-	KeyConsistency      map[string]KeyConsistency   `json:"key_consistency"`
-	LastValidated       time.Time                   `json:"last_validated"`
-	ValidationErrors    []string                    `json:"validation_errors,omitempty"`
+	VaultPath        string                    `json:"vault_path"`
+	SecretName       string                    `json:"secret_name"`
+	Environments     []VaultSecretEnvironment  `json:"environments"`
+	KeyConsistency   map[string]KeyConsistency `json:"key_consistency"`
+	LastValidated    time.Time                 `json:"last_validated"`
+	ValidationErrors []string                  `json:"validation_errors,omitempty"`
 }
 
 // VaultSecretEnvironment represents Vault secret status in a specific environment
 type VaultSecretEnvironment struct {
-	Environment         string    `json:"environment"`
-	ValidationStatus    string    `json:"validation_status"`
-	KubernetesSecretName string   `json:"kubernetes_secret_name"`
-	Namespace           string    `json:"namespace"`
-	RequiredKeys        []string  `json:"required_keys"`
-	MissingKeys         []string  `json:"missing_keys"`
-	LastSyncTime        *time.Time `json:"last_sync_time"`
+	Environment          string     `json:"environment"`
+	ValidationStatus     string     `json:"validation_status"`
+	KubernetesSecretName string     `json:"kubernetes_secret_name"`
+	Namespace            string     `json:"namespace"`
+	RequiredKeys         []string   `json:"required_keys"`
+	MissingKeys          []string   `json:"missing_keys"`
+	LastSyncTime         *time.Time `json:"last_sync_time"`
 }
 
 // KeyConsistency represents consistency of a key across environments
 type KeyConsistency struct {
-	Key                 string            `json:"key"`
-	PresentInEnvs       []string          `json:"present_in_envs"`
-	MissingInEnvs       []string          `json:"missing_in_envs"`
-	ConsistencyStatus   string            `json:"consistency_status"` // consistent, inconsistent, missing
-	RecommendedAction   string            `json:"recommended_action"`
+	Key               string   `json:"key"`
+	PresentInEnvs     []string `json:"present_in_envs"`
+	MissingInEnvs     []string `json:"missing_in_envs"`
+	ConsistencyStatus string   `json:"consistency_status"` // consistent, inconsistent, missing
+	RecommendedAction string   `json:"recommended_action"`
 }
 
 // VaultSecretReference represents a reference to a Vault secret
 type VaultSecretReference struct {
-	Path              string    `json:"path"`
-	SecretName        string    `json:"secret_name"`
-	ValidationStatus  string    `json:"validation_status"`
-	LastValidated     time.Time `json:"last_validated"`
+	Path             string    `json:"path"`
+	SecretName       string    `json:"secret_name"`
+	ValidationStatus string    `json:"validation_status"`
+	LastValidated    time.Time `json:"last_validated"`
 }
 
 // DeploymentEvent represents a deployment event in the timeline
 type DeploymentEvent struct {
-	Environment   string    `json:"environment"`
-	EventType     string    `json:"event_type"` // deploy, sync, rollback, scale
-	Timestamp     time.Time `json:"timestamp"`
-	HelmRevision  string    `json:"helm_revision,omitempty"`
-	GitCommit     string    `json:"git_commit,omitempty"`
-	Status        string    `json:"status"`
-	Duration      *int64    `json:"duration_ms,omitempty"`
-	TriggeredBy   string    `json:"triggered_by"`
-	Description   string    `json:"description"`
+	Environment  string    `json:"environment"`
+	EventType    string    `json:"event_type"` // deploy, sync, rollback, scale
+	Timestamp    time.Time `json:"timestamp"`
+	HelmRevision string    `json:"helm_revision,omitempty"`
+	GitCommit    string    `json:"git_commit,omitempty"`
+	Status       string    `json:"status"`
+	Duration     *int64    `json:"duration_ms,omitempty"`
+	TriggeredBy  string    `json:"triggered_by"`
+	Description  string    `json:"description"`
 }
 
 // ResourceVersionComparison represents resource version comparison across environments
 type ResourceVersionComparison struct {
-	ResourceType      string                    `json:"resource_type"` // Deployment, Service, ConfigMap, etc.
-	Environments      map[string]string         `json:"environments"`  // env -> version
-	Consistency       string                    `json:"consistency"`   // consistent, drift, unknown
-	LatestVersion     string                    `json:"latest_version"`
-	VersionDrift      []ResourceVersionDrift    `json:"version_drift,omitempty"`
+	ResourceType  string                 `json:"resource_type"` // Deployment, Service, ConfigMap, etc.
+	Environments  map[string]string      `json:"environments"`  // env -> version
+	Consistency   string                 `json:"consistency"`   // consistent, drift, unknown
+	LatestVersion string                 `json:"latest_version"`
+	VersionDrift  []ResourceVersionDrift `json:"version_drift,omitempty"`
 }
 
 // ResourceVersionDrift represents version drift for a specific resource
 type ResourceVersionDrift struct {
-	Environment       string    `json:"environment"`
-	CurrentVersion    string    `json:"current_version"`
-	ExpectedVersion   string    `json:"expected_version"`
-	DriftSeverity     string    `json:"drift_severity"` // minor, major, critical
-	LastUpdated       time.Time `json:"last_updated"`
+	Environment     string    `json:"environment"`
+	CurrentVersion  string    `json:"current_version"`
+	ExpectedVersion string    `json:"expected_version"`
+	DriftSeverity   string    `json:"drift_severity"` // minor, major, critical
+	LastUpdated     time.Time `json:"last_updated"`
 }
 
 // CorrelateEnvironments performs comprehensive correlation of an app across all environments
 func (ec *EnvironmentCorrelator) CorrelateEnvironments(ctx context.Context, customerID, contextName, appName string) (*EnvironmentCorrelation, error) {
 	start := time.Now()
-	
+
 	ec.logger.Info().
 		Str("customer_id", customerID).
 		Str("context_name", contextName).
@@ -305,7 +305,7 @@ func (ec *EnvironmentCorrelator) buildEnvironmentStatus(envStatus readmodel.Mult
 		LastDeployed:     envStatus.LastDeployed,
 		ValuesFile:       fmt.Sprintf("values-%s.yaml", envStatus.Environment),
 		VaultSecrets:     make([]VaultSecretReference, 0), // Will be populated by vault correlation
-		ResourceCount:    0, // Will be calculated from resource versions
+		ResourceCount:    0,                               // Will be calculated from resource versions
 		Errors:           make([]string, 0),
 	}
 }
@@ -434,7 +434,7 @@ func (ec *EnvironmentCorrelator) compareValuesFiles(ctx context.Context, custome
 			KeyDifferences:  make([]ValuesDifference, 0), // Would be populated from actual comparison
 			MissingKeys:     make([]string, 0),
 			ExtraKeys:       make([]string, 0),
-			LastModified:    nil, // Would get from Git metadata
+			LastModified:    nil,          // Would get from Git metadata
 			ComparedAgainst: "production", // Default comparison baseline
 		}
 	}
@@ -456,17 +456,17 @@ func (ec *EnvironmentCorrelator) correlateVaultSecrets(ctx context.Context, cust
 
 		// Group by vault path and secret name
 		secretMap := make(map[string]*VaultSecretCorrelation)
-		
+
 		for _, detail := range vaultDetails {
 			key := fmt.Sprintf("%s/%s", detail.VaultPath, detail.SecretName)
-			
+
 			if correlation, exists := secretMap[key]; exists {
 				// Add to existing correlation
 				correlation.Environments = append(correlation.Environments, VaultSecretEnvironment{
 					Environment:          env.Environment,
 					ValidationStatus:     detail.ValidationStatus,
 					KubernetesSecretName: ec.safeStringDeref(detail.KubernetesSecretName),
-					Namespace:           ec.safeStringDeref(detail.KubernetesNamespace),
+					Namespace:            ec.safeStringDeref(detail.KubernetesNamespace),
 					RequiredKeys:         detail.RequiredKeys,
 					MissingKeys:          detail.MissingKeys,
 					LastSyncTime:         detail.LastValidated,
@@ -481,7 +481,7 @@ func (ec *EnvironmentCorrelator) correlateVaultSecrets(ctx context.Context, cust
 							Environment:          env.Environment,
 							ValidationStatus:     detail.ValidationStatus,
 							KubernetesSecretName: ec.safeStringDeref(detail.KubernetesSecretName),
-							Namespace:           ec.safeStringDeref(detail.KubernetesNamespace),
+							Namespace:            ec.safeStringDeref(detail.KubernetesNamespace),
 							RequiredKeys:         detail.RequiredKeys,
 							MissingKeys:          detail.MissingKeys,
 							LastSyncTime:         detail.LastValidated,
@@ -549,9 +549,9 @@ func (ec *EnvironmentCorrelator) compareResourceVersions(ctx context.Context, cu
 
 	for _, resourceType := range resourceTypes {
 		comparison := ResourceVersionComparison{
-			ResourceType:  resourceType,
-			Environments:  make(map[string]string),
-			VersionDrift:  make([]ResourceVersionDrift, 0),
+			ResourceType: resourceType,
+			Environments: make(map[string]string),
+			VersionDrift: make([]ResourceVersionDrift, 0),
 		}
 
 		// Simulate resource version data
@@ -566,7 +566,7 @@ func (ec *EnvironmentCorrelator) compareResourceVersions(ctx context.Context, cu
 
 		// Determine consistency and latest version
 		comparison.Consistency, comparison.LatestVersion = ec.calculateResourceVersionConsistency(comparison.Environments)
-		
+
 		// Detect drift
 		for envName, version := range comparison.Environments {
 			if version != comparison.LatestVersion {
@@ -612,7 +612,7 @@ func (ec *EnvironmentCorrelator) calculateVersionDriftSeverity(current, expected
 func (ec *EnvironmentCorrelator) calculateKeyConsistency(correlation *VaultSecretCorrelation) {
 	// Build key consistency map across all environments
 	allKeys := make(map[string][]string) // key -> list of environments where it's present
-	
+
 	for _, env := range correlation.Environments {
 		for _, key := range env.RequiredKeys {
 			if _, exists := allKeys[key]; !exists {
@@ -640,7 +640,7 @@ func (ec *EnvironmentCorrelator) calculateKeyConsistency(correlation *VaultSecre
 
 		status := "consistent"
 		action := "No action required"
-		
+
 		if len(missingEnvs) > 0 {
 			if len(presentEnvs) == 1 {
 				status = "missing"

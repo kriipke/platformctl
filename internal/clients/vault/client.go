@@ -27,7 +27,7 @@ func NewHashiCorpVaultClient(cfg config.VaultConfig) *HashiCorpVaultClient {
 	if cfg.Address != "" {
 		config.Address = cfg.Address
 	}
-	
+
 	client, err := api.NewClient(config)
 	if err != nil {
 		log.Printf("Failed to create Vault client: %v", err)
@@ -199,7 +199,7 @@ func (vc *HashiCorpVaultClient) validateTokenAuth() error {
 	}
 
 	vc.client.SetToken(token)
-	
+
 	// Validate token by making a test call
 	_, err := vc.client.Auth().Token().LookupSelf()
 	return err

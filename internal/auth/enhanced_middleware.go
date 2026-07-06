@@ -22,7 +22,7 @@ import (
 type EnhancedContextKey string
 
 const (
-	EnhancedCustomerKey  EnhancedContextKey = "enhanced_customer"
+	EnhancedCustomerKey EnhancedContextKey = "enhanced_customer"
 	UserIDKey           EnhancedContextKey = "user_id"
 	SessionIDKey        EnhancedContextKey = "session_id"
 	JWTClaimsKey        EnhancedContextKey = "jwt_claims"
@@ -30,11 +30,11 @@ const (
 )
 
 var (
-	ErrCustomerNotFound   = errors.New("customer not found")
-	ErrInvalidAuthHeader  = errors.New("invalid authorization header")
-	ErrMissingToken       = errors.New("missing authentication token")
-	ErrSessionNotFound    = errors.New("session not found")
-	ErrSessionExpired     = errors.New("session expired")
+	ErrCustomerNotFound  = errors.New("customer not found")
+	ErrInvalidAuthHeader = errors.New("invalid authorization header")
+	ErrMissingToken      = errors.New("missing authentication token")
+	ErrSessionNotFound   = errors.New("session not found")
+	ErrSessionExpired    = errors.New("session expired")
 )
 
 // EnhancedCustomer represents a customer with additional authentication context
@@ -258,7 +258,7 @@ func (a *EnhancedAuthService) Login(r *http.Request, username, password string, 
 	sessionID := uuid.New().String()
 	clientIP := getClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
-	
+
 	// Store session in database
 	err = a.CreateSession(sessionID, customer.ID, username, userAgent, clientIP)
 	if err != nil {
@@ -378,7 +378,7 @@ func (a *EnhancedAuthService) GetSession(sessionID string) (*SessionInfo, error)
 // UpdateSessionActivity updates the last activity timestamp for a session
 func (a *EnhancedAuthService) UpdateSessionActivity(sessionID string) error {
 	query := `UPDATE sessions SET last_activity = $1 WHERE id = $2 AND is_active = true`
-	
+
 	_, err := a.db.Exec(query, time.Now(), sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to update session activity: %w", err)
@@ -390,7 +390,7 @@ func (a *EnhancedAuthService) UpdateSessionActivity(sessionID string) error {
 // InvalidateSession marks a session as inactive
 func (a *EnhancedAuthService) InvalidateSession(sessionID string) error {
 	query := `UPDATE sessions SET is_active = false WHERE id = $1`
-	
+
 	_, err := a.db.Exec(query, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to invalidate session: %w", err)

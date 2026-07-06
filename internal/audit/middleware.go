@@ -45,12 +45,12 @@ func (m *Middleware) AuditMiddleware() func(http.Handler) http.Handler {
 			recorder := &responseRecorder{
 				ResponseWriter: w,
 				statusCode:     http.StatusOK,
-				body:          bytes.NewBuffer(nil),
+				body:           bytes.NewBuffer(nil),
 			}
 
 			// Record request details
 			startTime := time.Now()
-			
+
 			// Read and buffer request body for logging
 			var requestBody []byte
 			if r.Body != nil && shouldLogRequestBody(r) {
@@ -82,7 +82,7 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 			recorder := &responseRecorder{
 				ResponseWriter: w,
 				statusCode:     http.StatusOK,
-				body:          bytes.NewBuffer(nil),
+				body:           bytes.NewBuffer(nil),
 			}
 
 			// Call the next handler
@@ -90,11 +90,11 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 
 			// Log CRUD event
 			outcome := outcomeFromStatusCode(recorder.statusCode)
-			
+
 			if eventType != "" && resourceType != "" {
 				auditCtx := ExtractAuditContext(r.Context(), r)
 				event := NewAuditEvent(auditCtx, eventType, ResourceType(resourceType), r.Method, outcome)
-				
+
 				if resourceID != "" {
 					event.WithResource(resourceID, resourceID)
 				}
@@ -102,7 +102,7 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 				// Add HTTP-specific metadata
 				event.WithMetadata("http_status", recorder.statusCode)
 				event.WithMetadata("response_size", recorder.body.Len())
-				
+
 				// Log any errors
 				if recorder.statusCode >= 400 {
 					errorCode := strconv.Itoa(recorder.statusCode)
@@ -119,11 +119,11 @@ func (m *Middleware) CRUDMiddleware() func(http.Handler) http.Handler {
 // logHTTPEvent logs a general HTTP request/response audit event
 func (m *Middleware) logHTTPEvent(ctx context.Context, r *http.Request, recorder *responseRecorder, startTime time.Time, requestBody []byte) {
 	auditCtx := ExtractAuditContext(ctx, r)
-	
+
 	// Determine event type based on the endpoint
 	eventType := determineEventTypeFromPath(r.URL.Path, r.Method)
 	resourceType := determineResourceTypeFromPath(r.URL.Path)
-	
+
 	outcome := outcomeFromStatusCode(recorder.statusCode)
 	action := formatHTTPAction(r.Method, r.URL.Path)
 
@@ -234,7 +234,7 @@ func extractResourceInfo(path string, vars map[string]string) (resourceType, res
 	} else {
 		resourceType = "system"
 	}
-	
+
 	return resourceType, resourceID
 }
 
@@ -242,7 +242,7 @@ func determineEventTypeFromPath(path, method string) EventType {
 	if strings.Contains(path, "/auth") {
 		return EventTypeAuth
 	}
-	
+
 	return httpMethodToEventType(method)
 }
 
@@ -256,7 +256,7 @@ func determineResourceTypeFromPath(path string) ResourceType {
 	} else if strings.HasPrefix(path, "/auth") {
 		return ResourceTypeUser
 	}
-	
+
 	return ResourceTypeSystem
 }
 
@@ -275,12 +275,12 @@ func shouldLogResponseBody(r *http.Request, statusCode int) bool {
 	if r.Method == "GET" && statusCode >= 200 && statusCode < 300 {
 		return true
 	}
-	
+
 	// Log error responses
 	if statusCode >= 400 {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -294,13 +294,13 @@ func isSensitiveEndpoint(path string) bool {
 		"/credential",
 		"/vault",
 	}
-	
+
 	lowerPath := strings.ToLower(path)
 	for _, pattern := range sensitivePatterns {
 		if strings.Contains(lowerPath, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }

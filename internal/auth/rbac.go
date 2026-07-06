@@ -30,11 +30,11 @@ type Permission struct {
 
 // Role represents a role with associated permissions
 type Role struct {
-	Name         string       `json:"name"`
-	Description  string       `json:"description"`
-	Permissions  []string     `json:"permissions"`
-	IsPrivileged bool         `json:"is_privileged"`
-	Conditions   []Condition  `json:"conditions,omitempty"`
+	Name         string      `json:"name"`
+	Description  string      `json:"description"`
+	Permissions  []string    `json:"permissions"`
+	IsPrivileged bool        `json:"is_privileged"`
+	Conditions   []Condition `json:"conditions,omitempty"`
 }
 
 // Condition represents an access condition

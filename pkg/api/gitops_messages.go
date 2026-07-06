@@ -25,14 +25,14 @@ type GitOpsMessageEnvelope struct {
 
 type ManifestMetadata struct {
 	// App manifest metadata
-	ApplicationSetName string            `json:"applicationset_name,omitempty"`
-	HelmSources        []HelmSourceInfo  `json:"helm_sources,omitempty"`
-	GitSources         []GitSourceInfo   `json:"git_sources,omitempty"`
+	ApplicationSetName string           `json:"applicationset_name,omitempty"`
+	HelmSources        []HelmSourceInfo `json:"helm_sources,omitempty"`
+	GitSources         []GitSourceInfo  `json:"git_sources,omitempty"`
 
 	// Environment manifest metadata
-	VaultSources       []VaultSourceInfo `json:"vault_sources,omitempty"`
-	ClusterConfigs     []ClusterInfo     `json:"cluster_configs,omitempty"`
-	ValuesFiles        []string          `json:"values_files,omitempty"`
+	VaultSources   []VaultSourceInfo `json:"vault_sources,omitempty"`
+	ClusterConfigs []ClusterInfo     `json:"cluster_configs,omitempty"`
+	ValuesFiles    []string          `json:"values_files,omitempty"`
 
 	// Context pairing metadata
 	AppReference         string `json:"app_reference,omitempty"`
@@ -41,10 +41,10 @@ type ManifestMetadata struct {
 }
 
 type HelmSourceInfo struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"` // registry, git, oci
-	URL      string `json:"url"`
-	Version  string `json:"version,omitempty"`
+	Name    string `json:"name"`
+	Type    string `json:"type"` // registry, git, oci
+	URL     string `json:"url"`
+	Version string `json:"version,omitempty"`
 }
 
 type GitSourceInfo struct {
@@ -66,23 +66,23 @@ type ClusterInfo struct {
 
 type GitOpsCommandMessage struct {
 	GitOpsMessageEnvelope
-	CommandType     string            `json:"command_type"` // sync, validate, inspect, correlate
-	TargetService   string            `json:"target_service"` // app-sync-service, environment-validator, context-correlator
-	Timeout         time.Duration     `json:"timeout"`
-	RetryPolicy     GitOpsRetryPolicy `json:"retry_policy"`
+	CommandType   string            `json:"command_type"`   // sync, validate, inspect, correlate
+	TargetService string            `json:"target_service"` // app-sync-service, environment-validator, context-correlator
+	Timeout       time.Duration     `json:"timeout"`
+	RetryPolicy   GitOpsRetryPolicy `json:"retry_policy"`
 }
 
 type GitOpsResultMessage struct {
 	GitOpsMessageEnvelope
-	ServiceName                string                     `json:"service_name"`
-	Status                     string                     `json:"status"` // healthy, degraded, unhealthy, error
-	CompletedAt                time.Time                  `json:"completed_at"`
-	ErrorMessage               string                     `json:"error_message,omitempty"`
-	ResultPayload              interface{}                `json:"result_payload"`
-	AppManifestData            *AppManifestResult         `json:"app_manifest_data,omitempty"`
-	EnvironmentManifestData    *EnvironmentManifestResult `json:"environment_manifest_data,omitempty"`
-	ContextPairingData         *ContextPairingResult      `json:"context_pairing_data,omitempty"`
-	PerformanceMetrics         GitOpsPerformanceMetrics   `json:"performance_metrics"`
+	ServiceName             string                     `json:"service_name"`
+	Status                  string                     `json:"status"` // healthy, degraded, unhealthy, error
+	CompletedAt             time.Time                  `json:"completed_at"`
+	ErrorMessage            string                     `json:"error_message,omitempty"`
+	ResultPayload           interface{}                `json:"result_payload"`
+	AppManifestData         *AppManifestResult         `json:"app_manifest_data,omitempty"`
+	EnvironmentManifestData *EnvironmentManifestResult `json:"environment_manifest_data,omitempty"`
+	ContextPairingData      *ContextPairingResult      `json:"context_pairing_data,omitempty"`
+	PerformanceMetrics      GitOpsPerformanceMetrics   `json:"performance_metrics"`
 }
 
 type GitOpsRetryPolicy struct {
@@ -92,16 +92,16 @@ type GitOpsRetryPolicy struct {
 }
 
 type AppManifestResult struct {
-	AppName             string                  `json:"app_name"`
-	ApplicationSetName  string                  `json:"applicationset_name"`
-	Namespace           string                  `json:"namespace"`
-	SyncStatus          string                  `json:"sync_status"`
-	HealthStatus        string                  `json:"health_status"`
-	HelmSources         []HelmSourceStatus      `json:"helm_sources"`
-	GitSources          []GitSourceStatus       `json:"git_sources"`
-	Applications        []ApplicationStatus     `json:"applications"`
-	LastSyncTime        *time.Time              `json:"last_sync_time,omitempty"`
-	Generator           ApplicationSetGenerator `json:"generator"`
+	AppName            string                  `json:"app_name"`
+	ApplicationSetName string                  `json:"applicationset_name"`
+	Namespace          string                  `json:"namespace"`
+	SyncStatus         string                  `json:"sync_status"`
+	HealthStatus       string                  `json:"health_status"`
+	HelmSources        []HelmSourceStatus      `json:"helm_sources"`
+	GitSources         []GitSourceStatus       `json:"git_sources"`
+	Applications       []ApplicationStatus     `json:"applications"`
+	LastSyncTime       *time.Time              `json:"last_sync_time,omitempty"`
+	Generator          ApplicationSetGenerator `json:"generator"`
 }
 
 type HelmSourceStatus struct {
@@ -139,21 +139,21 @@ type ApplicationSetGenerator struct {
 }
 
 type EnvironmentManifestResult struct {
-	EnvironmentName     string                     `json:"environment_name"`
-	VaultValidations    []VaultValidationResult    `json:"vault_validations"`
-	ClusterValidations  []ClusterValidationResult  `json:"cluster_validations"`
-	ValuesFileStatus    []ValuesFileStatus         `json:"values_file_status"`
-	LastValidated       time.Time                  `json:"last_validated"`
+	EnvironmentName    string                    `json:"environment_name"`
+	VaultValidations   []VaultValidationResult   `json:"vault_validations"`
+	ClusterValidations []ClusterValidationResult `json:"cluster_validations"`
+	ValuesFileStatus   []ValuesFileStatus        `json:"values_file_status"`
+	LastValidated      time.Time                 `json:"last_validated"`
 }
 
 type VaultValidationResult struct {
-	VaultPath           string                   `json:"vault_path"`
-	SecretName          string                   `json:"secret_name"`
-	ValidationStatus    string                   `json:"validation_status"` // valid, invalid, missing, error
-	MissingKeys         []string                 `json:"missing_keys,omitempty"`
-	ExtraKeys           []string                 `json:"extra_keys,omitempty"`
-	PodEnvValidations   []PodEnvValidationResult `json:"pod_env_validations"`
-	LastValidated       time.Time                `json:"last_validated"`
+	VaultPath         string                   `json:"vault_path"`
+	SecretName        string                   `json:"secret_name"`
+	ValidationStatus  string                   `json:"validation_status"` // valid, invalid, missing, error
+	MissingKeys       []string                 `json:"missing_keys,omitempty"`
+	ExtraKeys         []string                 `json:"extra_keys,omitempty"`
+	PodEnvValidations []PodEnvValidationResult `json:"pod_env_validations"`
+	LastValidated     time.Time                `json:"last_validated"`
 }
 
 type ClusterValidationResult struct {
@@ -210,21 +210,21 @@ func generateUUID() string {
 func NewGitOpsCommandMessage(customerID, contextName, action, manifestType, user string) *GitOpsCommandMessage {
 	return &GitOpsCommandMessage{
 		GitOpsMessageEnvelope: GitOpsMessageEnvelope{
-			SchemaVersion: 1,
-			MessageID:     generateUUID(),
-			CorrelationID: generateUUID(),
-			CustomerID:    customerID,
-			ContextName:   contextName,
-			Action:        action,
-			ManifestType:  manifestType,
-			RequestedBy:   user,
-			RequestedAt:   time.Now().UTC(),
-			Priority:      5, // Default priority
-			Payload:       make(map[string]interface{}),
+			SchemaVersion:    1,
+			MessageID:        generateUUID(),
+			CorrelationID:    generateUUID(),
+			CustomerID:       customerID,
+			ContextName:      contextName,
+			Action:           action,
+			ManifestType:     manifestType,
+			RequestedBy:      user,
+			RequestedAt:      time.Now().UTC(),
+			Priority:         5, // Default priority
+			Payload:          make(map[string]interface{}),
 			ManifestMetadata: ManifestMetadata{},
 		},
-		CommandType:   "sync", // Default command type
-		Timeout:       5 * time.Minute, // Default timeout
+		CommandType: "sync",          // Default command type
+		Timeout:     5 * time.Minute, // Default timeout
 		RetryPolicy: GitOpsRetryPolicy{
 			MaxRetries:      3,
 			RetryDelay:      30 * time.Second,

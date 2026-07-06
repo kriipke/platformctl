@@ -16,16 +16,16 @@ func (cv *CustomerValidator) ValidateAccess(customerID, contextName string) erro
 	if customerID == "" {
 		return fmt.Errorf("customer ID is required")
 	}
-	
+
 	if contextName == "" {
 		return fmt.Errorf("context name is required")
 	}
-	
+
 	// For Phase 1C, we'll accept all valid customer/context pairs
 	// Real implementation would:
 	// 1. Check if customer exists in the system
 	// 2. Verify customer has permission to access the specific context
 	// 3. Check any RBAC policies that might restrict access
-	
+
 	return nil
 }

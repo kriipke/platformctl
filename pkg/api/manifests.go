@@ -26,9 +26,9 @@ type GetAppResponse struct {
 }
 
 type ListAppsResponse struct {
-	Success bool          `json:"success"`
-	Apps    []models.App  `json:"apps"`
-	Count   int           `json:"count"`
+	Success bool         `json:"success"`
+	Apps    []models.App `json:"apps"`
+	Count   int          `json:"count"`
 }
 
 type UpdateAppRequest struct {

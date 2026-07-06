@@ -23,7 +23,7 @@ func Connect(databaseURL string) (*sqlx.DB, error) {
 	// Configure connection pool
 	maxOpenConns := getEnvAsInt("DB_MAX_OPEN_CONNS", 25)
 	maxIdleConns := getEnvAsInt("DB_MAX_IDLE_CONNS", 5)
-	
+
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
 

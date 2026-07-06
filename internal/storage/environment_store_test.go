@@ -63,7 +63,7 @@ func TestEnvironmentStore_Create(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify timestamps are set
 				assert.NotNil(t, tt.env.Metadata.CreatedAt)
 				assert.NotNil(t, tt.env.Metadata.UpdatedAt)
@@ -132,7 +132,7 @@ func TestEnvironmentStore_Get(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				require.NotNil(t, env)
-				
+
 				// Compare environments (ignoring timestamps)
 				testutil.AssertEnvironmentEqual(t, *tt.expectedEnv, *env)
 			}
@@ -228,7 +228,7 @@ func TestEnvironmentStore_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			env := tt.setupFunc()
 			originalUpdateTime := env.Metadata.UpdatedAt
-			
+
 			err := store.Update(ctx, &env, tt.customerID)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -237,13 +237,13 @@ func TestEnvironmentStore_Update(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify UpdatedAt timestamp is updated
 				assert.NotNil(t, env.Metadata.UpdatedAt)
 				if originalUpdateTime != nil {
 					assert.True(t, env.Metadata.UpdatedAt.After(*originalUpdateTime))
 				}
-				
+
 				// Verify the update by fetching the environment
 				updatedEnv, err := store.Get(ctx, env.Metadata.Name, tt.customerID)
 				assert.NoError(t, err)
@@ -268,7 +268,7 @@ func TestEnvironmentStore_Delete(t *testing.T) {
 	// Create test environments
 	env1 := testutil.CreateTestEnvironment("delete-test-env-1")
 	env2 := testutil.CreateTestEnvironment("delete-test-env-2")
-	
+
 	err := store.Create(ctx, &env1, customerID)
 	require.NoError(t, err)
 	err = store.Create(ctx, &env2, customerID)
@@ -320,7 +320,7 @@ func TestEnvironmentStore_Delete(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify the environment is deleted
 				_, err := store.Get(ctx, tt.envName, tt.customerID)
 				assert.ErrorIs(t, err, storage.ErrNotFound)
@@ -348,7 +348,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 		testutil.CreateTestEnvironment("customer1-env-2"),
 		testutil.CreateTestEnvironmentWithTokenAuth("customer1-env-3"),
 	}
-	
+
 	for _, env := range customer1Envs {
 		err := store.Create(ctx, &env, customerID1)
 		require.NoError(t, err)
@@ -358,7 +358,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 	customer2Envs := []models.Environment{
 		testutil.CreateTestEnvironment("customer2-env-1"),
 	}
-	
+
 	for _, env := range customer2Envs {
 		err := store.Create(ctx, &env, customerID2)
 		require.NoError(t, err)
@@ -398,7 +398,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, envs, tt.expectedCount)
-				
+
 				// Verify all environments belong to the correct customer
 				for _, env := range envs {
 					assert.NotNil(t, env)
@@ -406,7 +406,7 @@ func TestEnvironmentStore_List(t *testing.T) {
 					assert.Equal(t, "platformctl/v1", env.APIVersion)
 					assert.Equal(t, "Environment", env.Kind)
 				}
-				
+
 				// Verify environments are sorted by name
 				if len(envs) > 1 {
 					for i := 1; i < len(envs); i++ {
@@ -509,7 +509,7 @@ func TestEnvironmentStore_ComplexVaultConfiguration(t *testing.T) {
 
 	// Create environment with complex Vault configuration
 	env := testutil.CreateTestEnvironment("complex-vault-env")
-	
+
 	// Add multiple datasources
 	env.Spec.Datasources = map[string]models.VaultDatasource{
 		"postgresql": {
@@ -686,7 +686,7 @@ func TestEnvironmentStore_DifferentAuthMethods(t *testing.T) {
 
 			assert.Equal(t, tt.authConfig.Method, retrievedEnv.Spec.Vault.Auth.Method)
 			assert.Equal(t, tt.authConfig.Token, retrievedEnv.Spec.Vault.Auth.Token)
-			
+
 			if tt.authConfig.Kubernetes != nil {
 				require.NotNil(t, retrievedEnv.Spec.Vault.Auth.Kubernetes)
 				assert.Equal(t, tt.authConfig.Kubernetes.Role, retrievedEnv.Spec.Vault.Auth.Kubernetes.Role)

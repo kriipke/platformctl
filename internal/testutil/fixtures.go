@@ -295,8 +295,8 @@ func CreateTestContext(name, appRef string, deployments []models.ContextDeployme
 				},
 				Monitoring: models.MonitoringConfig{
 					ApplicationSets:       true,
-					VaultSecrets:         true,
-					HelmValues:           true,
+					VaultSecrets:          true,
+					HelmValues:            true,
 					CrossEnvironmentDrift: true,
 				},
 			},
