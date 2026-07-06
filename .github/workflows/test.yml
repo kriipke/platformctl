@@ -189,18 +189,15 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             goodwithtech/dockle:latest ghcr.io/kriipke/platformctl-gateway:test
 
-      - name: Test container runs
+      - name: Test container image is well-formed
         run: |
-          docker run --rm -d --name test-container ghcr.io/kriipke/platformctl-gateway:test
-          sleep 5
-          if docker ps | grep -q test-container; then
-            echo "Container is running successfully"
-            docker stop test-container
-          else
-            echo "Container failed to start"
-            docker logs test-container
-            exit 1
-          fi
+          # The gateway needs a database + RabbitMQ to stay up (it runs schema
+          # migrations on startup), and neither is available in this job — real
+          # startup is exercised by the Integration Tests job against a kind
+          # cluster. Here we just smoke-test that the image is well-formed: the
+          # service binary is present and executable at the expected path.
+          docker run --rm --entrypoint /bin/sh ghcr.io/kriipke/platformctl-gateway:test \
+            -c 'test -x /app/platformctl && echo "platformctl binary present and executable"'
 
   # Integration tests with kind cluster
   integration-tests:
