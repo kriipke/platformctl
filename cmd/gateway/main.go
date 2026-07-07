@@ -104,7 +104,7 @@ func main() {
 	middlewareStack.ApplyToGin(router)
 
 	// Setup API routes
-	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler)
+	setupAPIRoutes(router, appHandler, environmentHandler, contextHandler, actionHandler, statusHandler, cfg.AdminUser, cfg.AdminPassword)
 
 	// Start the health/readiness server on the dedicated health port. Kubernetes
 	// probes liveness (/health) and readiness (/ready) on this port (8081); the
@@ -151,10 +151,10 @@ func main() {
 	log.Println("Server exited")
 }
 
-func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environmentHandler *handlers.EnvironmentHandler, contextHandler *handlers.ContextHandler, actionHandler *handlers.GitOpsActionHandler, statusHandler *handlers.GitOpsStatusHandler) {
+func setupAPIRoutes(router *gin.Engine, appHandler *handlers.AppHandler, environmentHandler *handlers.EnvironmentHandler, contextHandler *handlers.ContextHandler, actionHandler *handlers.GitOpsActionHandler, statusHandler *handlers.GitOpsStatusHandler, adminUser, adminPassword string) {
 	// API routes with authentication
 	apiGroup := router.Group("/api/v1")
-	apiGroup.Use(ginBasicAuthMiddleware())
+	apiGroup.Use(ginBasicAuthMiddleware(adminUser, adminPassword))
 	// Populate the per-request customer/tenant context that the downstream
 	// handlers read. Without this, every /api/v1 route returns 401 even after
 	// basic auth succeeds. Must run after ginBasicAuthMiddleware so the
@@ -228,11 +228,26 @@ func ginHealthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Gin-compatible basic auth middleware
-func ginBasicAuthMiddleware() gin.HandlerFunc {
-	return gin.BasicAuth(gin.Accounts{
-		"admin": "admin", // TODO: Use proper authentication
-	})
+// ginBasicAuthMiddleware guards the /api/v1 routes with HTTP basic auth using
+// the admin credentials from configuration (GATEWAY_ADMIN_USER /
+// GATEWAY_ADMIN_PASSWORD, sourced from a Kubernetes Secret in real deploys).
+//
+// It fails CLOSED: if no password is configured it rejects every request with
+// 503 instead of falling back to a default credential, so an unconfigured
+// gateway can never be reached with a well-known password.
+func ginBasicAuthMiddleware(username, password string) gin.HandlerFunc {
+	if password == "" {
+		return func(c *gin.Context) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"error": "admin credentials not configured; set GATEWAY_ADMIN_PASSWORD",
+			})
+		}
+	}
+	if username == "" {
+		username = "admin"
+	}
+	// gin.BasicAuth compares credentials in constant time.
+	return gin.BasicAuth(gin.Accounts{username: password})
 }
 
 // customerNamespaceUUID is a fixed namespace used to derive a stable, deterministic
