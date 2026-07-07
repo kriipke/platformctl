@@ -22,9 +22,20 @@ rabbitmq:
 
 services:
   gateway:
+    # Public API ingress. DNS A record api-stage.opsdash.dev -> 138.197.242.49
+    # (ingress-nginx LB, DNSimple acct 146978) already resolves. cert-manager
+    # issues the TLS cert into secret platformctl-stage-tls via the
+    # letsencrypt-prod HTTP-01 solver.
     ingress:
-      enabled: false
-      # When ready, set a stage host, e.g.:
-      # hosts:
-      #   - host: stage.platformctl.com
-      #     path: /
+      enabled: true
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      tls:
+        - hosts: [api-stage.opsdash.dev]
+          secretName: platformctl-stage-tls
+      hosts:
+        - host: api-stage.opsdash.dev
+          path: /
