@@ -36,6 +36,14 @@ secretNames:
   # Generate with an `apiKey`-capable ArgoCD local account, e.g.:
   #   argocd account generate-token --account platformctl
   argocdToken: platformctl-argocd-token
+  # Gateway basic-auth admin credentials (keys `username`, `password`). Feeds the
+  # gateway's /api/v1 basic auth. Create out-of-band per namespace, e.g.:
+  #   kubectl -n <ns> create secret generic platformctl-gateway-admin \
+  #     --from-literal=username=admin --from-literal=password="$(openssl rand -base64 24)"
+  # Rotate by editing the secret + `kubectl -n <ns> rollout restart deploy/platformctl-gateway`
+  # (secretKeyRef env is read only at pod start). If absent, the gateway fails
+  # closed — /api/v1 returns 503 until the secret exists.
+  gatewayAdmin: platformctl-gateway-admin
 
 # -----------------------------------------------------------------------------
 # Non-secret runtime config. Rendered into one ConfigMap and mounted into every
@@ -139,6 +147,9 @@ services:
     dbSecret: direct
     httpPort: 8080
     serviceAccount: platformctl-service-account
+    # Mount admin basic-auth creds from secretNames.gatewayAdmin as
+    # GATEWAY_ADMIN_USER / GATEWAY_ADMIN_PASSWORD.
+    adminAuth: true
     env:
       PORT: "8080"
     resources:
