@@ -17,6 +17,14 @@ type Config struct {
 	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"30s"`
 	LogLevel     string        `env:"LOG_LEVEL" envDefault:"info"`
 
+	// Gateway admin basic-auth credentials (used only by cmd/gateway). Sourced
+	// from a Kubernetes Secret in real deploys. AdminPassword has NO default:
+	// when it is empty the gateway fails closed (all /api/v1 routes return 503)
+	// rather than falling back to a well-known password. Rotate by editing the
+	// Secret and restarting the gateway (secretKeyRef env is read only at boot).
+	AdminUser     string `env:"GATEWAY_ADMIN_USER" envDefault:"admin"`
+	AdminPassword string `env:"GATEWAY_ADMIN_PASSWORD"`
+
 	// Database configuration
 	DatabaseURL      string        `env:"DATABASE_URL" envDefault:"postgres://localhost/platformctl?sslmode=disable"`
 	MaxDBConnections int           `env:"MAX_DB_CONNECTIONS" envDefault:"25"`

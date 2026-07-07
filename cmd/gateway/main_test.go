@@ -31,7 +31,7 @@ func newAuthTestRouter() *gin.Engine {
 	router := gin.New()
 
 	apiGroup := router.Group("/api/v1")
-	apiGroup.Use(ginBasicAuthMiddleware())
+	apiGroup.Use(ginBasicAuthMiddleware("admin", "admin"))
 	apiGroup.Use(ginCustomerContextMiddleware())
 
 	apiGroup.GET("/contexts", ginHandlerWrapper(func(w http.ResponseWriter, r *http.Request) {

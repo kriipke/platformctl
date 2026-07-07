@@ -89,6 +89,25 @@ spec:
               key: ARGOCD_AUTH_TOKEN
               optional: true
         {{- end }}
+        {{- if $merged.adminAuth }}
+        # Gateway basic-auth admin credentials from the secret named by
+        # secretNames.gatewayAdmin. optional:true so the pod still boots if the
+        # secret is missing — the gateway then fails closed (/api/v1 -> 503).
+        # secretKeyRef env is resolved only at pod start: after creating or
+        # rotating the secret, `kubectl rollout restart deploy/platformctl-gateway`.
+        - name: GATEWAY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ $root.Values.secretNames.gatewayAdmin }}
+              key: username
+              optional: true
+        - name: GATEWAY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $root.Values.secretNames.gatewayAdmin }}
+              key: password
+              optional: true
+        {{- end }}
         {{- range $k, $v := $merged.env }}
         - name: {{ $k }}
           value: {{ $v | quote }}
