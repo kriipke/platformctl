@@ -139,10 +139,31 @@ Every command accepts `-o table|json|yaml`. Configuration resolves flags → env
 defaults (`--server http://localhost:8080`, basic auth `admin`/`admin`). Manifests are validated
 client-side before they are sent. See [docs/cli.md](docs/cli.md) for the full reference.
 
-> The gateway authenticates every `/api/v1` route with HTTP basic auth but does not yet populate the
-> tenant/customer context its handlers require, so authenticated calls currently return `401`/`unauthorized`
-> until that middleware is wired up. The CLI already sends basic auth plus `X-Customer-ID`/`X-User-ID`
-> (via `--customer-id`) and a `--token` bearer, so it is ready once the server side lands.
+### Config file
+
+Rather than passing `--server`/`--username`/`--password` on every call, drop a config file at
+`$HOME/.platformctl.yaml` (loaded automatically) and point it at the gateway with the admin basic-auth
+credentials from the `platformctl-gateway-admin` secret (see
+[One-time setup per environment](#one-time-setup-per-environment)):
+
+```yaml
+server: https://api-stage.opsdash.dev   # gateway base URL — the CLI appends /api/v1
+username: admin
+password: "REPLACE-WITH-platformctl-gateway-admin-PASSWORD"
+output: table                            # table | json | yaml
+# customerId: acme                       # optional tenant; sent as X-Customer-ID
+# insecure: false                        # skip TLS verification — dev / self-signed only
+```
+
+```bash
+chmod 600 ~/.platformctl.yaml            # holds a plaintext password — keep it private, never commit it
+platformctl context list                 # now works with no flags
+```
+
+JSON is also accepted — the same keys parse from e.g. `~/.platformctl.json`, but that filename is **not**
+auto-loaded, so pass it explicitly: `platformctl --config ~/.platformctl.json context list`. Do **not**
+set `token`: a bearer token takes precedence over basic auth, but the gateway only accepts basic auth
+today, so a token yields `401`.
 
 ---
 
@@ -155,7 +176,7 @@ One Helm chart ([charts/platformctl](charts/platformctl/)), one values file per 
 | stage | `platformctl-stage` | `charts/platformctl/values-stage.yaml` |
 | prod | `platformctl-prod` | `charts/platformctl/values-prod.yaml` |
 
-Postgres is external (DO managed); RabbitMQ is bundled in-cluster. The chart **references** two database secrets per namespace but never creates them.
+Postgres is external (DO managed); RabbitMQ is bundled in-cluster. The chart **references** its database and gateway-admin secrets per namespace but never creates them.
 
 ### One-time setup per environment
 
@@ -183,6 +204,25 @@ kubectl -n platformctl-stage create secret generic platformctl-credentials \
 kubectl -n platformctl-stage create secret generic platformctl-pool-credentials \
   --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_stage_pool?sslmode=require'
 ```
+
+**Gateway admin credentials** — the gateway guards every `/api/v1` route with HTTP basic auth read from the `platformctl-gateway-admin` secret (keys `username` / `password`). It fails **closed**: without the secret the gateway returns `503` on `/api/v1` instead of falling back to a default credential, so create it before the first deploy:
+
+```bash
+kubectl -n platformctl-stage create secret generic platformctl-gateway-admin \
+  --from-literal=username=admin \
+  --from-literal=password="$(openssl rand -base64 24)"
+```
+
+Rotate the password by replacing the secret and restarting the gateway — the value is read only at pod start:
+
+```bash
+kubectl -n platformctl-stage create secret generic platformctl-gateway-admin \
+  --from-literal=username=admin --from-literal=password="$(openssl rand -base64 24)" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n platformctl-stage rollout restart deploy/platformctl-gateway
+```
+
+Read the current password back with `kubectl -n platformctl-stage get secret platformctl-gateway-admin -o jsonpath='{.data.password}' | base64 -d`, and use it as the CLI `password` (see [CLI](#cli)).
 
 For manual deploys the `ghcr-pull` image-pull secret must also exist in the namespace — CI creates it from `GHCR_PULL_PAT`, so it's only missing on a namespace CI has never touched.
 
