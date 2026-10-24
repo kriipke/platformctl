@@ -44,12 +44,13 @@ secretNames:
   # (secretKeyRef env is read only at pod start). If absent, the gateway fails
   # closed — /api/v1 returns 503 until the secret exists.
   gatewayAdmin: platformctl-gateway-admin
+  # Required in every namespace. Keys: username, password, RABBITMQ_URL.
+  # Provision out of band before installing the chart (see README).
+  rabbitmq: platformctl-rabbitmq-credentials
 
 # -----------------------------------------------------------------------------
 # Non-secret runtime config. Rendered into one ConfigMap and mounted into every
-# service via envFrom. The app consumes DATABASE_URL + RABBITMQ_URL as whole
-# connection strings; the per-field DATABASE_HOST/PORT/... vars are intentionally
-# omitted (the binaries ignore them).
+# service via envFrom. DATABASE_URL and RABBITMQ_URL come from Secrets.
 # -----------------------------------------------------------------------------
 config:
   LOG_LEVEL: "info"
@@ -74,20 +75,13 @@ config:
   # Cap on total DB connections — keep LOW on shared managed Postgres instances
   # (the DO instance has a small connection limit). Override per env.
   MAX_DB_CONNECTIONS: "5"
-  # Message broker connection string. Points at the in-cluster RabbitMQ Service
-  # below when rabbitmq.enabled=true. Override this if you externalize the broker.
-  RABBITMQ_URL: "amqp://platformctl:platformctl@rabbitmq:5672/"
-
 # -----------------------------------------------------------------------------
-# Bundled in-cluster RabbitMQ (toggleable). Set enabled=false and point
-# config.RABBITMQ_URL at a managed broker to externalize it.
+# Bundled in-cluster RabbitMQ (toggleable). When disabled, provide an external
+# broker URL in the same Secret referenced by secretNames.rabbitmq.
 # -----------------------------------------------------------------------------
 rabbitmq:
   enabled: true
   image: rabbitmq:3.12-management-alpine
-  # Credentials for the bundled broker. Must match config.RABBITMQ_URL above.
-  username: platformctl
-  password: platformctl
   vhost: "/"
   persistence:
     enabled: true

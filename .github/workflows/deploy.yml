@@ -135,6 +135,16 @@ jobs:
             --docker-password="${{ secrets.GHCR_PULL_PAT }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Check RabbitMQ credentials
+        run: |
+          NS="${{ steps.target.outputs.namespace }}"
+          for key in username password RABBITMQ_URL; do
+            if [[ -z "$(kubectl -n "$NS" get secret platformctl-rabbitmq-credentials -o "jsonpath={.data.$key}" 2>/dev/null)" ]]; then
+              echo "::error::Missing $key in platformctl-rabbitmq-credentials in namespace $NS. Provision it as described in README.md."
+              exit 1
+            fi
+          done
+
       - name: Helm upgrade --install
         run: |
           set -euo pipefail
