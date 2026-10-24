@@ -7,12 +7,13 @@ Services:
   - {{ include "platformctl.fullname" $ }}-{{ $name }}
 {{- end }}
 
-RabbitMQ (in-cluster): {{ if .Values.rabbitmq.enabled }}enabled{{ else }}disabled — expecting external broker at config.RABBITMQ_URL{{ end }}
+RabbitMQ (in-cluster): {{ if .Values.rabbitmq.enabled }}enabled{{ else }}disabled — expecting an external broker URL in the RabbitMQ Secret{{ end }}
 
-Reminder — this chart does NOT create the database secrets. They must already exist
+Reminder — this chart does NOT create the service credentials. They must already exist
 in namespace "{{ .Release.Namespace }}":
   - {{ .Values.secretNames.direct }}   (key DATABASE_URL, direct connection :25060 — used by gateway)
   - {{ .Values.secretNames.pool }}      (key DATABASE_URL, PgBouncer pool :25061 — used by all other services)
+  - {{ .Values.secretNames.rabbitmq }}  (keys username, password, RABBITMQ_URL — used by RabbitMQ and services)
 
 Check rollout:
   kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "platformctl.fullname" . }}-gateway
