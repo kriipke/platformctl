@@ -245,7 +245,7 @@ jobs:
             kind load docker-image ghcr.io/kriipke/platformctl-$service:test --name platformctl-test
           done
 
-      - name: Provision namespace, throwaway Postgres, and DB secrets
+      - name: Provision namespace, throwaway Postgres, and service secrets
         run: |
           NS=platformctl-ci
           kubectl create namespace "$NS"
@@ -260,6 +260,13 @@ jobs:
           URL='postgres://platformctl:REPLACE_WITH_RUNTIME_PASSWORD@postgres:5432/platformctl?sslmode=disable'
           kubectl create secret generic platformctl-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
           kubectl create secret generic platformctl-pool-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
+          # These credentials are confined to the disposable kind cluster.
+          BROKER_PASSWORD="$(openssl rand -hex 24)"
+          kubectl create secret generic platformctl-rabbitmq-credentials -n "$NS" \
+            --from-literal=username=platformctl \
+            --from-literal="password=$BROKER_PASSWORD" \
+            --from-literal="RABBITMQ_URL=amqp://platformctl:${BROKER_PASSWORD}@rabbitmq:5672/"
+          unset BROKER_PASSWORD
 
       - name: Helm install
         run: |

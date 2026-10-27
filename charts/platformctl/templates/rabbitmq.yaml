@@ -49,9 +49,15 @@ spec:
           name: management
         env:
         - name: RABBITMQ_DEFAULT_USER
-          value: {{ $rmq.username | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretNames.rabbitmq }}
+              key: username
         - name: RABBITMQ_DEFAULT_PASS
-          value: {{ $rmq.password | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretNames.rabbitmq }}
+              key: password
         - name: RABBITMQ_DEFAULT_VHOST
           value: {{ $rmq.vhost | quote }}
         {{- if $rmq.persistence.enabled }}

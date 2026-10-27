@@ -1,0 +1,23 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.platformctl.yaml
+.platformctl.json
+
+# Build and dependency artifacts
+/bin/
+/node_modules/
+*.test
+coverage.out
+
+# Local tooling and operating system files
+/.sandcastle/
+.DS_Store
+*.log
+.idea/
+.vscode/

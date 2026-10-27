@@ -10,8 +10,8 @@ config:
   # Shared DO managed Postgres has a small connection limit — keep this low.
   MAX_DB_CONNECTIONS: "2"
 
-# Bundled broker in-cluster (flip to false + set config.RABBITMQ_URL to move to
-# a managed broker).
+# Bundled broker in-cluster (flip to false + set RABBITMQ_URL in the RabbitMQ
+# credentials Secret to move to a managed broker).
 rabbitmq:
   enabled: true
   persistence:

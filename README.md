@@ -2,7 +2,9 @@
 
 GitOps monitoring platform for applications deployed via ArgoCD ApplicationSets, Helm umbrella charts, and Vault-backed secrets. It watches the whole delivery chain — ApplicationSet → generated Applications → Helm releases → VaultStaticSecrets → pod environment variables — and materializes a per-context, per-environment health read model behind a REST API.
 
-**Status (2026-07-02):** stage deploys are green — all 7 services build in CI, deploy via Helm, and pass their Kubernetes probes on the DigitalOcean cluster. Prod has not been deployed yet. A `platformctl` CLI now wraps the REST API (`make cli`; see [CLI](#cli) below). Sections below marked *(planned)* are aspirational.
+Platform engineers and operators can use the API and CLI to inspect deployment health across environments and trigger GitOps checks.
+
+**Last verified deployment status (2026-07-02):** stage deploys were green — all 7 services built in CI, deployed via Helm, and passed their Kubernetes probes on the DigitalOcean cluster. Prod had not been deployed. This is the last documented check, not a claim about current cluster health. A `platformctl` CLI wraps the REST API (`make cli`; see [CLI](#cli) below). Sections below marked *(planned)* are aspirational.
 
 ---
 
@@ -96,7 +98,7 @@ make docker-build       # build container images
 make help               # everything else
 ```
 
-Local dependencies come from [deployments/docker-compose.dev.yml](deployments/docker-compose.dev.yml):
+Local dependencies come from [deployments/docker-compose.dev.yml](deployments/docker-compose.dev.yml). Copy [.env.example](.env.example) to `.env` for local configuration; `.env` is ignored by Git. The Compose credentials below are disposable development defaults, not deployment credentials.
 
 ```bash
 make dev-up             # start Postgres 14 + RabbitMQ (management UI on :15672)
@@ -176,7 +178,7 @@ One Helm chart ([charts/platformctl](charts/platformctl/)), one values file per 
 | stage | `platformctl-stage` | `charts/platformctl/values-stage.yaml` |
 | prod | `platformctl-prod` | `charts/platformctl/values-prod.yaml` |
 
-Postgres is external (DO managed); RabbitMQ is bundled in-cluster. The chart **references** its database and gateway-admin secrets per namespace but never creates them.
+Postgres is external (DO managed); RabbitMQ is bundled in-cluster. The chart **references** database, broker, and gateway-admin secrets per namespace but never creates them.
 
 ### One-time setup per environment
 
@@ -204,6 +206,20 @@ kubectl -n platformctl-stage create secret generic platformctl-credentials \
 kubectl -n platformctl-stage create secret generic platformctl-pool-credentials \
   --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<SUBDOMAIN>.db.ondigitalocean.com:25061/platformctl_stage_pool?sslmode=require'
 ```
+
+**RabbitMQ credentials** — create `platformctl-rabbitmq-credentials` in each namespace before installing the chart. Its `username`, `password`, and `RABBITMQ_URL` keys must agree. Use a separate generated password for each namespace:
+
+```bash
+NS=platformctl-stage
+broker_password="$(openssl rand -hex 24)"
+kubectl -n "$NS" create secret generic platformctl-rabbitmq-credentials \
+  --from-literal=username=platformctl \
+  --from-literal="password=$broker_password" \
+  --from-literal="RABBITMQ_URL=amqp://platformctl:${broker_password}@rabbitmq:5672/"
+unset broker_password
+```
+
+For an existing RabbitMQ volume, `RABBITMQ_DEFAULT_PASS` does not change an existing account. Rotate that account in RabbitMQ and update the Secret together, then restart RabbitMQ and the services so their environment variables pick up the new values. The old password appeared in Git history; treat it as exposed if it was ever used outside disposable development.
 
 **Gateway admin credentials** — the gateway guards every `/api/v1` route with HTTP basic auth read from the `platformctl-gateway-admin` secret (keys `username` / `password`). It fails **closed**: without the secret the gateway returns `503` on `/api/v1` instead of falling back to a default credential, so create it before the first deploy:
 
@@ -295,7 +311,7 @@ Common failure modes: a consumer pod crash-looping usually means its health serv
 - New Relic integration service
 - Redis caching, JWT auth, RBAC/tenant isolation
 
-See [ROADMAP.md](ROADMAP.md) for the full plan and [docs/phases/](docs/phases/) for the phase-by-phase design docs.
+See [ROADMAP.md](ROADMAP.md) for scoped candidate work and [docs/phases/](docs/phases/) for earlier design notes.
 
 ---
 
