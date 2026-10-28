@@ -1,0 +1,14 @@
+title = "platformctl credential scanning"
+
+[extend]
+useDefault = true
+
+# These are Vault reference paths in synthetic SQL fixtures, not key material.
+# Both the file path and the detected value must match; credentials in the same
+# file remain subject to the default rules.
+[[allowlists]]
+description = "Synthetic Vault reference paths"
+condition = "AND"
+paths = ['''^scripts/generate-sample-data\.sql$''']
+regexTarget = "secret"
+regexes = ['''^(?:acme/prod/jwt|globalbank/(?:dev/encryption|test/encryption|prod/(?:hsm|encryption)))$''']

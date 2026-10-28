@@ -257,7 +257,7 @@ jobs:
           kubectl expose deployment postgres -n "$NS" --port=5432 --target-port=5432
           kubectl rollout status deployment/postgres -n "$NS" --timeout=180s
           # In CI both direct + pool secrets point at the same throwaway DB.
-          URL='postgres://platformctl:REPLACE_WITH_RUNTIME_PASSWORD@postgres:5432/platformctl?sslmode=disable'
+          URL='postgres://platformctl:platformctl@postgres:5432/platformctl?sslmode=disable'
           kubectl create secret generic platformctl-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
           kubectl create secret generic platformctl-pool-credentials -n "$NS" --from-literal=DATABASE_URL="$URL"
           # These credentials are confined to the disposable kind cluster.

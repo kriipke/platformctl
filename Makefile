@@ -139,8 +139,8 @@ docker-run-%: ## Run specific service in Docker (e.g., make docker-run-gateway)
 	echo "Running $$service_name in Docker..."; \
 	docker run -it --rm \
 		-p 8080:8080 -p 8081:8081 -p 9090:9090 \
-		-e DATABASE_URL=postgres://platformctl:REPLACE_WITH_RUNTIME_PASSWORD@host.docker.internal:5432/platformctl \
-		-e RABBITMQ_URL=amqp://platformctl:REPLACE_WITH_RUNTIME_PASSWORD@host.docker.internal:5672/ \
+		-e DATABASE_URL=postgres://platformctl:platformctl@host.docker.internal:5432/platformctl \
+		-e RABBITMQ_URL=amqp://platformctl:platformctl@host.docker.internal:5672/ \
 		$(REGISTRY)/$$service_name:latest
 
 # Database targets
