@@ -140,7 +140,7 @@ jobs:
           NS="${{ steps.target.outputs.namespace }}"
           for key in username password RABBITMQ_URL; do
             if [[ -z "$(kubectl -n "$NS" get secret platformctl-rabbitmq-credentials -o "jsonpath={.data.$key}" 2>/dev/null)" ]]; then
-              echo "::error::Missing $key in platformctl-rabbitmq-credentials in namespace $NS. Provision it as described in README.md."
+              echo "::error::Missing $key in platformctl-rabbitmq-credentials in namespace $NS. Provision it as described in docs/deployment.adoc."
               exit 1
             fi
           done

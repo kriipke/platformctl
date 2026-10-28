@@ -37,7 +37,7 @@ coverage.out
 # Documentation
 docs/
 *.md
-README.md
+*.adoc
 
 # Development environment
 .env

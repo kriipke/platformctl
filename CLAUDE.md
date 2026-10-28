@@ -422,7 +422,7 @@ readinessProbe:
 ## 📚 Documentation References
 
 ### Essential Reading Order
-1. [README.md](./README.md) - Architecture overview
+1. [README.adoc](./README.adoc) - Architecture overview
 2. [ROADMAP.md](./ROADMAP.md) - Full feature roadmap  
 3. [docs/phases/PHASE-1A.md](./docs/phases/PHASE-1A.md) - Start here for implementation
 4. [docs/data-models/](./docs/data-models/) - Data structure references

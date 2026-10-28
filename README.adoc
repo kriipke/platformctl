@@ -1,0 +1,257 @@
+= platformctl
+
+`platformctl` is a self-hosted GitOps tool for platform engineers investigating failed deployments and differences between environments. Its vision is to give engineers an evidence backed explanation of an application's deployment state, and a controlled way to resolve problems.
+
+The goal is to answer four questions: what is deployed, what differs from the intended configuration, what is failing, and what to check or change next. By connecting evidence from Argo CD, Kubernetes, Helm values, and Vault, platformctl aims to help a platform team trace a deployment failure to the resources and configuration involved.
+
+The project organizes that information around three manifests: an *App* describes an application and its Helm sources and Argo CD ApplicationSets; an *Environment* describes a cluster, Helm values, and Vault secrets; and a *Context* pairs an App with one or more Environments.
+
+The current Go implementation provides manifest storage, asynchronous GitOps actions, and aggregated status queries through an HTTP gateway, CLI, RabbitMQ workers, and a PostgreSQL read model. The CLI manages Contexts and invokes their actions; App and Environment CRUD is available through the HTTP API. Some integration checks still use simulated results. Completing those integrations and making every finding traceable to current evidence are the next steps toward the vision, as described in link:ROADMAP.md[the roadmap].
+
+== How it works
+
+[source,text]
+----
+CLI or HTTP client -> gateway -> PostgreSQL (App, Environment, Context)
+                         |
+                         +-> RabbitMQ commands -> GitOps workers
+                                                    |
+                         PostgreSQL read model <- result aggregator <- RabbitMQ results
+                                  |
+                       gateway status endpoints
+----
+
+The gateway validates and stores manifests, publishes action messages, and returns a correlation ID when an action is queued. Workers process those messages asynchronously. The aggregator writes their results to a read model that the status endpoints query. A successful action request means the command was published; it does not mean the GitOps work has finished.
+
+The runnable services under `cmd/` are:
+
+* `gateway`: versioned HTTP API, authentication, manifest CRUD, action publishing, and status queries.
+* `app-sync-svc`: Argo CD ApplicationSet inspection and generated application sync.
+* `environment-validation-svc`: Vault, cluster, and Helm values validation.
+* `context-correlation-svc`: App and Environment pairing checks.
+* `multi-environment-kube-svc`: workload comparison across environments.
+* `customer-git-branch-svc`: customer branch and Helm values correlation.
+* `gitops-aggregator`: consumes worker results and updates the PostgreSQL read model.
+* `cli`: the `platformctl` command.
+
+== Repository layout
+
+[source,text]
+----
+cmd/                  Service and CLI entry points
+internal/             Configuration, clients, handlers, storage, and workers
+pkg/api/              Shared HTTP and message types
+migrations/           PostgreSQL schema migrations
+charts/platformctl/   Helm chart and stage/prod values
+.github/workflows/    Build, deployment, and validation workflows
+deployments/          Local Compose dependencies
+scripts/              Image build and cleanup helpers
+test/                 Integration tests
+----
+
+== Run the gateway locally
+
+You need Go 1.24.6 or newer and Docker with Compose. From the repository root, start the local PostgreSQL and RabbitMQ dependencies:
+
+[source,sh]
+----
+docker compose -f deployments/docker-compose.dev.yml up -d
+----
+
+Start the gateway in another terminal:
+
+[source,sh]
+----
+export DATABASE_URL='postgres://platformctl:platformctl@localhost:5432/platformctl?sslmode=disable'
+export RABBITMQ_URL='amqp://guest:guest@localhost:5672/'
+export GATEWAY_ADMIN_PASSWORD='local-only-password'
+export PORT=8080
+go run ./cmd/gateway
+----
+
+The gateway applies the SQL migrations in `migrations/` on startup. `PORT=8080` is explicit because the current configuration default includes a colon and the gateway adds its own colon when binding. The Compose file starts dependencies only; it does not start the Go services.
+
+Check the gateway and list Contexts:
+
+[source,sh]
+----
+curl http://localhost:8080/health
+curl --user admin http://localhost:8080/api/v1/contexts
+----
+
+For asynchronous actions and populated status results, also run `gitops-aggregator` and the relevant worker from `cmd/`. Each service connects to the same PostgreSQL and RabbitMQ instances. When running multiple services on one host, assign distinct `OBS_HEALTH_CHECK_PORT` and `OBS_METRICS_PORT` values to each process to avoid port conflicts.
+
+Compose exposes PostgreSQL on port 5432, RabbitMQ on 5672, and the RabbitMQ management UI on 15672. Override `POSTGRES_HOST_PORT`, `RABBITMQ_HOST_PORT`, or `RABBITMQ_MGMT_HOST_PORT` if a port is already in use, and adjust connection URLs accordingly. For example:
+
+[source,sh]
+----
+POSTGRES_HOST_PORT=55432 docker compose -f deployments/docker-compose.dev.yml up -d
+docker compose -f deployments/docker-compose.dev.yml logs -f
+docker compose -f deployments/docker-compose.dev.yml down
+----
+
+The `down` command stops the dependencies and preserves their named data volumes.
+
+== Manifest model
+
+All three resources use `apiVersion: platformctl/v1`, a `kind` of `App`, `Environment`, or `Context`, and a DNS compatible `metadata.name`.
+
+* *App* specifies application identity and version, Helm chart sources, Argo CD ApplicationSets, and Environment references.
+* *Environment* specifies a cluster and namespace, a Git based Helm values source, Vault configuration, secret sources, and optional pod environment checks.
+* *Context* specifies an App reference, deployment pairings with Environment references, and GitOps monitoring options. At least one deployment must be active. The first deployment's App and Environment references are stored as the Context's primary pairing.
+
+Create an App and Environment before creating a Context that references them. The API stores each resource under a customer ID. Manifest types and validation rules are defined in `internal/models/` and `internal/validation/`.
+
+== CLI
+
+Build the CLI for your machine with:
+
+[source,sh]
+----
+go build -o ./bin/platformctl ./cmd/cli
+----
+
+With the local gateway running, for example:
+
+[source,sh]
+----
+export PLATFORMCTL_PASSWORD='local-only-password'
+./bin/platformctl context list
+./bin/platformctl context get my-context
+./bin/platformctl context create context.yaml
+./bin/platformctl context run my-context sync-apps
+./bin/platformctl context status my-context --watch
+----
+
+`context` also supports `update` and `delete`. Create and update accept YAML or JSON files or standard input. Available actions are `sync-apps`, `validate-environments`, `correlate-contexts`, `correlate-multi-environment`, and `inspect-manifests`; `inspect-manifests` accepts `--type app|environment|context|all`. Use `--output table|json|yaml` for CLI output. `platformctl --help` shows the full command and flag reference.
+
+CLI settings come from flags, then `PLATFORMCTL_*` environment variables, then `$HOME/.platformctl.yaml`, then built in defaults. Useful settings include `PLATFORMCTL_SERVER`, `PLATFORMCTL_USERNAME`, `PLATFORMCTL_PASSWORD`, and `PLATFORMCTL_CUSTOMER_ID`. The CLI sends the customer ID as `X-Customer-ID` when configured.
+
+For persistent settings, create `$HOME/.platformctl.yaml` with the gateway base URL and credentials:
+
+[source,yaml]
+----
+server: http://localhost:8080
+username: admin
+password: "REPLACE-WITH-GATEWAY-PASSWORD"
+output: table
+# customerId: acme
+----
+
+The CLI appends `/api/v1` to the base URL. Keep this file private with `chmod 600 ~/.platformctl.yaml` and do not commit it. An alternate YAML or JSON configuration file can be selected with `--config`; only `$HOME/.platformctl.yaml` is loaded automatically.
+
+The CLI exposes a `--token` option, but the running gateway currently authenticates `/api/v1` with HTTP Basic Auth. Use `--username` and `--password` with this gateway.
+
+Shell completion is available for Bash, Zsh, Fish, and PowerShell:
+
+[source,sh]
+----
+./bin/platformctl completion zsh
+----
+
+See link:docs/cli.md[the CLI reference] and link:docs/examples/context.yaml[the example Context manifest] for additional usage. Create the referenced App and Environment before using the example Context.
+
+== HTTP API
+
+All routes below are under `/api/v1` and require gateway Basic Auth. The gateway uses `GATEWAY_ADMIN_USER` (default `admin`) and `GATEWAY_ADMIN_PASSWORD`. When the password is unset, protected routes return HTTP 503.
+
+[cols="2,5",options="header"]
+|===
+|Route |Purpose
+
+|`GET, POST /apps`; `GET, PUT, DELETE /apps/:name`
+|Create, list, read, update, and delete Apps.
+
+|`GET, POST /environments`; `GET, PUT, DELETE /environments/:name`
+|Create, list, read, update, and delete Environments.
+
+|`GET, POST /contexts`; `GET, PUT, DELETE /contexts/:name`
+|Create, list, read, update, and delete Contexts.
+
+|`POST /contexts/:name/actions/{action}`
+|Queue one of the five Context actions listed above.
+
+|`GET /gitops/contexts/status`; `GET /gitops/contexts/:contextName/status`
+|List or read aggregated Context status.
+
+|`GET /gitops/contexts/:contextName/health`
+|Read Context health.
+
+|`GET /gitops/contexts/:contextName/apps/:appName/status`; `GET /gitops/contexts/:contextName/apps/:appName/environments/status`
+|Read App manifest and multi-environment status.
+
+|`GET /gitops/contexts/:contextName/environments/:environmentName/status`; `GET /gitops/contexts/:contextName/environments/:environmentName/vault/status`
+|Read Environment and Vault validation status.
+
+|`GET /gitops/health/overview`
+|Read the system health overview from the GitOps read model.
+|===
+
+Create and update requests wrap manifests in a resource named field, for example `{"context": { ... }}`. Action requests return a `correlation_id`; poll the status routes for results. The gateway also serves unauthenticated `/health` on the API port and `/health` plus `/ready` on the separate health port (default 8081).
+
+== Configuration and deployment
+
+Runtime configuration is read from environment variables; an optional `.env` file is loaded from the working directory. Use link:.env.example[the example environment file] as a starting point; `.env` is ignored by Git. The local Compose credentials are disposable development defaults. The main values are `DATABASE_URL`, `RABBITMQ_URL`, `PORT`, `GATEWAY_ADMIN_PASSWORD`, `ARGOCD_SERVER_URL`, `ARGOCD_AUTH_TOKEN`, `VAULT_ADDRESS`, and the `OBS_*` logging, metrics, and health settings. The gateway reads migrations from `MIGRATIONS_PATH` (default `./migrations`). Argo CD and Vault settings have example defaults in `internal/config/config.go`; configure real endpoints and credentials before using integrations.
+
+`charts/platformctl/` contains the Kubernetes deployment chart and stage and production values. It deploys the gateway, aggregator, and workers, with optional bundled RabbitMQ. The chart expects database, RabbitMQ, and gateway credential Secrets to exist in the target namespace. `Makefile` provides build, test, Docker image, migration, and Helm targets; run `make help` to see them.
+
+The supplied deployment workflow targets `platformctl-stage` on pushes to `main`, and `platformctl-prod` on version tags matching `v*.*.*`. Manual runs select the environment and image tag. It uses DigitalOcean and GHCR; these are the repository's deployment configuration, not requirements of the Go services.
+
+For namespace setup, database connections, credential Secrets, image access, Helm commands, and troubleshooting, see link:docs/deployment.adoc[the deployment guide]. The gateway uses the chart's direct database connection for migrations; workers use its pooled connection setting.
+
+== Development commands
+
+[source,sh]
+----
+make build-local    # all services and the CLI for the current machine
+make test           # full suite with race detection and coverage; needs dependencies
+make lint           # requires golangci-lint
+make db-migrate     # requires DATABASE_URL and the golang-migrate CLI
+make docker-build   # build service container images
+make help
+----
+
+`make build` and `make cli` default to Linux/amd64. Use `make build-local` or the CLI's `go build` command above for native binaries. Migration `004_gitops_read_model.up.sql` has no corresponding down migration; review the available rollback path before attempting a database downgrade.
+
+== Current implementation limits
+
+* Several integration paths still return simulated or partially simulated results, notably parts of Vault validation, cluster validation, Context correlation, and cross environment workload checks. Treat those status values as development signals until the corresponding integrations are completed.
+* The CLI only covers Context resources. Use the HTTP API for App and Environment CRUD.
+* The gateway accepts `X-Customer-ID` after Basic Auth without checking that the authenticated user belongs to that customer. Restrict access to trusted clients in multi-tenant deployments.
+* Running only the gateway lets you manage manifests and queue actions; workers and the aggregator are required for action execution and status updates.
+
+== Tests
+
+Run the short test suite without external services:
+
+[source,sh]
+----
+go test -short ./...
+----
+
+For the full suite, start the Compose dependencies first. Tests in `test/integration/` connect directly to RabbitMQ at `localhost:5672`:
+
+[source,sh]
+----
+docker compose -f deployments/docker-compose.dev.yml up -d
+go test ./...
+----
+
+Database-backed integration tests require `TEST_DATABASE_URL`; tests that use it skip when it is unset. For the repository's standard build and deployment targets, run `make help`.
+
+
+== Further reading
+
+* link:ROADMAP.md[Vision and roadmap]
+* link:docs/deployment.adoc[Deployment and troubleshooting]
+* link:docs/cli.md[CLI reference]
+* link:docs/examples/[Example Context manifests]
+* link:docs/adr/[Architecture decision records]
+* link:docs/data-models/[Manifest, API, and database model documentation]
+* link:TEST_SUITE.md[Test suite documentation]
+
+Some supporting documents describe earlier designs or planned features. Check current source code and the implementation limits above when using them.
+
+== License
+
+Licensed under the link:LICENSE[MIT License].

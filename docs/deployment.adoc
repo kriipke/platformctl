@@ -1,0 +1,204 @@
+= Deployment and troubleshooting
+
+This guide describes the deployment configuration in the repository. It does not assert that a particular cluster or release is currently healthy. See link:../README.adoc[the README] for local development and current integration limits.
+
+== Deployment layout
+
+The link:../charts/platformctl/[Helm chart] deploys seven Go services and, when enabled, RabbitMQ. PostgreSQL is external to the chart.
+
+[cols="1,2,3",options="header"]
+|===
+|Environment |Namespace |Values file
+|Stage |`platformctl-stage` |`charts/platformctl/values-stage.yaml`
+|Production |`platformctl-prod` |`charts/platformctl/values-prod.yaml`
+|===
+
+The supplied values target the repository's DigitalOcean setup. Before using them on another cluster, review the image registry and tag, pull Secrets, RabbitMQ credential Secret and storage class, Argo CD endpoint, and ingress hosts, TLS configuration, and issuer. The stage and production overlays enable ingress with environment-specific hosts. Use a final override file for your installation or disable ingress explicitly for access through port forwarding.
+
+The default image naming pattern is `ghcr.io/kriipke/platformctl-<service>:<tag>`. Verify that the selected tag exists for every service before deploying. The build workflow defines image publication; the existence of a workflow does not establish that an image has been published successfully.
+
+== Database setup
+
+The gateway applies migrations on startup and uses the database Secret selected by `secretNames.direct`. Other services use `secretNames.pool`. Use a direct PostgreSQL connection for the gateway's migration advisory locks, rather than a transaction-pooled PgBouncer connection.
+
+In the supplied DigitalOcean setup, the direct connection uses port 25060 and the PgBouncer pool uses 25061. Use the connection strings supplied for your own database. A pool name in a pooled connection URL identifies the pool; it is not a second PostgreSQL database.
+
+For a new environment, an administrator can create a database and its owner, for example:
+
+[source,sql]
+----
+CREATE ROLE platformctl_stage LOGIN PASSWORD '<PASSWORD>';
+CREATE DATABASE platformctl_stage OWNER platformctl_stage;
+----
+
+Use separate credentials and database names for production. If your installation has no pool, both database Secrets can contain a direct connection URL; the chart still expects both Secrets with its default configuration.
+
+Migration `004_gitops_read_model.up.sql` currently has no down migration. Review migration reversibility and take a database backup before upgrading. A Helm rollback does not undo migrations already applied by the gateway.
+
+== Namespace and credentials
+
+The chart references the following Secrets. It does not create these application credential Secrets.
+
+[cols="2,2,3",options="header"]
+|===
+|Default Secret name |Keys |Used by
+|`platformctl-credentials` |`DATABASE_URL` |Gateway; direct connection
+|`platformctl-pool-credentials` |`DATABASE_URL` |Aggregator and workers
+|`platformctl-rabbitmq-credentials` |`username`, `password`, `RABBITMQ_URL` |Broker credentials and connection URL for all Go services
+|`platformctl-gateway-admin` |`username`, `password` |Gateway Basic Auth
+|`platformctl-argocd-token` |`ARGOCD_AUTH_TOKEN` |App sync and Context correlation workers
+|`ghcr-pull` |Docker registry credentials |Image pulls; created by the deployment workflow or manually
+|===
+
+The first five names can be changed through `secretNames` in the chart values. Image pull Secret references are configured through `imagePullSecrets`.
+
+For a new stage installation, replace all placeholders before running:
+
+[source,sh]
+----
+export PLATFORMCTL_NAMESPACE=platformctl-stage
+kubectl create namespace "$PLATFORMCTL_NAMESPACE"
+
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret generic platformctl-credentials \
+  --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<DB_HOST>:25060/platformctl_stage?sslmode=require'
+
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret generic platformctl-pool-credentials \
+  --from-literal=DATABASE_URL='postgresql://platformctl_stage:<PASSWORD>@<DB_HOST>:25061/<POOL_NAME>?sslmode=require'
+
+broker_password="$(openssl rand -hex 24)"
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret generic platformctl-rabbitmq-credentials \
+  --from-literal=username=platformctl \
+  --from-literal="password=$broker_password" \
+  --from-literal="RABBITMQ_URL=amqp://platformctl:${broker_password}@rabbitmq:5672/"
+unset broker_password
+
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret generic platformctl-gateway-admin \
+  --from-literal=username=admin \
+  --from-literal=password='<GATEWAY_PASSWORD>'
+
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret generic platformctl-argocd-token \
+  --from-literal=ARGOCD_AUTH_TOKEN='<ARGOCD_TOKEN>'
+----
+
+The broker Secret is required in each namespace, including when using an external broker. Its username, password, and connection URL must agree. With `rabbitmq.enabled=false`, set its `RABBITMQ_URL` to the external broker endpoint.
+
+For an existing RabbitMQ volume, changing `RABBITMQ_DEFAULT_PASS` does not update an existing account. Rotate the account in RabbitMQ and update the Secret together, then restart the broker and affected services. Earlier default broker credentials appeared in Git history; replace them if they were used outside disposable development.
+
+For private GHCR images, create the image pull Secret using a registry identity and a token with package read access:
+
+[source,sh]
+----
+kubectl -n "$PLATFORMCTL_NAMESPACE" create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io \
+  --docker-username='<GITHUB_USERNAME>' \
+  --docker-password='<GHCR_PULL_TOKEN>'
+----
+
+The gateway can start without its optional admin Secret, but protected API routes return HTTP 503 until a password is configured. The Argo CD token Secret is also optional at pod startup; authenticated Argo CD operations still require appropriate credentials and permissions.
+
+Secret values injected through environment variables are read at pod startup. Restart the affected deployments after creating or rotating a Secret. For the default release name, for example:
+
+[source,sh]
+----
+kubectl -n "$PLATFORMCTL_NAMESPACE" rollout restart deployment/platformctl-gateway
+----
+
+== Render and deploy manually
+
+You need Helm, kubectl, a kubeconfig for the target cluster, the credential Secrets above, and published images. For DigitalOcean, `doctl kubernetes cluster kubeconfig save <cluster>` obtains a kubeconfig using your authenticated DigitalOcean account.
+
+Run from the repository root. Replace the example tag with a tag available for all seven services:
+
+[source,sh]
+----
+export PLATFORMCTL_NAMESPACE=platformctl-stage
+export PLATFORMCTL_IMAGE_TAG='vX.Y.Z'
+
+helm template platformctl charts/platformctl \
+  --namespace "$PLATFORMCTL_NAMESPACE" \
+  -f charts/platformctl/values-stage.yaml \
+  --set image.tag="$PLATFORMCTL_IMAGE_TAG"
+
+helm upgrade --install platformctl charts/platformctl \
+  --namespace "$PLATFORMCTL_NAMESPACE" --create-namespace \
+  -f charts/platformctl/values-stage.yaml \
+  --set image.tag="$PLATFORMCTL_IMAGE_TAG" \
+  --atomic --timeout 10m
+----
+
+Append `-f <your-overrides.yaml>` after the supplied values file in both commands when adapting the configuration. To deploy production, change the namespace and use `values-prod.yaml`.
+
+The chart includes ServiceAccounts and ClusterRoles for Kubernetes monitoring; `rbac.create` controls creation. ClusterRole and binding names include the release namespace so stage and production can coexist. Review the permissions in link:../charts/platformctl/templates/rbac.yaml[the RBAC template] against your installation's needs.
+
+== GitHub Actions deployment
+
+The link:../.github/workflows/deploy.yml[deployment workflow] targets the DigitalOcean cluster named in its `CLUSTER` variable. It serializes deployments per environment and runs `helm upgrade --install --atomic`.
+
+[cols="2,1,2",options="header"]
+|===
+|Trigger |Target |Image tag
+|Push to `main` |Stage |`latest`
+|Push a tag matching `v*.*.*` |Production |The Git tag
+|Manual workflow run |Selected environment |Selected tag; defaults to `latest` for stage and is required for production
+|===
+
+The deployment workflow requires these GitHub repository Secrets:
+
+* `DIGITALOCEAN_ACCESS_TOKEN`: authenticates doctl to obtain the cluster kubeconfig.
+* `GHCR_PULL_PAT`: authenticates registry access and creates or updates `ghcr-pull` in the target namespace.
+
+Database, RabbitMQ, gateway admin, and Argo CD Secrets must be provisioned separately. The deployment workflow checks that `platformctl-rabbitmq-credentials` contains `username`, `password`, and `RABBITMQ_URL` before installing the chart. The link:../.github/workflows/build-and-push.yml[image build workflow] publishes service images. A manual deployment does not itself trigger an image build.
+
+The deployment workflow waits for the gateway image tag to exist, then installs the chart and checks rollouts. That existence check does not prove that every service image is available or that a mutable `latest` tag belongs to the triggering commit. Inspect build results when diagnosing unexpected versions or image pull failures.
+
+== Verify and troubleshoot
+
+For the default Helm release name:
+
+[source,sh]
+----
+export PLATFORMCTL_NAMESPACE=platformctl-stage
+kubectl -n "$PLATFORMCTL_NAMESPACE" get deployments,pods,services
+kubectl -n "$PLATFORMCTL_NAMESPACE" get events --sort-by='.lastTimestamp'
+kubectl -n "$PLATFORMCTL_NAMESPACE" logs deployment/platformctl-gateway
+kubectl -n "$PLATFORMCTL_NAMESPACE" logs deployment/platformctl-gitops-aggregator
+----
+
+Forward the gateway API in a dedicated terminal:
+
+[source,sh]
+----
+kubectl -n "$PLATFORMCTL_NAMESPACE" port-forward service/platformctl-gateway 8080:80
+----
+
+Then check HTTP access and an authenticated route:
+
+[source,sh]
+----
+curl http://localhost:8080/health
+curl --user admin http://localhost:8080/api/v1/contexts
+----
+
+The second command prompts for the gateway password. API health alone does not prove that external integrations or queued work are functioning.
+
+Services expose `/health` and `/ready` on their health port, normally 8081. Prometheus metrics servers are currently started by the aggregator, App sync worker, and Environment validation worker. The chart exposing a metrics port for a service does not mean that service starts a metrics server.
+
+For the bundled RabbitMQ management UI, run:
+
+[source,sh]
+----
+kubectl -n "$PLATFORMCTL_NAMESPACE" port-forward service/rabbitmq 15672:15672
+----
+
+Use the RabbitMQ credentials from the Secret referenced by `secretNames.rabbitmq`. To investigate an action, search gateway, worker, and aggregator logs for its returned correlation ID. Log formats differ, so search for the ID value rather than assuming a common field name.
+
+[cols="2,4",options="header"]
+|===
+|Symptom |Checks
+|API returns 503 |Verify the gateway admin Secret contains a password and restart the gateway after changing it.
+|API returns 401 |Verify Basic Auth credentials. The current gateway does not authenticate CLI bearer tokens.
+|Gateway fails during startup |Inspect database connectivity, migration errors, direct versus pooled connection selection, and RabbitMQ availability.
+|Pod repeatedly restarts |Inspect pod events and previous container logs; check health port configuration and startup dependencies.
+|Image pull failure |Check that the tag exists for the affected service and that registry credentials are available in the namespace.
+|Action queues but status does not change |Check the relevant worker and aggregator, broker queues, correlation ID logs, and external integration errors.
+|===
